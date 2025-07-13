@@ -2,6 +2,8 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Models.Events;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core
@@ -14,6 +16,11 @@ namespace AlbionOnlineSniffer.Tests.Core
             public void AddWispInGate(string id, Vector2 position)
             {
                 AddWispInGateCalled = true;
+            }
+
+            public void Remove(string id)
+            {
+                throw new NotImplementedException();
             }
         }
 

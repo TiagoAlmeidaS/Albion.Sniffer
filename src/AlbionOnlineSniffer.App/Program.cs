@@ -56,25 +56,25 @@ namespace AlbionOnlineSniffer.App
                 using IQueuePublisher redisPublisher = Queue.DependencyProvider.CreateRedisPublisher(redisConn);
 
                 // Core Handlers
-                var playersHandler = Core.DependencyProvider.CreatePlayersHandler();
-                var mobsHandler = Core.DependencyProvider.CreateMobsHandler();
-                var harvestablesHandler = Core.DependencyProvider.CreateHarvestablesHandler();
-                var lootChestsHandler = Core.DependencyProvider.CreateLootChestsHandler();
-                var dungeonsHandler = Core.DependencyProvider.CreateDungeonsHandler();
-                var fishNodesHandler = Core.DependencyProvider.CreateFishNodesHandler();
-                var gatedWispsHandler = Core.DependencyProvider.CreateGatedWispsHandler();
+                var playersManager = Core.DependencyProvider.CreatePlayersManager();
+                var mobsManager = Core.DependencyProvider.CreateMobsManager();
+                var harvestablesManager = Core.DependencyProvider.CreateHarvestablesManager();
+                var lootChestsManager = Core.DependencyProvider.CreateLootChestsManager();
+                var dungeonsManager = Core.DependencyProvider.CreateDungeonsManager();
+                var fishNodesManager = Core.DependencyProvider.CreateFishNodesManager();
+                var gatedWispsManager = Core.DependencyProvider.CreateGatedWispsManager();
                 var configHandler = Core.DependencyProvider.CreateConfigHandler();
                 var localPlayerHandler = Core.DependencyProvider.CreateLocalPlayerHandler();
 
                 // Event Handlers
-                var characterHandler = new NewCharacterEventHandler(playersHandler, localPlayerHandler, configHandler);
-                var mobHandler = new NewMobEventHandler(mobsHandler);
-                var harvestableHandler = new NewHarvestableEventHandler(harvestablesHandler);
-                var lootChestHandler = new NewLootChestEventHandler(lootChestsHandler);
-                var dungeonHandler = new NewDungeonEventHandler(dungeonsHandler);
-                var fishingZoneHandler = new NewFishingZoneEventHandler(fishNodesHandler);
-                var gatedWispHandler = new NewGatedWispEventHandler(gatedWispsHandler);
-                var wispGateOpenedHandler = new WispGateOpenedEventHandler(gatedWispsHandler);
+                var characterHandler = new NewCharacterEventHandler(playersManager, localPlayerHandler, configHandler);
+                var mobHandler = new NewMobEventHandler(mobsManager);
+                var harvestableHandler = new NewHarvestableEventHandler(harvestablesManager);
+                var lootChestHandler = new NewLootChestEventHandler(lootChestsManager);
+                var dungeonHandler = new NewDungeonEventHandler(dungeonsManager);
+                var fishingZoneHandler = new NewFishingZoneEventHandler(fishNodesManager);
+                var gatedWispHandler = new NewGatedWispEventHandler(gatedWispsManager);
+                var wispGateOpenedHandler = new WispGateOpenedEventHandler(gatedWispsManager);
 
                 // Conectar eventos dos handlers aos publishers
                 characterHandler.OnCharacterParsed += async data => {

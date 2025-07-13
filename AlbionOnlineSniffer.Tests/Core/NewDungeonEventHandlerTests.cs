@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Models.Events;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core

@@ -1,6 +1,8 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -9,18 +11,18 @@ namespace AlbionOnlineSniffer.Core.Handlers
     /// </summary>
     public class NewMobEventHandler
     {
-        private readonly IMobsHandler _mobHandler;
+        private readonly IMobsManager _mobManager;
 
         public event Action<NewMobParsedData>? OnMobParsed;
 
-        public NewMobEventHandler(IMobsHandler mobHandler)
+        public NewMobEventHandler(IMobsManager mobManager)
         {
-            _mobHandler = mobHandler;
+            _mobManager = mobManager;
         }
 
         public Task HandleAsync(NewMobEvent value)
         {
-            _mobHandler.AddMob(value.Id, value.TypeId, value.Position, value.Health, value.Charge);
+            _mobManager.AddMob(value.Id, value.TypeId, value.Position, value.Health, value.Charge);
 
             OnMobParsed?.Invoke(new NewMobParsedData
             {
@@ -44,8 +46,14 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public int Charge { get; set; }
     }
 
-    public interface IMobsHandler
+    public interface IMobsManager
     {
-        void AddMob(string id, int typeId, Vector2 position, int health, int charge);
+        void AddMob(int id, int typeId, System.Numerics.Vector2 position, Health health, byte enchLvl);
+        void UpdateMobPosition(int id, byte[] positionBytes, byte[] newPositionBytes, float speed, System.DateTime time);
+        void SyncMobsPositions();
+        void Remove(int id);
+        void Clear();
+        void UpdateMobCharge(int mobId, int charge);
+        void UpdateHealth(int id, int health);
     }
 } 

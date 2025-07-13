@@ -1,29 +1,31 @@
 using System;
 using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Models.Events;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
     public class WispGateOpenedEventHandler
     {
-        private readonly IGatedWispsHandler _wispInGateHandler;
+        private readonly IGatedWispsManager _wispInGateManager;
         public event Action<WispGateOpenedParsedData>? OnWispGateOpenedParsed;
 
-        public WispGateOpenedEventHandler(IGatedWispsHandler wispInGateHandler)
+        public WispGateOpenedEventHandler(IGatedWispsManager wispInGateManager)
         {
-            _wispInGateHandler = wispInGateHandler;
+            _wispInGateManager = wispInGateManager;
         }
 
         public Task HandleAsync(WispGateOpenedEvent value)
         {
-            if (value.isCollected)
+            if (value.IsCollected)
             {
-                _wispInGateHandler.Remove(value.Id);
+                _wispInGateManager.Remove(value.Id);
             }
 
             OnWispGateOpenedParsed?.Invoke(new WispGateOpenedParsedData
             {
                 Id = value.Id,
-                IsCollected = value.isCollected
+                IsCollected = value.IsCollected
             });
 
             return Task.CompletedTask;
@@ -34,10 +36,5 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         public string Id { get; set; }
         public bool IsCollected { get; set; }
-    }
-
-    public interface IGatedWispsHandler
-    {
-        void Remove(string id);
     }
 } 

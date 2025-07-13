@@ -1,6 +1,6 @@
 using System;
-using Albion.Network; // Supondo que a dependência Albion.Network está disponível
 using System.Collections.Generic;
+using AlbionOnlineSniffer.Core.Photon;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
@@ -44,7 +44,7 @@ namespace AlbionOnlineSniffer.Core.Services
             if (_disposed) throw new ObjectDisposedException(nameof(Protocol16Deserializer));
             try
             {
-                _photonReceiver.ReceivePacket(payload);
+                _photonReceiver?.ReceivePacket(payload);
             }
             catch (Exception ex)
             {

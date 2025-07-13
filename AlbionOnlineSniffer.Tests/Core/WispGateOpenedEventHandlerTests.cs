@@ -1,6 +1,9 @@
 using System;
+using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Models.Events;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core
@@ -10,6 +13,11 @@ namespace AlbionOnlineSniffer.Tests.Core
         private class GatedWispsHandlerMock : IGatedWispsHandler
         {
             public bool RemoveCalled { get; private set; }
+            public void AddWispInGate(string id, Vector2 position)
+            {
+                throw new NotImplementedException();
+            }
+
             public void Remove(string id)
             {
                 RemoveCalled = true;

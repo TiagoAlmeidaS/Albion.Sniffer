@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.Events;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -9,18 +10,18 @@ namespace AlbionOnlineSniffer.Core.Handlers
     /// </summary>
     public class NewLootChestEventHandler
     {
-        private readonly ILootChestsHandler _worldChestHandler;
+        private readonly ILootChestsManager _worldChestManager;
 
         public event Action<NewLootChestParsedData>? OnLootChestParsed;
 
-        public NewLootChestEventHandler(ILootChestsHandler worldChestHandler)
+        public NewLootChestEventHandler(ILootChestsManager worldChestManager)
         {
-            _worldChestHandler = worldChestHandler;
+            _worldChestManager = worldChestManager;
         }
 
         public Task HandleAsync(NewLootChestEvent value)
         {
-            _worldChestHandler.AddWorldChest(value.Id, value.Position, value.Name, value.EnchLvl);
+            _worldChestManager.AddWorldChest(value.Id, value.Position, value.Name, value.EnchLvl);
 
             OnLootChestParsed?.Invoke(new NewLootChestParsedData
             {
@@ -42,8 +43,11 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public int EnchLvl { get; set; }
     }
 
-    public interface ILootChestsHandler
+    public interface ILootChestsManager
     {
-        void AddWorldChest(string id, Vector2 position, string name, int enchLvl);
+        void AddWorldChest(int id, System.Numerics.Vector2 position, string name, int enchLvl);
+        void Remove(int id);
+        void Clear();
+        int GetCharge(string name, int enchLvl);
     }
 } 

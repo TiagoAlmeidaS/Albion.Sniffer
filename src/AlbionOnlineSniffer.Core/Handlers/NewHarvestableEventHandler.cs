@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.Events;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -9,18 +10,18 @@ namespace AlbionOnlineSniffer.Core.Handlers
     /// </summary>
     public class NewHarvestableEventHandler
     {
-        private readonly IHarvestablesHandler _harvestableHandler;
+        private readonly IHarvestablesManager _harvestableManager;
 
         public event Action<NewHarvestableParsedData>? OnHarvestableParsed;
 
-        public NewHarvestableEventHandler(IHarvestablesHandler harvestableHandler)
+        public NewHarvestableEventHandler(IHarvestablesManager harvestableManager)
         {
-            _harvestableHandler = harvestableHandler;
+            _harvestableManager = harvestableManager;
         }
 
         public Task HandleAsync(NewHarvestableEvent value)
         {
-            _harvestableHandler.AddHarvestable(value.Id, value.Type, value.Tier, value.Position, value.Count, value.Charge);
+            _harvestableManager.AddHarvestable(value.Id, value.Type, value.Tier, value.Position, value.Count, value.Charge);
 
             OnHarvestableParsed?.Invoke(new NewHarvestableParsedData
             {
@@ -46,8 +47,11 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public int Charge { get; set; }
     }
 
-    public interface IHarvestablesHandler
+    public interface IHarvestablesManager
     {
-        void AddHarvestable(string id, int type, int tier, Vector2 position, int count, int charge);
+        void AddHarvestable(int id, int type, int tier, System.Numerics.Vector2 position, int count, int charge);
+        void RemoveHarvestables();
+        void UpdateHarvestable(int id, int count, int charge);
+        void Clear();
     }
 } 
