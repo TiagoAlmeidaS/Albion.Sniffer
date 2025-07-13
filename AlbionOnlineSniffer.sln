@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{06E36229-8FCE-43E9-8B9E-9429FFEE849C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Core", "src\AlbionOnlineSniffer.Core\AlbionOnlineSniffer.Core.csproj", "{E03601FC-553E-49B4-A53A-D9406D04EDD6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Capture", "src\AlbionOnlineSniffer.Capture\AlbionOnlineSniffer.Capture.csproj", "{A3834428-7CDD-4CEA-8879-50615BC4BCD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Queue", "src\AlbionOnlineSniffer.Queue\AlbionOnlineSniffer.Queue.csproj", "{9A71430B-3B41-4FE0-B2AF-99B815D3A83C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.App", "src\AlbionOnlineSniffer.App\AlbionOnlineSniffer.App.csproj", "{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Tests", "AlbionOnlineSniffer.Tests\AlbionOnlineSniffer.Tests.csproj", "{964A4D9C-25BA-4C0B-857A-C0B1E840206B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E03601FC-553E-49B4-A53A-D9406D04EDD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E03601FC-553E-49B4-A53A-D9406D04EDD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E03601FC-553E-49B4-A53A-D9406D04EDD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E03601FC-553E-49B4-A53A-D9406D04EDD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3834428-7CDD-4CEA-8879-50615BC4BCD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3834428-7CDD-4CEA-8879-50615BC4BCD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3834428-7CDD-4CEA-8879-50615BC4BCD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3834428-7CDD-4CEA-8879-50615BC4BCD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A71430B-3B41-4FE0-B2AF-99B815D3A83C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A71430B-3B41-4FE0-B2AF-99B815D3A83C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A71430B-3B41-4FE0-B2AF-99B815D3A83C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A71430B-3B41-4FE0-B2AF-99B815D3A83C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{964A4D9C-25BA-4C0B-857A-C0B1E840206B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{964A4D9C-25BA-4C0B-857A-C0B1E840206B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{964A4D9C-25BA-4C0B-857A-C0B1E840206B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{964A4D9C-25BA-4C0B-857A-C0B1E840206B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E03601FC-553E-49B4-A53A-D9406D04EDD6} = {06E36229-8FCE-43E9-8B9E-9429FFEE849C}
+		{A3834428-7CDD-4CEA-8879-50615BC4BCD3} = {06E36229-8FCE-43E9-8B9E-9429FFEE849C}
+		{9A71430B-3B41-4FE0-B2AF-99B815D3A83C} = {06E36229-8FCE-43E9-8B9E-9429FFEE849C}
+		{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18} = {06E36229-8FCE-43E9-8B9E-9429FFEE849C}
+	EndGlobalSection
+EndGlobal
