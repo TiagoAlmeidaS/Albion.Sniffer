@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Numerics;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {

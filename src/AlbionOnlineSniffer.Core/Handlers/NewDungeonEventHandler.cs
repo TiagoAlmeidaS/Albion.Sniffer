@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -17,7 +18,12 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         public Task HandleAsync(NewDungeonEvent value)
         {
-            _dungeonsManager.AddDungeon(value.Id, value.Type, value.Position, value.Charges);
+            _dungeonsManager.AddDungeon(
+                int.TryParse(value.Id, out var id) ? id : 0,
+                value.Type.ToString(),
+                value.Position,
+                value.Charges
+            );
 
             OnDungeonParsed?.Invoke(new NewDungeonParsedData
             {
@@ -37,12 +43,5 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public int Type { get; set; }
         public Vector2 Position { get; set; }
         public int Charges { get; set; }
-    }
-
-    public interface IDungeonsManager
-    {
-        void AddDungeon(int id, string type, System.Numerics.Vector2 position, int charges);
-        void Remove(int id);
-        void Clear();
     }
 } 

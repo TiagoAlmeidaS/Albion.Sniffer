@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -36,7 +37,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             Vector2 pos = Vector2.Zero;
             if (_playerManager.XorCode != null && value.EncryptedPosition != null)
             {
-                var coords = _playerManager.Decrypt(value.EncryptedPosition);
+                var coords = _playerManager.Decrypt(value.EncryptedPosition as byte[] ?? Array.Empty<byte>());
                 pos = new Vector2(coords[1], coords[0]);
             }
             else if (value.Position != Vector2.Zero)
@@ -44,7 +45,17 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 pos = value.Position;
             }
 
-            _playerManager.AddPlayer(value.Id, value.Name, value.Guild, value.Alliance, pos, value.Health, value.Faction, value.Equipments, value.Spells);
+            _playerManager.AddPlayer(
+                int.TryParse(value.Id, out var id) ? id : 0,
+                value.Name,
+                value.Guild,
+                value.Alliance,
+                pos,
+                new Health { Value = value.Health },
+                (Faction)value.Faction,
+                value.Equipments as int[] ?? Array.Empty<int>(),
+                value.Spells as int[] ?? Array.Empty<int>()
+            );
 
             // Lógica de listas customizadas, facções, etc. pode ser mantida, mas sem UI/som
             // Em vez disso, pode-se disparar eventos ou logs
@@ -85,30 +96,5 @@ namespace AlbionOnlineSniffer.Core.Handlers
     }
 
     // Interfaces para handlers (pode ser implementado conforme necessidade)
-    public interface IPlayersManager
-    {
-        byte[]? XorCode { get; set; }
-        float[] Decrypt(byte[] coordinates, int offset = 0);
-        void AddPlayer(int id, string name, string guild, string alliance, System.Numerics.Vector2 position, Health health, Faction faction, int[] equipments, int[] spells);
-        void Remove(int id);
-        void Clear();
-        void Mounted(int id, bool isMounted);
-        void UpdateHealth(int id, int health);
-        void SetFaction(int id, Faction faction);
-        void RegenerateHealth();
-        void UpdateItems(int id, int[] equipment, int[] spells);
-        void SetRegeneration(int id, Health health);
-        void SyncPlayersPosition();
-        void UpdatePlayerPosition(int id, byte[] positionBytes, byte[] newPositionBytes, float speed, System.DateTime time);
-    }
-
-    public interface ILocalPlayerHandler
-    {
-        // Definir métodos/propriedades relevantes
-    }
-
-    public interface IConfigHandler
-    {
-        // Definir métodos/propriedades relevantes
-    }
+    // Removidas as interfaces ILocalPlayerHandler e IConfigHandler duplicadas
 } 

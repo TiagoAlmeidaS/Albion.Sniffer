@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -17,7 +18,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         public Task HandleAsync(NewFishingZoneEvent value)
         {
-            _fishZoneManager.AddFishZone(value.Id, value.Position, value.Size, value.RespawnCount);
+            _fishZoneManager.AddFishZone(int.TryParse(value.Id, out var id) ? id : 0, value.Position, value.Size, value.RespawnCount);
 
             OnFishingZoneParsed?.Invoke(new NewFishingZoneParsedData
             {
@@ -37,12 +38,5 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public Vector2 Position { get; set; }
         public int Size { get; set; }
         public int RespawnCount { get; set; }
-    }
-
-    public interface IFishNodesManager
-    {
-        void AddFishZone(int id, System.Numerics.Vector2 position, int size, int respawnCount);
-        void Remove(int id);
-        void Clear();
     }
 } 

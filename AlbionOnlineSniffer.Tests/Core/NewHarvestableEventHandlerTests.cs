@@ -1,21 +1,22 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Handlers;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewHarvestableEventHandlerTests
     {
-        private class HarvestablesHandlerMock : IHarvestablesHandler
+        private class HarvestablesHandlerMock : IHarvestablesManager
         {
             public bool AddHarvestableCalled { get; private set; }
-            public void AddHarvestable(string id, int type, int tier, Vector2 position, int count, int charge)
-            {
-                AddHarvestableCalled = true;
-            }
+            public void AddHarvestable(int id, int type, int tier, Vector2 position, int count, int charge) { AddHarvestableCalled = true; }
+            public void RemoveHarvestables() { }
+            public void UpdateHarvestable(int id, int count, int charge) { }
+            public void Clear() { }
         }
 
         [Fact]

@@ -1,21 +1,22 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Handlers;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewDungeonEventHandlerTests
     {
-        private class DungeonsHandlerMock : IDungeonsHandler
+        private class DungeonsHandlerMock : IDungeonsManager
         {
             public bool AddDungeonCalled { get; private set; }
-            public void AddDungeon(string id, int type, Vector2 position, int charges)
-            {
-                AddDungeonCalled = true;
-            }
+            public void AddDungeon(int id, string type, Vector2 position, int charges) { AddDungeonCalled = true; }
+            public void Remove(int id) { }
+            public void Clear() { }
         }
 
         [Fact]

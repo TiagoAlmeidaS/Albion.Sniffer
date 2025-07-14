@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -22,7 +23,13 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         public Task HandleAsync(NewMobEvent value)
         {
-            _mobManager.AddMob(value.Id, value.TypeId, value.Position, value.Health, value.Charge);
+            _mobManager.AddMob(
+                int.TryParse(value.Id, out var id) ? id : 0,
+                value.TypeId,
+                value.Position,
+                new Health { Value = value.Health },
+                (byte)value.Charge
+            );
 
             OnMobParsed?.Invoke(new NewMobParsedData
             {
@@ -44,16 +51,5 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public Vector2 Position { get; set; }
         public int Health { get; set; }
         public int Charge { get; set; }
-    }
-
-    public interface IMobsManager
-    {
-        void AddMob(int id, int typeId, System.Numerics.Vector2 position, Health health, byte enchLvl);
-        void UpdateMobPosition(int id, byte[] positionBytes, byte[] newPositionBytes, float speed, System.DateTime time);
-        void SyncMobsPositions();
-        void Remove(int id);
-        void Clear();
-        void UpdateMobCharge(int mobId, int charge);
-        void UpdateHealth(int id, int health);
     }
 } 

@@ -19,7 +19,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public Task HandleAsync(NewGatedWispEvent value)
         {
             if (!value.IsCollected)
-                _wispInGateManager.AddWispInGate(value.Id, value.Position);
+                _wispInGateManager.AddWispInGate(int.TryParse(value.Id, out var id) ? id : 0, value.Position);
 
             OnGatedWispParsed?.Invoke(new NewGatedWispParsedData
             {

@@ -19,7 +19,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
         {
             if (value.IsCollected)
             {
-                _wispInGateManager.Remove(value.Id);
+                _wispInGateManager.Remove(int.TryParse(value.Id, out var id) ? id : 0);
             }
 
             OnWispGateOpenedParsed?.Invoke(new WispGateOpenedParsedData

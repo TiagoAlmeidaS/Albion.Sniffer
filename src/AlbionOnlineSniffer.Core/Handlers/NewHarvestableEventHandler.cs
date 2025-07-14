@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -21,7 +22,14 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         public Task HandleAsync(NewHarvestableEvent value)
         {
-            _harvestableManager.AddHarvestable(value.Id, value.Type, value.Tier, value.Position, value.Count, value.Charge);
+            _harvestableManager.AddHarvestable(
+                int.TryParse(value.Id, out var id) ? id : 0,
+                value.Type,
+                value.Tier,
+                value.Position,
+                value.Count,
+                value.Charge
+            );
 
             OnHarvestableParsed?.Invoke(new NewHarvestableParsedData
             {
@@ -45,13 +53,5 @@ namespace AlbionOnlineSniffer.Core.Handlers
         public Vector2 Position { get; set; }
         public int Count { get; set; }
         public int Charge { get; set; }
-    }
-
-    public interface IHarvestablesManager
-    {
-        void AddHarvestable(int id, int type, int tier, System.Numerics.Vector2 position, int count, int charge);
-        void RemoveHarvestables();
-        void UpdateHarvestable(int id, int count, int charge);
-        void Clear();
     }
 } 

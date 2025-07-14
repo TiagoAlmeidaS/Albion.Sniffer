@@ -38,17 +38,21 @@ namespace AlbionOnlineSniffer.Capture
 
             _device = device;
             _device.OnPacketArrival += Device_OnPacketArrival;
-            _device.Open(DeviceMode.Promiscuous, 5);
+            _device.Open(new DeviceConfiguration {
+                Mode = DeviceModes.Promiscuous | DeviceModes.DataTransferUdp | DeviceModes.MaxResponsiveness,
+                ReadTimeout = 5
+            });
             _device.Filter = _filter;
             _device.StartCapture();
             _isCapturing = true;
         }
 
-        private void Device_OnPacketArrival(object sender, CaptureEventArgs e)
+        private void Device_OnPacketArrival(object sender, PacketCapture e)
         {
             try
             {
-                var packet = Packet.ParsePacket(e.Packet.LinkLayerType, e.Packet.Data).Extract<UdpPacket>();
+                var rawPacket = e.GetPacket();
+                var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data).Extract<UdpPacket>();
                 if (packet != null && packet.PayloadData != null)
                 {
                     OnUdpPayloadCaptured?.Invoke(packet.PayloadData);

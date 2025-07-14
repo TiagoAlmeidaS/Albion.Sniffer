@@ -1,21 +1,22 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Handlers;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewLootChestEventHandlerTests
     {
-        private class LootChestsHandlerMock : ILootChestsHandler
+        private class LootChestsHandlerMock : ILootChestsManager
         {
             public bool AddWorldChestCalled { get; private set; }
-            public void AddWorldChest(string id, Vector2 position, string name, int enchLvl)
-            {
-                AddWorldChestCalled = true;
-            }
+            public void AddWorldChest(int id, Vector2 position, string name, int enchLvl) { AddWorldChestCalled = true; }
+            public void Remove(int id) { }
+            public void Clear() { }
+            public int GetCharge(string name, int enchLvl) => 0;
         }
 
         [Fact]

@@ -1,21 +1,26 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Models;
 using Xunit;
+using AlbionOnlineSniffer.Core.Handlers;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewMobEventHandlerTests
     {
-        private class MobsHandlerMock : IMobsHandler
+        private class MobsHandlerMock : IMobsManager
         {
             public bool AddMobCalled { get; private set; }
-            public void AddMob(string id, int typeId, Vector2 position, int health, int charge)
-            {
-                AddMobCalled = true;
-            }
+            public void AddMob(int id, int typeId, Vector2 position, Health health, byte charge) { AddMobCalled = true; }
+            public void UpdateMobPosition(int id, byte[] encryptedPosition, byte[] xorCode, float heading, DateTime timestamp) { }
+            public void SyncMobsPositions() { }
+            public void Remove(int id) { }
+            public void Clear() { }
+            public void UpdateMobCharge(int id, int charge) { }
+            public void UpdateHealth(int id, int health) { }
         }
 
         [Fact]

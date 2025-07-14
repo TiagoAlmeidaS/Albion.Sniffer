@@ -1,21 +1,21 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Handlers;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewFishingZoneEventHandlerTests
     {
-        private class FishNodesHandlerMock : IFishNodesHandler
+        private class FishNodesHandlerMock : IFishNodesManager
         {
             public bool AddFishZoneCalled { get; private set; }
-            public void AddFishZone(string id, Vector2 position, int size, int respawnCount)
-            {
-                AddFishZoneCalled = true;
-            }
+            public void AddFishZone(int id, Vector2 position, int size, int respawnCount) { AddFishZoneCalled = true; }
+            public void Remove(int id) { }
+            public void Clear() { }
         }
 
         [Fact]

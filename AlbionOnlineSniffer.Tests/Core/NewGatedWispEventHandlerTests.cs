@@ -10,18 +10,12 @@ namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewGatedWispEventHandlerTests
     {
-        private class GatedWispsHandlerMock : IGatedWispsHandler
+        private class GatedWispsHandlerMock : IGatedWispsManager
         {
             public bool AddWispInGateCalled { get; private set; }
-            public void AddWispInGate(string id, Vector2 position)
-            {
-                AddWispInGateCalled = true;
-            }
-
-            public void Remove(string id)
-            {
-                throw new NotImplementedException();
-            }
+            public void AddWispInGate(int id, Vector2 position) { AddWispInGateCalled = true; }
+            public void Remove(int id) { }
+            public void Clear() { }
         }
 
         [Fact]

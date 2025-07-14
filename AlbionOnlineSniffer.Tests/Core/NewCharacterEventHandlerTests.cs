@@ -1,23 +1,32 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Models;
 using Xunit;
+using AlbionOnlineSniffer.Core.Handlers;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewCharacterEventHandlerTests
     {
-        private class PlayersHandlerMock : IPlayersHandler
+        private class PlayersHandlerMock : IPlayersManager
         {
-            public object XorCode => null;
-            public int[] Decrypt(object encryptedPosition) => new[] { 10, 20 };
+            public byte[] XorCode { get; set; } = null;
             public bool AddPlayerCalled { get; private set; }
-            public void AddPlayer(string id, string name, string guild, string alliance, Vector2 pos, int health, int faction, object equipments, object spells)
-            {
-                AddPlayerCalled = true;
-            }
+            public void AddPlayer(int id, string name, string guild, string alliance, Vector2 pos, Health health, Faction faction, int[] equipments, int[] spells) { AddPlayerCalled = true; }
+            public void Remove(int id) { }
+            public void Clear() { }
+            public void Mounted(int id, bool mounted) { }
+            public void UpdateHealth(int id, int health) { }
+            public void SetFaction(int id, Faction faction) { }
+            public void RegenerateHealth() { }
+            public void UpdateItems(int id, int[] equipments, int[] spells) { }
+            public void SetRegeneration(int id, Health health) { }
+            public void SyncPlayersPosition() { }
+            public void UpdatePlayerPosition(int id, byte[] encryptedPosition, byte[] xorCode, float heading, DateTime timestamp) { }
+            public float[] Decrypt(byte[] coordinates, int offset = 0) => new[] { 10f, 20f };
         }
 
         private class LocalPlayerHandlerMock : ILocalPlayerHandler { }
