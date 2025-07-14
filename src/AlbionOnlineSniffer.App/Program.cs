@@ -48,12 +48,14 @@ namespace AlbionOnlineSniffer.App
                     .Build();
 
                 // Publishers
-                var rabbitHost = config["RabbitMQ:Host"];
+                var rabbitHost = config["RabbitMQ:ConnectionString"];
                 var rabbitExchange = config["RabbitMQ:Exchange"];
                 using IQueuePublisher rabbitPublisher = Queue.DependencyProvider.CreateRabbitMqPublisher(rabbitHost, rabbitExchange);
-
-                var redisConn = config["Redis:ConnectionString"];
-                using IQueuePublisher redisPublisher = Queue.DependencyProvider.CreateRedisPublisher(redisConn);
+                // using IQueuePublisher redisPublisher = Queue.DependencyProvider.CreateRedisPublisher(redisConn);
+                
+                //TODO: Implementar Redis Publisher posteriormente
+                // var redisConn = config["Redis:ConnectionString"];
+                // using IQueuePublisher redisPublisher = Queue.DependencyProvider.CreateRedisPublisher(redisConn);
 
                 // Core Handlers
                 var playersManager = Core.DependencyProvider.CreatePlayersManager();
@@ -80,42 +82,42 @@ namespace AlbionOnlineSniffer.App
                 characterHandler.OnCharacterParsed += async data => {
                     logger.LogInformation("Evento: Novo personagem detectado");
                     await rabbitPublisher.PublishAsync("character.new", data);
-                    await redisPublisher.PublishAsync("character.new", data);
+                    // await redisPublisher.PublishAsync("character.new", data);
                 };
                 mobHandler.OnMobParsed += async data => {
                     logger.LogInformation("Evento: Novo mob detectado");
                     await rabbitPublisher.PublishAsync("mob.new", data);
-                    await redisPublisher.PublishAsync("mob.new", data);
+                    // await redisPublisher.PublishAsync("mob.new", data);
                 };
                 harvestableHandler.OnHarvestableParsed += async data => {
                     logger.LogInformation("Evento: Novo harvestable detectado");
                     await rabbitPublisher.PublishAsync("harvestable.new", data);
-                    await redisPublisher.PublishAsync("harvestable.new", data);
+                    // await redisPublisher.PublishAsync("harvestable.new", data);
                 };
                 lootChestHandler.OnLootChestParsed += async data => {
                     logger.LogInformation("Evento: Novo loot chest detectado");
                     await rabbitPublisher.PublishAsync("lootchest.new", data);
-                    await redisPublisher.PublishAsync("lootchest.new", data);
+                    // await redisPublisher.PublishAsync("lootchest.new", data);
                 };
                 dungeonHandler.OnDungeonParsed += async data => {
                     logger.LogInformation("Evento: Nova dungeon detectada");
                     await rabbitPublisher.PublishAsync("dungeon.new", data);
-                    await redisPublisher.PublishAsync("dungeon.new", data);
+                    // await redisPublisher.PublishAsync("dungeon.new", data);
                 };
                 fishingZoneHandler.OnFishingZoneParsed += async data => {
                     logger.LogInformation("Evento: Nova fishing zone detectada");
                     await rabbitPublisher.PublishAsync("fishingzone.new", data);
-                    await redisPublisher.PublishAsync("fishingzone.new", data);
+                    // await redisPublisher.PublishAsync("fishingzone.new", data);
                 };
                 gatedWispHandler.OnGatedWispParsed += async data => {
                     logger.LogInformation("Evento: Novo gated wisp detectado");
                     await rabbitPublisher.PublishAsync("gatedwisp.new", data);
-                    await redisPublisher.PublishAsync("gatedwisp.new", data);
+                    // await redisPublisher.PublishAsync("gatedwisp.new", data);
                 };
                 wispGateOpenedHandler.OnWispGateOpenedParsed += async data => {
                     logger.LogInformation("Evento: Wisp gate opened detectado");
                     await rabbitPublisher.PublishAsync("wispopened.new", data);
-                    await redisPublisher.PublishAsync("wispopened.new", data);
+                    // await redisPublisher.PublishAsync("wispopened.new", data);
                 };
 
                 // Instanciar parser com handlers

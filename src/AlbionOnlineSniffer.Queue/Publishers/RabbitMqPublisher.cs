@@ -12,9 +12,9 @@ namespace AlbionOnlineSniffer.Queue.Publishers
         private readonly IModel _channel;
         private readonly string _exchange;
 
-        public RabbitMqPublisher(string host, string exchange)
+        public RabbitMqPublisher(string connectionString, string exchange)
         {
-            var factory = new ConnectionFactory() { HostName = host };
+            var factory = new ConnectionFactory() { Uri = new Uri(connectionString) };
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
             _exchange = exchange;
