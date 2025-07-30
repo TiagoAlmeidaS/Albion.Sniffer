@@ -18,7 +18,7 @@ namespace AlbionOnlineSniffer.Capture
         // Evento para encaminhar o payload UDP ao parser
         public event Action<byte[]>? OnUdpPayloadCaptured;
 
-        public PacketCaptureService(int udpPort = 5050) // Corrigido para porta 5050 como no albion-radar-deatheye-2pc
+        public PacketCaptureService(int udpPort = 5056) // Corrigido para porta 5056 (porta oficial do Albion Online)
         {
             _udpPort = udpPort;
             _filter = $"udp and port {_udpPort}";
