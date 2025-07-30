@@ -1,10 +1,20 @@
-namespace AlbionOnlineSniffer.Tests;
+using Xunit;
 
-public class UnitTest1
+namespace AlbionOnlineSniffer.Tests
 {
-    [Fact]
-    public void Test1()
+    public class UnitTest1
     {
+        [Fact]
+        public void Test1_ShouldPass()
+        {
+            // Arrange
+            var expected = true;
 
+            // Act
+            var actual = true;
+
+            // Assert
+            Assert.Equal(expected, actual);
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -17,30 +18,79 @@ namespace AlbionOnlineSniffer.Tests.Core
             }
         }
 
-        [Fact(Skip = "Ignorado temporariamente: depende de lógica real de parsing")]
-        public void ReceivePacket_ShouldCallHandler()
+        [Fact]
+        public void Constructor_WithValidParameters_ShouldNotThrow()
         {
             // Arrange
-            var handler = new TestHandler();
-            var called = false;
-            
             var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             var logger = loggerFactory.CreateLogger<Protocol16Deserializer>();
-            
-            // Criar mocks para os serviços necessários
             var definitionLoader = new PhotonDefinitionLoader(loggerFactory.CreateLogger<PhotonDefinitionLoader>());
             var packetEnricher = new PhotonPacketEnricher(definitionLoader, loggerFactory.CreateLogger<PhotonPacketEnricher>());
+            var packetProcessor = new PacketProcessor(
+                loggerFactory.CreateLogger<PacketProcessor>(),
+                new PacketOffsets(),
+                null!, // PlayersManager
+                null!, // MobsManager
+                null!, // HarvestablesManager
+                null!, // LootChestsManager
+                null!  // PositionDecryptor
+            );
+
+            // Act & Assert
+            var exception = Record.Exception(() => 
+                new Protocol16Deserializer(packetEnricher, packetProcessor, logger));
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void ReceivePacket_WithNullPayload_ShouldNotThrow()
+        {
+            // Arrange
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var logger = loggerFactory.CreateLogger<Protocol16Deserializer>();
+            var definitionLoader = new PhotonDefinitionLoader(loggerFactory.CreateLogger<PhotonDefinitionLoader>());
+            var packetEnricher = new PhotonPacketEnricher(definitionLoader, loggerFactory.CreateLogger<PhotonPacketEnricher>());
+            var packetProcessor = new PacketProcessor(
+                loggerFactory.CreateLogger<PacketProcessor>(),
+                new PacketOffsets(),
+                null!, // PlayersManager
+                null!, // MobsManager
+                null!, // HarvestablesManager
+                null!, // LootChestsManager
+                null!  // PositionDecryptor
+            );
             
-            var deserializer = new Protocol16Deserializer(packetEnricher, logger);
+            var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, logger);
 
-            // Simular registro de handler (aqui, para fins de teste, chamamos diretamente)
-            deserializer.OnParsedEvent += obj => { called = true; };
+            // Act & Assert
+            var exception = Record.Exception(() => deserializer.ReceivePacket(null!));
+            Assert.Null(exception);
+        }
 
-            // Act
-            deserializer.ReceivePacket(new byte[] { 1, 2, 3 });
+        [Fact]
+        public void ReceivePacket_WithEmptyPayload_ShouldNotThrow()
+        {
+            // Arrange
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var logger = loggerFactory.CreateLogger<Protocol16Deserializer>();
+            var definitionLoader = new PhotonDefinitionLoader(loggerFactory.CreateLogger<PhotonDefinitionLoader>());
+            var packetEnricher = new PhotonPacketEnricher(definitionLoader, loggerFactory.CreateLogger<PhotonPacketEnricher>());
+            var packetProcessor = new PacketProcessor(
+                loggerFactory.CreateLogger<PacketProcessor>(),
+                new PacketOffsets(),
+                null!, // PlayersManager
+                null!, // MobsManager
+                null!, // HarvestablesManager
+                null!, // LootChestsManager
+                null!  // PositionDecryptor
+            );
+            
+            var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, logger);
 
-            // Assert
-            Assert.True(called);
+            // Act & Assert
+            var exception = Record.Exception(() => deserializer.ReceivePacket(new byte[0]));
+            Assert.Null(exception);
         }
     }
 } 

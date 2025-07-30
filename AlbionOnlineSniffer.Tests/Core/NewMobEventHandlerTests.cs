@@ -1,52 +1,89 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Services;
 using Xunit;
 using AlbionOnlineSniffer.Core.Handlers;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewMobEventHandlerTests
     {
-        private class MobsHandlerMock : IMobsManager
+        private readonly ILogger<NewMobEventHandler> _logger;
+        private readonly ILogger<PositionDecryptor> _positionDecryptorLogger;
+        private readonly PositionDecryptor _positionDecryptor;
+
+        public NewMobEventHandlerTests()
         {
-            public bool AddMobCalled { get; private set; }
-            public void AddMob(int id, int typeId, Vector2 position, Health health, byte charge) { AddMobCalled = true; }
-            public void UpdateMobPosition(int id, byte[] encryptedPosition, byte[] xorCode, float heading, DateTime timestamp) { }
-            public void SyncMobsPositions() { }
-            public void Remove(int id) { }
-            public void Clear() { }
-            public void UpdateMobCharge(int id, int charge) { }
-            public void UpdateHealth(int id, int health) { }
+            var loggerFactory = LoggerFactory.Create(builder => {});
+            _logger = loggerFactory.CreateLogger<NewMobEventHandler>();
+            _positionDecryptorLogger = loggerFactory.CreateLogger<PositionDecryptor>();
+            _positionDecryptor = new PositionDecryptor(_positionDecryptorLogger);
         }
 
         [Fact]
-        public async Task HandleAsync_ShouldRaiseOnMobParsedEvent()
+        public async Task HandleNewMob_WithValidParameters_ShouldReturnMob()
         {
             // Arrange
-            var mobsHandler = new MobsHandlerMock();
-            var handler = new NewMobEventHandler(mobsHandler);
-            bool eventRaised = false;
-            handler.OnMobParsed += data => { eventRaised = true; };
-
-            var evt = new NewMobEvent
+            var handler = new NewMobEventHandler(_logger, _positionDecryptor);
+            
+            var parameters = new Dictionary<byte, object>
             {
-                Id = "mob1",
-                TypeId = 42,
-                Position = new Vector2(5, 10),
-                Health = 200,
-                Charge = 3
+                { 1, 12345 }, // ID
+                { 2, 57 }, // TypeId (57 - 15 = 42)
+                { 3, new float[] { 100.5f, 200.3f } }, // Position
+                { 4, 150 }, // CurrentHealth
+                { 5, 150 }, // MaxHealth
+                { 6, 3 } // Charge
             };
 
             // Act
-            await handler.HandleAsync(evt);
+            var result = await handler.HandleNewMob(parameters);
 
             // Assert
-            Assert.True(eventRaised);
-            Assert.True(mobsHandler.AddMobCalled);
+            Assert.NotNull(result);
+            Assert.Equal(12345, result.Id);
+            Assert.Equal(42, result.TypeId); // 57 - 15 = 42
+            Assert.Equal(new Vector2(100.5f, 200.3f), result.Position);
+            Assert.Equal(150, result.Health.Value);
+            Assert.Equal(150, result.Health.MaxValue);
+            Assert.Equal(3, result.Charge);
+        }
+
+        [Fact]
+        public async Task HandleNewMob_WithNullParameters_ShouldReturnNull()
+        {
+            // Arrange
+            var handler = new NewMobEventHandler(_logger, _positionDecryptor);
+
+            // Act
+            var result = await handler.HandleNewMob(null!);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task HandleNewMob_WithMissingRequiredParameters_ShouldReturnNull()
+        {
+            // Arrange
+            var handler = new NewMobEventHandler(_logger, _positionDecryptor);
+            var parameters = new Dictionary<byte, object>
+            {
+                { 1, 12345 } // Apenas ID, faltando outros parâmetros
+            };
+
+            // Act
+            var result = await handler.HandleNewMob(parameters);
+
+            // Assert
+            Assert.Null(result);
         }
     }
 } 

@@ -1,67 +1,93 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Services;
 using Xunit;
 using AlbionOnlineSniffer.Core.Handlers;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
     public class NewCharacterEventHandlerTests
     {
-        private class PlayersHandlerMock : IPlayersManager
+        private readonly ILogger<NewCharacterEventHandler> _logger;
+        private readonly ILogger<PositionDecryptor> _positionDecryptorLogger;
+        private readonly PositionDecryptor _positionDecryptor;
+
+        public NewCharacterEventHandlerTests()
         {
-            public byte[] XorCode { get; set; } = null;
-            public bool AddPlayerCalled { get; private set; }
-            public void AddPlayer(int id, string name, string guild, string alliance, Vector2 pos, Health health, Faction faction, int[] equipments, int[] spells) { AddPlayerCalled = true; }
-            public void Remove(int id) { }
-            public void Clear() { }
-            public void Mounted(int id, bool mounted) { }
-            public void UpdateHealth(int id, int health) { }
-            public void SetFaction(int id, Faction faction) { }
-            public void RegenerateHealth() { }
-            public void UpdateItems(int id, int[] equipments, int[] spells) { }
-            public void SetRegeneration(int id, Health health) { }
-            public void SyncPlayersPosition() { }
-            public void UpdatePlayerPosition(int id, byte[] encryptedPosition, byte[] xorCode, float heading, DateTime timestamp) { }
-            public float[] Decrypt(byte[] coordinates, int offset = 0) => new[] { 10f, 20f };
+            var loggerFactory = LoggerFactory.Create(builder => {});
+            _logger = loggerFactory.CreateLogger<NewCharacterEventHandler>();
+            _positionDecryptorLogger = loggerFactory.CreateLogger<PositionDecryptor>();
+            _positionDecryptor = new PositionDecryptor(_positionDecryptorLogger);
         }
 
-        private class LocalPlayerHandlerMock : ILocalPlayerHandler { }
-        private class ConfigHandlerMock : IConfigHandler { }
-
         [Fact]
-        public async Task HandleAsync_ShouldRaiseOnCharacterParsedEvent()
+        public async Task HandleNewCharacter_WithValidParameters_ShouldReturnPlayer()
         {
             // Arrange
-            var playersHandler = new PlayersHandlerMock();
-            var localPlayerHandler = new LocalPlayerHandlerMock();
-            var configHandler = new ConfigHandlerMock();
-            var handler = new NewCharacterEventHandler(playersHandler, localPlayerHandler, configHandler);
-            bool eventRaised = false;
-            handler.OnCharacterParsed += data => { eventRaised = true; };
-
-            var evt = new NewCharacterEvent
+            var handler = new NewCharacterEventHandler(_logger, _positionDecryptor);
+            
+            var parameters = new Dictionary<byte, object>
             {
-                Id = "char1",
-                Name = "TestChar",
-                Guild = "TestGuild",
-                Alliance = "TestAlliance",
-                Position = new Vector2(1, 2),
-                Health = 100,
-                Faction = 1,
-                Equipments = null,
-                Spells = null
+                { 1, 12345 }, // ID
+                { 2, "TestPlayer" }, // Name
+                { 3, "TestGuild" }, // Guild
+                { 4, "TestAlliance" }, // Alliance
+                { 5, Faction.NoPVP }, // Faction
+                { 6, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 } }, // EncryptedPosition
+                { 7, 5.5f }, // Speed
+                { 8, 100 }, // CurrentHealth
+                { 9, 100 }, // MaxHealth
+                { 10, new int[] { 1, 2, 3 } }, // Equipments
+                { 11, new int[] { 10, 20, 30 } } // Spells
             };
 
             // Act
-            await handler.HandleAsync(evt);
+            var result = await handler.HandleNewCharacter(parameters);
 
             // Assert
-            Assert.True(eventRaised);
-            Assert.True(playersHandler.AddPlayerCalled);
+            Assert.NotNull(result);
+            Assert.Equal(12345, result.Id);
+            Assert.Equal("TestPlayer", result.Name);
+            Assert.Equal("TestGuild", result.Guild);
+            Assert.Equal("TestAlliance", result.Alliance);
+            Assert.Equal(Faction.NoPVP, result.Faction);
+        }
+
+        [Fact]
+        public async Task HandleNewCharacter_WithNullParameters_ShouldReturnNull()
+        {
+            // Arrange
+            var handler = new NewCharacterEventHandler(_logger, _positionDecryptor);
+
+            // Act
+            var result = await handler.HandleNewCharacter(null!);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task HandleNewCharacter_WithMissingRequiredParameters_ShouldReturnNull()
+        {
+            // Arrange
+            var handler = new NewCharacterEventHandler(_logger, _positionDecryptor);
+            var parameters = new Dictionary<byte, object>
+            {
+                { 1, 12345 } // Apenas ID, faltando outros parâmetros
+            };
+
+            // Act
+            var result = await handler.HandleNewCharacter(parameters);
+
+            // Assert
+            Assert.Null(result);
         }
     }
 } 
