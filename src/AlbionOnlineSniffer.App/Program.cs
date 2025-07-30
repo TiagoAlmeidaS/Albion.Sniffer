@@ -4,10 +4,10 @@
  * 1. Lê configurações de appsettings.json (RabbitMQ, Redis, etc).
  * 2. Instancia publishers de fila (RabbitMQ, Redis) via DependencyProvider do módulo Queue.
  * 3. Instancia todos os handlers e serviços de domínio via DependencyProvider do módulo Core.
- * 4. Conecta eventos dos handlers aos publishers (publicação automática de eventos parseados).
- * 5. Instancia o parser central (Protocol16Deserializer) com todos os handlers.
+ * 4. Conecta EventDispatcher ao Publisher para publicação automática de eventos.
+ * 5. Instancia o parser central (Protocol16Deserializer) com PacketProcessor via DI.
  * 6. Instancia o capturador de pacotes via DependencyProvider do módulo Capture e conecta ao parser.
- * 7. Inicia a captura de pacotes. Ao receber pacotes, o fluxo é: Captura -> Parsing -> Handler -> Publicação.
+ * 7. Inicia a captura de pacotes. Ao receber pacotes, o fluxo é: Captura -> Parsing -> PacketProcessor -> EventDispatcher -> Publisher.
  * 8. Logging estruturado e tratamento de erros garantem rastreabilidade e robustez.
  *
  * Para adicionar novos eventos, handlers ou publishers, basta expandir os DependencyProviders e conectar os eventos desejados.
@@ -70,14 +70,36 @@ namespace AlbionOnlineSniffer.App
                 var serviceProvider = services.BuildServiceProvider();
                 
                 // Get services from DI container
-                var playerManager = serviceProvider.GetRequiredService<Core.Handlers.PlayersManager>();
-                var mobManager = serviceProvider.GetRequiredService<Core.Handlers.MobsManager>();
-                var harvestableManager = serviceProvider.GetRequiredService<Core.Handlers.HarvestablesManager>();
-                var lootChestManager = serviceProvider.GetRequiredService<Core.Handlers.LootChestsManager>();
                 var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
+                var packetProcessor = serviceProvider.GetRequiredService<Core.Services.PacketProcessor>();
                 
-                // Configure event handlers
+                // Configure event handlers (exemplos de uso)
                 Core.Services.EventServiceExamples.ConfigureEventHandlers(eventDispatcher, logger);
+
+                // 🔧 INTEGRAÇÃO COM MENSAGERIA - Conectar EventDispatcher ao Publisher
+                eventDispatcher.RegisterGlobalHandler(async gameEvent =>
+                {
+                    try
+                    {
+                        var topic = $"albion.event.{gameEvent.EventType.ToLowerInvariant()}";
+                        var message = new
+                        {
+                            EventType = gameEvent.EventType,
+                            Timestamp = gameEvent.Timestamp,
+                            Data = gameEvent
+                        };
+                        
+                        await publisher.PublishAsync(topic, message);
+                        logger.LogDebug("Evento publicado na fila: {EventType} -> {Topic}", 
+                            gameEvent.EventType, topic);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Erro ao publicar evento na fila: {EventType}", gameEvent.EventType);
+                    }
+                });
+
+                logger.LogInformation("✅ EventDispatcher conectado ao sistema de mensageria!");
 
                 // Configurar serviços de parsing
                 var definitionLoader = Core.DependencyProvider.CreatePhotonDefinitionLoader(
@@ -109,55 +131,13 @@ namespace AlbionOnlineSniffer.App
                     }
                 }
 
-                // Carregar dados de clusters
-                var clusterService = serviceProvider.GetRequiredService<Core.Services.ClusterService>();
-                var clustersPath = Path.Combine(Directory.GetCurrentDirectory(), "src", "AlbionOnlineSniffer.Core", "Data", "jsons", "clusters.json");
-                if (File.Exists(clustersPath))
-                {
-                    clusterService.LoadClusters(clustersPath);
-                    logger.LogInformation("Dados de clusters carregados com sucesso");
-                }
-                else
-                {
-                    logger.LogWarning("Arquivo de clusters não encontrado: {Path}", clustersPath);
-                }
-
-                // Carregar dados de itens
-                var itemDataService = serviceProvider.GetRequiredService<Core.Services.ItemDataService>();
-                var itemsPath = Path.Combine(Directory.GetCurrentDirectory(), "ao-bin-dumps", "items.xml");
-                if (File.Exists(itemsPath))
-                {
-                    itemDataService.LoadItems(itemsPath);
-                    logger.LogInformation("Dados de itens carregados com sucesso");
-                }
-                else
-                {
-                    logger.LogWarning("Arquivo de itens não encontrado: {Path}", itemsPath);
-                }
-
-                // Configurar processador de pacotes
-                var packetProcessor = serviceProvider.GetRequiredService<Core.Services.PacketProcessor>();
-                
                 // Configurar parser
                 var parser = Core.DependencyProvider.CreateProtocol16Deserializer(
                     packetEnricher, 
                     packetProcessor,
                     loggerFactory.CreateLogger<Core.Services.Protocol16Deserializer>());
 
-                // Conectar evento de pacotes enriquecidos ao publisher
-                parser.OnEnrichedPacket += async enrichedPacket =>
-                {
-                    var topic = $"albion.packet.{enrichedPacket.PacketName.ToLowerInvariant()}";
-                    var message = enrichedPacket.ToSerializableObject();
-                    await publisher.PublishAsync(topic, message);
-                    
-                    logger.LogDebug("Pacote enriquecido publicado: {PacketName} -> {Topic}", 
-                        enrichedPacket.PacketName, topic);
-                };
-
                 logger.LogInformation("Sistema de eventos e parsing configurado com sucesso!");
-                logger.LogInformation("Managers disponíveis: Players={PlayerCount}, Mobs={MobCount}, Harvestables={HarvestableCount}, LootChests={LootChestCount}", 
-                    playerManager.PlayerCount, mobManager.MobCount, harvestableManager.HarvestableCount, lootChestManager.LootChestCount);
 
                 // Capture
                 var capture = Capture.DependencyProvider.CreatePacketCaptureService(udpPort: 5050);
@@ -170,7 +150,6 @@ namespace AlbionOnlineSniffer.App
                 logger.LogInformation("Sniffer iniciado. Sistema de eventos funcionando. Pressione ENTER para sair.");
                 Console.ReadLine();
 
-                // capture.Dispose(); // Temporariamente comentado
                 logger.LogInformation("Sniffer finalizado.");
             }
             catch (Exception ex)

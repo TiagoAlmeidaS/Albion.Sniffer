@@ -19,6 +19,18 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     }
 
     /// <summary>
+    /// Evento genérico para uso interno do sistema
+    /// </summary>
+    public class GenericGameEvent : GameEvent
+    {
+        public GenericGameEvent(string eventType)
+        {
+            EventType = eventType;
+            Timestamp = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
     /// Evento de novo jogador detectado
     /// </summary>
     public class PlayerDetectedEvent : GameEvent

@@ -160,10 +160,11 @@ namespace AlbionOnlineSniffer.Core
             MobsManager mobsManager,
             HarvestablesManager harvestablesManager,
             LootChestsManager lootChestsManager,
-            PositionDecryptor positionDecryptor)
+            PositionDecryptor positionDecryptor,
+            EventDispatcher eventDispatcher)
         {
             return new PacketProcessor(logger, packetOffsets, playersManager, mobsManager, 
-                harvestablesManager, lootChestsManager, positionDecryptor);
+                harvestablesManager, lootChestsManager, positionDecryptor, eventDispatcher);
         }
 
         /// <summary>

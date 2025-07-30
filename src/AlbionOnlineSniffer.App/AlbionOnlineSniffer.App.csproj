@@ -27,4 +27,16 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\ao-bin-dumps\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>ao-bin-dumps\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+
+    <Content Include="..\AlbionOnlineSniffer.Core\Data\jsons\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>src\AlbionOnlineSniffer.Core\Data\jsons\%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
 </Project>

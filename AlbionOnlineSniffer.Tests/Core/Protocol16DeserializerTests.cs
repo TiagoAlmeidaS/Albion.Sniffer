@@ -26,6 +26,7 @@ namespace AlbionOnlineSniffer.Tests.Core
             var logger = loggerFactory.CreateLogger<Protocol16Deserializer>();
             var definitionLoader = new PhotonDefinitionLoader(loggerFactory.CreateLogger<PhotonDefinitionLoader>());
             var packetEnricher = new PhotonPacketEnricher(definitionLoader, loggerFactory.CreateLogger<PhotonPacketEnricher>());
+            var eventDispatcher = new EventDispatcher(loggerFactory.CreateLogger<EventDispatcher>());
             var packetProcessor = new PacketProcessor(
                 loggerFactory.CreateLogger<PacketProcessor>(),
                 new PacketOffsets(),
@@ -33,7 +34,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 null!, // MobsManager
                 null!, // HarvestablesManager
                 null!, // LootChestsManager
-                null!  // PositionDecryptor
+                null!, // PositionDecryptor
+                eventDispatcher // EventDispatcher
             );
 
             // Act & Assert
@@ -51,6 +53,7 @@ namespace AlbionOnlineSniffer.Tests.Core
             var logger = loggerFactory.CreateLogger<Protocol16Deserializer>();
             var definitionLoader = new PhotonDefinitionLoader(loggerFactory.CreateLogger<PhotonDefinitionLoader>());
             var packetEnricher = new PhotonPacketEnricher(definitionLoader, loggerFactory.CreateLogger<PhotonPacketEnricher>());
+            var eventDispatcher = new EventDispatcher(loggerFactory.CreateLogger<EventDispatcher>());
             var packetProcessor = new PacketProcessor(
                 loggerFactory.CreateLogger<PacketProcessor>(),
                 new PacketOffsets(),
@@ -58,7 +61,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 null!, // MobsManager
                 null!, // HarvestablesManager
                 null!, // LootChestsManager
-                null!  // PositionDecryptor
+                null!, // PositionDecryptor
+                eventDispatcher // EventDispatcher
             );
             
             var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, logger);
@@ -76,6 +80,7 @@ namespace AlbionOnlineSniffer.Tests.Core
             var logger = loggerFactory.CreateLogger<Protocol16Deserializer>();
             var definitionLoader = new PhotonDefinitionLoader(loggerFactory.CreateLogger<PhotonDefinitionLoader>());
             var packetEnricher = new PhotonPacketEnricher(definitionLoader, loggerFactory.CreateLogger<PhotonPacketEnricher>());
+            var eventDispatcher = new EventDispatcher(loggerFactory.CreateLogger<EventDispatcher>());
             var packetProcessor = new PacketProcessor(
                 loggerFactory.CreateLogger<PacketProcessor>(),
                 new PacketOffsets(),
@@ -83,7 +88,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 null!, // MobsManager
                 null!, // HarvestablesManager
                 null!, // LootChestsManager
-                null!  // PositionDecryptor
+                null!, // PositionDecryptor
+                eventDispatcher // EventDispatcher
             );
             
             var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, logger);

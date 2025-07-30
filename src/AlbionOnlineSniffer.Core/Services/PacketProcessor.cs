@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Handlers;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Models.Events;
 using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Services
@@ -21,6 +22,7 @@ namespace AlbionOnlineSniffer.Core.Services
         private readonly HarvestablesManager _harvestablesManager;
         private readonly LootChestsManager _lootChestsManager;
         private readonly PositionDecryptor _positionDecryptor;
+        private readonly EventDispatcher _eventDispatcher;
 
         // Mapeamento de IDs de pacotes para tipos (baseado no albion-radar-deatheye-2pc)
         private readonly Dictionary<int, string> _packetIdToType = new()
@@ -54,7 +56,7 @@ namespace AlbionOnlineSniffer.Core.Services
         public PacketProcessor(ILogger<PacketProcessor> logger, PacketOffsets packetOffsets, 
             PlayersManager playersManager, MobsManager mobsManager, 
             HarvestablesManager harvestablesManager, LootChestsManager lootChestsManager,
-            PositionDecryptor positionDecryptor)
+            PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
         {
             _logger = logger;
             _packetOffsets = packetOffsets;
@@ -63,6 +65,7 @@ namespace AlbionOnlineSniffer.Core.Services
             _harvestablesManager = harvestablesManager;
             _lootChestsManager = lootChestsManager;
             _positionDecryptor = positionDecryptor;
+            _eventDispatcher = eventDispatcher;
         }
 
         /// <summary>
@@ -126,51 +129,78 @@ namespace AlbionOnlineSniffer.Core.Services
         /// </summary>
         private async Task ProcessPacketByType(string packetType, Dictionary<byte, object> parameters)
         {
-            switch (packetType)
+            try
             {
-                case "NewCharacter":
-                    await _playersManager.ProcessNewCharacter(parameters);
-                    break;
+                switch (packetType)
+                {
+                    case "NewCharacter":
+                        await _playersManager.ProcessNewCharacter(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("NewCharacter"));
+                        break;
 
-                case "Move":
-                    await _playersManager.ProcessMove(parameters);
-                    break;
+                    case "Move":
+                        await _playersManager.ProcessMove(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("Move"));
+                        break;
 
-                case "NewMobEvent":
-                    await _mobsManager.ProcessNewMob(parameters);
-                    break;
+                    case "NewMobEvent":
+                        await _mobsManager.ProcessNewMob(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("NewMobEvent"));
+                        break;
 
-                case "NewHarvestableObject":
-                    await _harvestablesManager.ProcessNewHarvestable(parameters);
-                    break;
+                    case "NewHarvestableObject":
+                        await _harvestablesManager.ProcessNewHarvestable(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("NewHarvestableObject"));
+                        break;
 
-                case "NewLootChest":
-                    await _lootChestsManager.ProcessNewLootChest(parameters);
-                    break;
+                    case "NewLootChest":
+                        await _lootChestsManager.ProcessNewLootChest(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("NewLootChest"));
+                        break;
 
-                case "Leave":
-                    ProcessLeave(parameters);
-                    break;
+                    case "Leave":
+                        ProcessLeave(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("Leave"));
+                        break;
 
-                case "HealthUpdateEvent":
-                    ProcessHealthUpdate(parameters);
-                    break;
+                    case "HealthUpdateEvent":
+                        ProcessHealthUpdate(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("HealthUpdateEvent"));
+                        break;
 
-                case "Mounted":
-                    ProcessMounted(parameters);
-                    break;
+                    case "Mounted":
+                        ProcessMounted(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("Mounted"));
+                        break;
 
-                case "MobChangeState":
-                    ProcessMobChangeState(parameters);
-                    break;
+                    case "MobChangeState":
+                        ProcessMobChangeState(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("MobChangeState"));
+                        break;
 
-                case "HarvestableChangeState":
-                    ProcessHarvestableChangeState(parameters);
-                    break;
+                    case "HarvestableChangeState":
+                        ProcessHarvestableChangeState(parameters);
+                        // Disparar evento para mensageria
+                        await _eventDispatcher.DispatchEvent(new GenericGameEvent("HarvestableChangeState"));
+                        break;
 
-                default:
-                    _logger.LogDebug("Tipo de pacote não processado: {PacketType}", packetType);
-                    break;
+                    default:
+                        _logger.LogDebug("Tipo de pacote não processado: {PacketType}", packetType);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar pacote do tipo {PacketType}: {Message}", packetType, ex.Message);
             }
         }
 
