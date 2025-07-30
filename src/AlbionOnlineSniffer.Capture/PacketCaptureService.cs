@@ -63,15 +63,21 @@ namespace AlbionOnlineSniffer.Capture
                 Console.WriteLine($"Dispositivo {i}: {dev.Description} ({dev.Name})");
                 if (dev is SharpPcap.LibPcap.LibPcapLiveDevice liveDev)
                 {
-                    Console.WriteLine($"  - Endereços: {liveDev.Addresses?.Count ?? 0}");
-                    if (liveDev.Addresses != null)
+                    if (liveDev.Addresses?.Count > 0)
                     {
                         foreach (var addr in liveDev.Addresses)
                         {
-                            Console.WriteLine($"    - {addr.Addr.ipAddress} / {addr.Netmask.ipAddress}");
+                            var ip = addr.Addr?.ipAddress?.ToString() ?? "sem IP";
+                            var mask = addr.Netmask?.ipAddress?.ToString() ?? "sem máscara";
+                            Console.WriteLine($"    - {ip} / {mask}");
                         }
                     }
+                    else
+                    {
+                        Console.WriteLine("  - Nenhum endereço associado.");
+                    }
                 }
+
             }
 
             // Estratégia baseada no albion-radar-deatheye-2pc: capturar todos os dispositivos válidos
