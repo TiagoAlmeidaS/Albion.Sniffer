@@ -1,196 +1,170 @@
-// Classe responsável por gerenciar o estado e a coleção de jogadores do jogo.
-// Não processa eventos diretamente, apenas mantém e manipula o estado dos players.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
 using AlbionOnlineSniffer.Core.Models.Events;
-using AlbionOnlineSniffer.Core.Models;
-using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
-    public class PlayersManager : IPlayersManager
+    /// <summary>
+    /// Gerenciador de jogadores baseado no albion-radar-deatheye-2pc
+    /// </summary>
+    public class PlayersManager
     {
-        public ConcurrentDictionary<int, Player> PlayersList { get; } = new();
-        private readonly List<PlayerItems> _itemsList;
-        public byte[]? XorCode { get; set; }
+        private readonly ILogger<PlayersManager> _logger;
+        private readonly PositionDecryptor _positionDecryptor;
+        private readonly ConcurrentDictionary<int, Player> _players = new();
+        private readonly NewCharacterEventHandler _newCharacterHandler;
+        private readonly MoveEventHandler _moveHandler;
+        private readonly EventDispatcher _eventDispatcher;
 
-        public PlayersManager(List<PlayerItems> itemsList)
+        public PlayersManager(ILogger<PlayersManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
         {
-            _itemsList = itemsList;
+            _logger = logger;
+            _positionDecryptor = positionDecryptor;
+            _eventDispatcher = eventDispatcher;
+            
+            // Criar loggers específicos para os handlers
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var newCharacterLogger = loggerFactory.CreateLogger<NewCharacterEventHandler>();
+            var moveLogger = loggerFactory.CreateLogger<MoveEventHandler>();
+            
+            _newCharacterHandler = new NewCharacterEventHandler(newCharacterLogger, positionDecryptor);
+            _moveHandler = new MoveEventHandler(moveLogger, positionDecryptor);
         }
 
-        public float[] Decrypt(byte[] coordinates, int offset = 0)
+        /// <summary>
+        /// Adiciona um novo jogador
+        /// </summary>
+        public void AddPlayer(int id, string name, string guild, string alliance, Vector2 position, Health health, Faction faction, Equipment equipment, int[] spells)
         {
-            var code = XorCode;
-            if (code == null)
+            lock (_players)
             {
-                return new[] { BitConverter.ToSingle(coordinates, offset), BitConverter.ToSingle(coordinates, offset + 4) };
+                if (_players.ContainsKey(id))
+                {
+                    _players.TryRemove(id, out Player? existingPlayer);
+                }
+
+                var player = new Player(id, name, guild, alliance, position, health, faction, equipment, spells);
+                _players.TryAdd(id, player);
+                
+                _logger.LogInformation("Jogador adicionado: {Name} (ID: {Id})", name, id);
+
+                // Disparar evento de jogador detectado
+                _ = _eventDispatcher.DispatchEvent(new PlayerDetectedEvent(player));
             }
-            var x = coordinates.Skip(offset).Take(4).ToArray();
-            var y = coordinates.Skip(offset + 4).Take(4).ToArray();
-            Decrypt(x, code, 0);
-            Decrypt(y, code, 4);
-            return new[] { BitConverter.ToSingle(x, 0), BitConverter.ToSingle(y, 0) };
         }
 
-        private static void Decrypt(byte[] bytes4, byte[] saltBytes8, int saltPos)
+        /// <summary>
+        /// Remove um jogador
+        /// </summary>
+        public void RemovePlayer(int id)
         {
-            for (var i = 0; i < bytes4.Length; i++)
+            lock (_players)
             {
-                var saltIndex = i % (saltBytes8.Length - saltPos) + saltPos;
-                bytes4[i] ^= saltBytes8[saltIndex];
+                if (_players.TryRemove(id, out Player? player))
+                {
+                    _logger.LogInformation("Jogador removido: {Name} (ID: {Id})", player?.Name ?? "Unknown", id);
+                    
+                    // Disparar evento de jogador saiu
+                    _ = _eventDispatcher.DispatchEvent(new PlayerLeftEvent(id));
+                }
             }
         }
 
-        public void AddPlayer(int id, string name, string guild, string alliance, Vector2 position, Health health, Faction faction, int[] equipments, int[] spells)
+        /// <summary>
+        /// Atualiza a posição de um jogador
+        /// </summary>
+        public void UpdatePlayerPosition(int id, Vector2 position)
         {
-            lock (PlayersList)
+            lock (_players)
             {
-                if (PlayersList.ContainsKey(id))
-                    PlayersList.TryRemove(id, out _);
-                PlayersList.TryAdd(id, new Player(id, name, guild, alliance, position, health, faction, LoadEquipment(equipments), spells));
+                if (_players.TryGetValue(id, out Player? player))
+                {
+                    player.Position = position;
+                    player.Time = DateTime.UtcNow;
+                    
+                    // Disparar evento de movimento
+                    _ = _eventDispatcher.DispatchEvent(new PlayerMovedEvent(id, position));
+                }
             }
         }
 
-        public void Remove(int id)
+        /// <summary>
+        /// Atualiza a saúde de um jogador
+        /// </summary>
+        public void UpdatePlayerHealth(int id, int health)
         {
-            lock (PlayersList)
-                PlayersList.TryRemove(id, out _);
+            lock (_players)
+            {
+                if (_players.TryGetValue(id, out Player? player))
+                {
+                    player.Health.Value = health;
+                }
+            }
         }
 
+        /// <summary>
+        /// Processa um evento NewCharacter
+        /// </summary>
+        public async Task ProcessNewCharacter(Dictionary<byte, object> parameters)
+        {
+            var player = await _newCharacterHandler.HandleNewCharacter(parameters);
+            if (player is not null)
+            {
+                AddPlayer(player.Id, player.Name, player.Guild, player.Alliance, 
+                         player.Position, player.Health, player.Faction, player.Equipment, player.Spells);
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento Move
+        /// </summary>
+        public async Task ProcessMove(Dictionary<byte, object> parameters)
+        {
+            var moveData = await _moveHandler.HandleMove(parameters);
+            if (moveData != null)
+            {
+                UpdatePlayerPosition(moveData.PlayerId, moveData.Position);
+            }
+        }
+
+        /// <summary>
+        /// Obtém todos os jogadores
+        /// </summary>
+        public IEnumerable<Player> GetAllPlayers()
+        {
+            return _players.Values;
+        }
+
+        /// <summary>
+        /// Obtém um jogador específico
+        /// </summary>
+        public Player? GetPlayer(int id)
+        {
+            _players.TryGetValue(id, out Player? player);
+            return player;
+        }
+
+        /// <summary>
+        /// Limpa todos os jogadores
+        /// </summary>
         public void Clear()
         {
-            lock (PlayersList)
-                PlayersList.Clear();
-        }
-
-        public void Mounted(int id, bool isMounted)
-        {
-            lock (PlayersList)
+            lock (_players)
             {
-                if (PlayersList.TryGetValue(id, out var player))
-                    player.IsMounted = isMounted;
+                _players.Clear();
+                _logger.LogInformation("Todos os jogadores foram removidos");
             }
         }
 
-        public void UpdateHealth(int id, int health)
-        {
-            lock (PlayersList)
-            {
-                if (PlayersList.TryGetValue(id, out var player))
-                    player.Health.Value = health;
-            }
-        }
-
-        public void SetFaction(int id, Faction faction)
-        {
-            lock (PlayersList)
-            {
-                if (PlayersList.TryGetValue(id, out var player))
-                    player.Faction = faction;
-            }
-        }
-
-        public void RegenerateHealth()
-        {
-            lock (PlayersList)
-            {
-                foreach (var p in PlayersList.Values.ToList())
-                {
-                    if (p != null && p.Health.IsRegeneration)
-                        p.Health.Value += (int)p.Health.Regeneration;
-                }
-            }
-        }
-
-        public void UpdateItems(int id, int[] equipment, int[] spells)
-        {
-            lock (PlayersList)
-            {
-                if (PlayersList.TryGetValue(id, out var player))
-                {
-                    player.Equipment = LoadEquipment(equipment);
-                    player.Spells = spells;
-                }
-            }
-        }
-
-        public void SetRegeneration(int id, Health health)
-        {
-            lock (PlayersList)
-            {
-                if (PlayersList.TryGetValue(id, out var player))
-                    player.Health = health;
-            }
-        }
-
-        public void SyncPlayersPosition()
-        {
-            lock (PlayersList)
-            {
-                foreach (var p in PlayersList.Values.ToList())
-                {
-                    if (p == null || p.IsStanding || p.Speed == 0) continue;
-                    Vector2 posDiff = p.Position - p.NewPosition;
-                    if (posDiff == Vector2.Zero) continue;
-                    p.Position -= posDiff * (float)((DateTime.UtcNow - p.Time).TotalSeconds / (posDiff.Length() / (p.Speed / 10)));
-                }
-            }
-        }
-
-        public void UpdatePlayerPosition(int id, byte[] positionBytes, byte[] newPositionBytes, float speed, DateTime time)
-        {
-            lock (PlayersList)
-            {
-                Vector2 position = Vector2.Zero;
-                Vector2 newPosition = Vector2.Zero;
-                if (XorCode != null)
-                {
-                    var pos = Decrypt(positionBytes);
-                    position = new Vector2(pos[1], pos[0]);
-                    var newPos = Decrypt(newPositionBytes);
-                    newPosition = new Vector2(newPos[1], newPos[0]);
-                }
-                if (PlayersList.TryGetValue(id, out var player))
-                {
-                    player.IsStanding = (player.Position - position).Length() <= 0.05;
-                    player.Position = position;
-                    player.Speed = speed;
-                    player.Time = time;
-                    player.NewPosition = newPosition;
-                }
-            }
-        }
-
-        private Equipment LoadEquipment(int[] values)
-        {
-            Array.Resize(ref values, 8);
-            Equipment equipment = new Equipment();
-            for (int i = 0; i < values.Length; i++)
-            {
-                if (_itemsList.Exists(x => x.Id == values[i]))
-                {
-                    equipment.Items.Add(_itemsList.Find(x => x.Id == values[i]));
-                }
-                else if (values[i] == 0 || values[i] == -1)
-                {
-                    equipment.Items.Add(new PlayerItems() { Id = 0, Itempower = 0, Name = "NULL" });
-                }
-                else
-                {
-                    equipment.Items.Add(new PlayerItems() { Id = 0, Itempower = 0, Name = "T1_TRASH" });
-                }
-            }
-            equipment.AllItemPower = GetItemPower(equipment.Items);
-            return equipment;
-        }
-
-        private int GetItemPower(List<PlayerItems> items)
-        {
-            return items.Sum(i => i.Itempower);
-        }
+        /// <summary>
+        /// Obtém a contagem de jogadores
+        /// </summary>
+        public int PlayerCount => _players.Count;
     }
 } 

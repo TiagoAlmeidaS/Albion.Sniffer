@@ -3,6 +3,7 @@ using PacketDotNet;
 using System;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 
 namespace AlbionOnlineSniffer.Capture
 {
@@ -17,34 +18,126 @@ namespace AlbionOnlineSniffer.Capture
         // Evento para encaminhar o payload UDP ao parser
         public event Action<byte[]>? OnUdpPayloadCaptured;
 
-        public PacketCaptureService(int udpPort = 5056)
+        public PacketCaptureService(int udpPort = 5050) // Corrigido para porta 5050 como no albion-radar-deatheye-2pc
         {
             _udpPort = udpPort;
             _filter = $"udp and port {_udpPort}";
         }
 
+        private void CheckCaptureDrivers()
+        {
+            Console.WriteLine("Verificando drivers de captura de pacotes...");
+            
+            // Verificar se estamos no Windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.WriteLine("Sistema operacional: Windows");
+                Console.WriteLine("IMPORTANTE: Para captura de pacotes no Windows, você precisa:");
+                Console.WriteLine("1. Instalar Npcap (https://npcap.com/) ou WinPcap");
+                Console.WriteLine("2. Executar o programa como Administrador");
+                Console.WriteLine("3. Verificar se o firewall não está bloqueando");
+            }
+        }
+
         public void Start()
         {
+            CheckCaptureDrivers();
+            
             var devices = CaptureDeviceList.Instance;
+            Console.WriteLine($"Dispositivos disponíveis: {devices.Count}");
+            
             if (devices.Count <= 0)
+            {
+                Console.WriteLine("ERRO: Nenhum adaptador de rede encontrado.");
+                Console.WriteLine("Possíveis causas:");
+                Console.WriteLine("- Npcap/WinPcap não está instalado");
+                Console.WriteLine("- Programa não está sendo executado como Administrador");
+                Console.WriteLine("- Firewall bloqueando acesso aos adaptadores");
                 throw new InvalidOperationException("No network adapters available for capture.");
+            }
 
-            // Seleciona o primeiro dispositivo válido (pode ser customizável depois)
-            var device = devices.FirstOrDefault(d => d.MacAddress != null ||
-                ((d as SharpPcap.LibPcap.LibPcapLiveDevice)?.Addresses?.Any(e => e.Addr.ipAddress?.Equals(IPAddress.Loopback) ?? false) ?? false));
+            // Listar todos os dispositivos para debug
+            for (int i = 0; i < devices.Count; i++)
+            {
+                var dev = devices[i];
+                Console.WriteLine($"Dispositivo {i}: {dev.Description} ({dev.Name})");
+                if (dev is SharpPcap.LibPcap.LibPcapLiveDevice liveDev)
+                {
+                    Console.WriteLine($"  - Endereços: {liveDev.Addresses?.Count ?? 0}");
+                    if (liveDev.Addresses != null)
+                    {
+                        foreach (var addr in liveDev.Addresses)
+                        {
+                            Console.WriteLine($"    - {addr.Addr.ipAddress} / {addr.Netmask.ipAddress}");
+                        }
+                    }
+                }
+            }
 
-            if (device == null)
-                throw new InvalidOperationException("No suitable network adapter found.");
+            // Estratégia baseada no albion-radar-deatheye-2pc: capturar todos os dispositivos válidos
+            var validDevices = devices.Where(d => 
+            {
+                // Incluir dispositivos com MAC address ou loopback (como no albion-radar-deatheye-2pc)
+                if (d.MacAddress != null)
+                {
+                    Console.WriteLine($"  - Dispositivo válido (MAC): {d.Description}");
+                    return true;
+                }
+                
+                // Capturar loopback também (como no albion-radar-deatheye-2pc)
+                if (d is SharpPcap.LibPcap.LibPcapLiveDevice liveDev)
+                {
+                    var hasLoopback = liveDev.Addresses?.Any(e => e.Addr.ipAddress?.Equals(IPAddress.Loopback) ?? false) ?? false;
+                    if (hasLoopback)
+                    {
+                        Console.WriteLine($"  - Dispositivo loopback: {d.Description}");
+                        return true;
+                    }
+                }
+                
+                Console.WriteLine($"  - Dispositivo inválido: {d.Description}");
+                return false;
+            }).ToList();
 
-            _device = device;
-            _device.OnPacketArrival += Device_OnPacketArrival;
-            _device.Open(new DeviceConfiguration {
-                Mode = DeviceModes.Promiscuous | DeviceModes.DataTransferUdp | DeviceModes.MaxResponsiveness,
-                ReadTimeout = 5
-            });
-            _device.Filter = _filter;
-            _device.StartCapture();
-            _isCapturing = true;
+            if (!validDevices.Any())
+            {
+                Console.WriteLine("ERRO: Nenhum adaptador de rede válido encontrado.");
+                throw new InvalidOperationException("No valid network adapters found.");
+            }
+
+            // Iniciar captura em todos os dispositivos válidos (como no albion-radar-deatheye-2pc)
+            foreach (var device in validDevices)
+            {
+                try
+                {
+                    Console.WriteLine($"Iniciando captura no dispositivo: {device.Description}");
+                    StartCaptureOnDevice(device);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"ERRO ao iniciar captura no dispositivo {device.Description}: {ex.Message}");
+                }
+            }
+        }
+
+        private void StartCaptureOnDevice(ICaptureDevice device)
+        {
+            if (!device.Started)
+            {
+                device.Open(new DeviceConfiguration
+                {
+                    Mode = DeviceModes.DataTransferUdp | DeviceModes.Promiscuous | DeviceModes.MaxResponsiveness,
+                    ReadTimeout = 5
+                });
+
+                device.Filter = _filter;
+                device.OnPacketArrival += Device_OnPacketArrival;
+                device.StartCapture();
+                _isCapturing = true;
+                
+                Console.WriteLine($"Captura iniciada no dispositivo: {device.Description}");
+                Console.WriteLine($"Filtro aplicado: {_filter}");
+            }
         }
 
         private void Device_OnPacketArrival(object sender, PacketCapture e)

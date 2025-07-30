@@ -1,5 +1,5 @@
 using System.Numerics;
-using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
 
 namespace AlbionOnlineSniffer.Core.Interfaces
 {

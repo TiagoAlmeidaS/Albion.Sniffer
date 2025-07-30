@@ -274,5 +274,21 @@ __pycache__/
 *.idea/
 *bin/
 
+albion-radar-deatheye-2pc/
+albion-radar-deatheye-2pc/**/*
+albion-radar-deatheye-2pc/**/**/*
+albion-radar-deatheye-2pc/**/**/**/*
+albion-radar-deatheye-2pc/**/**/**/**/*
+albion-radar-deatheye-2pc/**/**/**/**/**/*
+albion-radar-deatheye-2pc/**/**/**/**/**/**/*
+albion-radar-deatheye-2pc/**/**/**/**/**/**/**/*
 
-
+*ao-bin-dumps/
+*ao-bin-dumps/*
+*ao-bin-dumps/**/*
+*ao-bin-dumps/**/**/*
+*ao-bin-dumps/**/**/**/*
+*ao-bin-dumps/**/**/**/**/*
+*ao-bin-dumps/**/**/**/**/**/*
+*ao-bin-dumps/**/**/**/**/**/**/*
+*ao-bin-dumps/**/**/**/**/**/**/**/*

@@ -13,15 +13,11 @@
  * Para adicionar novos eventos, handlers ou publishers, basta expandir os DependencyProviders e conectar os eventos desejados.
  */
 
-using System;
-using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using AlbionOnlineSniffer.Queue;
-using AlbionOnlineSniffer.Queue.Interfaces;
 using AlbionOnlineSniffer.Core;
-using AlbionOnlineSniffer.Core.Handlers;
-using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Capture;
 
 namespace AlbionOnlineSniffer.App
@@ -42,103 +38,139 @@ namespace AlbionOnlineSniffer.App
                 logger.LogInformation("Iniciando AlbionOnlineSniffer...");
 
                 // Configuração
-                var config = new ConfigurationBuilder()
+                var configuration = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                     .Build();
 
-                // Publishers
-                var rabbitHost = config["RabbitMQ:ConnectionString"];
-                var rabbitExchange = config["RabbitMQ:Exchange"];
-                using IQueuePublisher rabbitPublisher = Queue.DependencyProvider.CreateRabbitMqPublisher(rabbitHost, rabbitExchange);
-                // using IQueuePublisher redisPublisher = Queue.DependencyProvider.CreateRedisPublisher(redisConn);
+                var binDumpsEnabled = configuration.GetValue<bool>("BinDumps:Enabled", true);
+                var binDumpsPath = configuration.GetValue<string>("BinDumps:BasePath", "ao-bin-dumps");
                 
-                //TODO: Implementar Redis Publisher posteriormente
-                // var redisConn = config["Redis:ConnectionString"];
-                // using IQueuePublisher redisPublisher = Queue.DependencyProvider.CreateRedisPublisher(redisConn);
+                logger.LogInformation("Configuração de bin-dumps: Habilitado={Enabled}, Caminho={Path}", 
+                    binDumpsEnabled, binDumpsPath);
 
-                // Core Handlers
-                var playersManager = Core.DependencyProvider.CreatePlayersManager();
-                var mobsManager = Core.DependencyProvider.CreateMobsManager();
-                var harvestablesManager = Core.DependencyProvider.CreateHarvestablesManager();
-                var lootChestsManager = Core.DependencyProvider.CreateLootChestsManager();
-                var dungeonsManager = Core.DependencyProvider.CreateDungeonsManager();
-                var fishNodesManager = Core.DependencyProvider.CreateFishNodesManager();
-                var gatedWispsManager = Core.DependencyProvider.CreateGatedWispsManager();
-                var configHandler = Core.DependencyProvider.CreateConfigHandler();
-                var localPlayerHandler = Core.DependencyProvider.CreateLocalPlayerHandler();
+                // Publishers
+                var rabbitMqConnectionString = configuration.GetConnectionString("RabbitMQ") ?? 
+                    configuration.GetValue<string>("RabbitMQ:ConnectionString") ?? 
+                    "amqp://localhost";
+                var exchange = configuration.GetValue<string>("RabbitMQ:Exchange", "albion.sniffer");
+                
+                var publisher = Queue.DependencyProvider.CreateRabbitMqPublisher(rabbitMqConnectionString, exchange);
 
-                // Event Handlers
-                var characterHandler = new NewCharacterEventHandler(playersManager, localPlayerHandler, configHandler);
-                var mobHandler = new NewMobEventHandler(mobsManager);
-                var harvestableHandler = new NewHarvestableEventHandler(harvestablesManager);
-                var lootChestHandler = new NewLootChestEventHandler(lootChestsManager);
-                var dungeonHandler = new NewDungeonEventHandler(dungeonsManager);
-                var fishingZoneHandler = new NewFishingZoneEventHandler(fishNodesManager);
-                var gatedWispHandler = new NewGatedWispEventHandler(gatedWispsManager);
-                var wispGateOpenedHandler = new WispGateOpenedEventHandler(gatedWispsManager);
+                // Configure dependency injection
+                var services = new ServiceCollection();
+                
+                // Add logging
+                services.AddLogging(builder => builder.AddConsole());
+                
+                // Register Core services
+                Core.DependencyProvider.RegisterServices(services);
+                
+                // Build service provider
+                var serviceProvider = services.BuildServiceProvider();
+                
+                // Get services from DI container
+                var playerManager = serviceProvider.GetRequiredService<Core.Handlers.PlayersManager>();
+                var mobManager = serviceProvider.GetRequiredService<Core.Handlers.MobsManager>();
+                var harvestableManager = serviceProvider.GetRequiredService<Core.Handlers.HarvestablesManager>();
+                var lootChestManager = serviceProvider.GetRequiredService<Core.Handlers.LootChestsManager>();
+                var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
+                
+                // Configure event handlers
+                Core.Services.EventServiceExamples.ConfigureEventHandlers(eventDispatcher, logger);
 
-                // Conectar eventos dos handlers aos publishers
-                characterHandler.OnCharacterParsed += async data => {
-                    logger.LogInformation("Evento: Novo personagem detectado");
-                    await rabbitPublisher.PublishAsync("character.new", data);
-                    // await redisPublisher.PublishAsync("character.new", data);
-                };
-                mobHandler.OnMobParsed += async data => {
-                    logger.LogInformation("Evento: Novo mob detectado");
-                    await rabbitPublisher.PublishAsync("mob.new", data);
-                    // await redisPublisher.PublishAsync("mob.new", data);
-                };
-                harvestableHandler.OnHarvestableParsed += async data => {
-                    logger.LogInformation("Evento: Novo harvestable detectado");
-                    await rabbitPublisher.PublishAsync("harvestable.new", data);
-                    // await redisPublisher.PublishAsync("harvestable.new", data);
-                };
-                lootChestHandler.OnLootChestParsed += async data => {
-                    logger.LogInformation("Evento: Novo loot chest detectado");
-                    await rabbitPublisher.PublishAsync("lootchest.new", data);
-                    // await redisPublisher.PublishAsync("lootchest.new", data);
-                };
-                dungeonHandler.OnDungeonParsed += async data => {
-                    logger.LogInformation("Evento: Nova dungeon detectada");
-                    await rabbitPublisher.PublishAsync("dungeon.new", data);
-                    // await redisPublisher.PublishAsync("dungeon.new", data);
-                };
-                fishingZoneHandler.OnFishingZoneParsed += async data => {
-                    logger.LogInformation("Evento: Nova fishing zone detectada");
-                    await rabbitPublisher.PublishAsync("fishingzone.new", data);
-                    // await redisPublisher.PublishAsync("fishingzone.new", data);
-                };
-                gatedWispHandler.OnGatedWispParsed += async data => {
-                    logger.LogInformation("Evento: Novo gated wisp detectado");
-                    await rabbitPublisher.PublishAsync("gatedwisp.new", data);
-                    // await redisPublisher.PublishAsync("gatedwisp.new", data);
-                };
-                wispGateOpenedHandler.OnWispGateOpenedParsed += async data => {
-                    logger.LogInformation("Evento: Wisp gate opened detectado");
-                    await rabbitPublisher.PublishAsync("wispopened.new", data);
-                    // await redisPublisher.PublishAsync("wispopened.new", data);
-                };
+                // Configurar serviços de parsing
+                var definitionLoader = Core.DependencyProvider.CreatePhotonDefinitionLoader(
+                    loggerFactory.CreateLogger<Core.Services.PhotonDefinitionLoader>());
+                
+                var packetEnricher = Core.DependencyProvider.CreatePhotonPacketEnricher(
+                    definitionLoader, 
+                    loggerFactory.CreateLogger<Core.Services.PhotonPacketEnricher>());
 
-                // Instanciar parser com handlers
-                var parser = new Protocol16Deserializer(new object[]
+                // Carregar definições dos bin-dumps se habilitado
+                if (binDumpsEnabled)
                 {
-                    characterHandler, mobHandler, harvestableHandler, lootChestHandler,
-                    dungeonHandler, fishingZoneHandler, gatedWispHandler, wispGateOpenedHandler
-                });
+                    try
+                    {
+                        var fullBinDumpsPath = Path.Combine(Directory.GetCurrentDirectory(), binDumpsPath);
+                        if (Directory.Exists(fullBinDumpsPath))
+                        {
+                            definitionLoader.Load(fullBinDumpsPath);
+                            logger.LogInformation("Definições dos bin-dumps carregadas com sucesso");
+                        }
+                        else
+                        {
+                            logger.LogWarning("Diretório de bin-dumps não encontrado: {Path}", fullBinDumpsPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Erro ao carregar definições dos bin-dumps: {Message}", ex.Message);
+                    }
+                }
+
+                // Carregar dados de clusters
+                var clusterService = serviceProvider.GetRequiredService<Core.Services.ClusterService>();
+                var clustersPath = Path.Combine(Directory.GetCurrentDirectory(), "src", "AlbionOnlineSniffer.Core", "Data", "jsons", "clusters.json");
+                if (File.Exists(clustersPath))
+                {
+                    clusterService.LoadClusters(clustersPath);
+                    logger.LogInformation("Dados de clusters carregados com sucesso");
+                }
+                else
+                {
+                    logger.LogWarning("Arquivo de clusters não encontrado: {Path}", clustersPath);
+                }
+
+                // Carregar dados de itens
+                var itemDataService = serviceProvider.GetRequiredService<Core.Services.ItemDataService>();
+                var itemsPath = Path.Combine(Directory.GetCurrentDirectory(), "ao-bin-dumps", "items.xml");
+                if (File.Exists(itemsPath))
+                {
+                    itemDataService.LoadItems(itemsPath);
+                    logger.LogInformation("Dados de itens carregados com sucesso");
+                }
+                else
+                {
+                    logger.LogWarning("Arquivo de itens não encontrado: {Path}", itemsPath);
+                }
+
+                // Configurar processador de pacotes
+                var packetProcessor = serviceProvider.GetRequiredService<Core.Services.PacketProcessor>();
+                
+                // Configurar parser
+                var parser = Core.DependencyProvider.CreateProtocol16Deserializer(
+                    packetEnricher, 
+                    packetProcessor,
+                    loggerFactory.CreateLogger<Core.Services.Protocol16Deserializer>());
+
+                // Conectar evento de pacotes enriquecidos ao publisher
+                parser.OnEnrichedPacket += async enrichedPacket =>
+                {
+                    var topic = $"albion.packet.{enrichedPacket.PacketName.ToLowerInvariant()}";
+                    var message = enrichedPacket.ToSerializableObject();
+                    await publisher.PublishAsync(topic, message);
+                    
+                    logger.LogDebug("Pacote enriquecido publicado: {PacketName} -> {Topic}", 
+                        enrichedPacket.PacketName, topic);
+                };
+
+                logger.LogInformation("Sistema de eventos e parsing configurado com sucesso!");
+                logger.LogInformation("Managers disponíveis: Players={PlayerCount}, Mobs={MobCount}, Harvestables={HarvestableCount}, LootChests={LootChestCount}", 
+                    playerManager.PlayerCount, mobManager.MobCount, harvestableManager.HarvestableCount, lootChestManager.LootChestCount);
 
                 // Capture
-                var capture = Capture.DependencyProvider.CreatePacketCaptureService(udpPort: 5056);
+                var capture = Capture.DependencyProvider.CreatePacketCaptureService(udpPort: 5050);
                 capture.OnUdpPayloadCaptured += parser.ReceivePacket;
 
                 // Iniciar captura
-                logger.LogInformation("Iniciando captura de pacotes...");
+                logger.LogInformation("Iniciando captura de pacotes na porta UDP {Port}...", 5050);
                 capture.Start();
 
-                logger.LogInformation("Sniffer iniciado. Pressione ENTER para sair.");
+                logger.LogInformation("Sniffer iniciado. Sistema de eventos funcionando. Pressione ENTER para sair.");
                 Console.ReadLine();
 
-                capture.Dispose();
+                // capture.Dispose(); // Temporariamente comentado
                 logger.LogInformation("Sniffer finalizado.");
             }
             catch (Exception ex)

@@ -1,67 +1,199 @@
-// Classe responsável por gerenciar o estado e a coleção de harvestables do jogo.
-// Não processa eventos diretamente, apenas mantém e manipula o estado dos harvestables.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using AlbionOnlineSniffer.Core.Interfaces;
+using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
 using AlbionOnlineSniffer.Core.Models.Events;
-using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
-    public class HarvestablesManager : IHarvestablesManager
+    /// <summary>
+    /// Gerenciador de harvestables baseado no albion-radar-deatheye-2pc
+    /// </summary>
+    public class HarvestablesManager
     {
-        public ConcurrentDictionary<int, Harvestable> HarvestableList { get; } = new();
-        private readonly Dictionary<int, string> _harvestableTypes;
-        private readonly LocalPlayerHandler _localPlayerHandler;
-        public HarvestablesManager(Dictionary<int, string> harvestableTypes, LocalPlayerHandler localPlayerHandler)
+        private readonly ILogger<HarvestablesManager> _logger;
+        private readonly PositionDecryptor _positionDecryptor;
+        private readonly ConcurrentDictionary<int, Harvestable> _harvestables = new();
+        private readonly NewHarvestableEventHandler _newHarvestableHandler;
+        private readonly EventDispatcher _eventDispatcher;
+        private readonly Dictionary<int, string> _harvestableTypes = new();
+
+        public HarvestablesManager(ILogger<HarvestablesManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
         {
-            _harvestableTypes = harvestableTypes;
-            _localPlayerHandler = localPlayerHandler;
+            _logger = logger;
+            _positionDecryptor = positionDecryptor;
+            _eventDispatcher = eventDispatcher;
+            
+            // Criar logger específico para o handler
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var newHarvestableLogger = loggerFactory.CreateLogger<NewHarvestableEventHandler>();
+            
+            _newHarvestableHandler = new NewHarvestableEventHandler(newHarvestableLogger, positionDecryptor);
+            
+            // Inicializar tipos de harvestables básicos
+            InitializeHarvestableTypes();
         }
+
+        /// <summary>
+        /// Adiciona um novo harvestable
+        /// </summary>
         public void AddHarvestable(int id, int type, int tier, Vector2 position, int count, int charge)
         {
-            lock (HarvestableList)
+            lock (_harvestables)
             {
-                if (HarvestableList.ContainsKey(id))
-                    HarvestableList.TryRemove(id, out _);
-                HarvestableList.TryAdd(id, new Harvestable(id, LoadHarvestableType(type), tier, position, count, charge));
+                if (_harvestables.ContainsKey(id))
+                {
+                    _harvestables.TryRemove(id, out Harvestable? existingHarvestable);
+                }
+
+                var typeString = LoadHarvestableType(type);
+                var harvestable = new Harvestable(id, typeString, tier, position, count, charge);
+                _harvestables.TryAdd(id, harvestable);
+                
+                _logger.LogInformation("Harvestable adicionado: {Type} T{Level} (ID: {Id})", typeString, tier, id);
+
+                // Disparar evento de harvestable detectado
+                _ = _eventDispatcher.DispatchEvent(new HarvestableDetectedEvent(harvestable));
             }
         }
-        public void RemoveHarvestables()
+
+        /// <summary>
+        /// Remove harvestables muito distantes do jogador
+        /// </summary>
+        public void RemoveHarvestables(Vector2 playerPosition, float maxDistance = 70f)
         {
-            lock (HarvestableList)
+            lock (_harvestables)
             {
-                var toRemove = HarvestableList.Where(t => System.Numerics.Vector2.Distance(t.Value.Position, _localPlayerHandler.LocalPlayer.Position) > 70).Select(t => t.Key).ToList();
-                foreach (var key in toRemove)
+                var toRemove = new List<int>();
+                
+                foreach (var kvp in _harvestables)
                 {
-                    HarvestableList.TryRemove(key, out _);
+                    var distance = Vector2.Distance(kvp.Value.Position, playerPosition);
+                    if (distance > maxDistance)
+                    {
+                        toRemove.Add(kvp.Key);
+                    }
+                }
+
+                foreach (var id in toRemove)
+                {
+                    if (_harvestables.TryRemove(id, out Harvestable? harvestable))
+                    {
+                        _logger.LogDebug("Harvestable removido por distância: {Type} (ID: {Id})", harvestable.Type, id);
+                    }
                 }
             }
         }
+
+        /// <summary>
+        /// Atualiza um harvestable
+        /// </summary>
         public void UpdateHarvestable(int id, int count, int charge)
         {
-            lock (HarvestableList)
+            lock (_harvestables)
             {
-                if (HarvestableList.TryGetValue(id, out var temp))
+                if (_harvestables.TryGetValue(id, out Harvestable? harvestable))
                 {
-                    temp.Count = count;
-                    temp.Charge = charge;
+                    harvestable.Count = count;
+                    harvestable.Charge = charge;
+                    
+                    // Disparar evento de harvestable atualizado com posição
+                    _ = _eventDispatcher.DispatchEvent(new HarvestableUpdatedEvent(id, count, charge, harvestable.Position));
                 }
             }
         }
+
+        /// <summary>
+        /// Processa um evento NewHarvestable
+        /// </summary>
+        public async Task ProcessNewHarvestable(Dictionary<byte, object> parameters)
+        {
+            var harvestable = await _newHarvestableHandler.HandleNewHarvestable(parameters);
+            if (harvestable is not null)
+            {
+                AddHarvestable(harvestable.Id, GetTypeId(harvestable.Type), harvestable.Tier, 
+                              harvestable.Position, harvestable.Count, harvestable.Charge);
+            }
+        }
+
+        /// <summary>
+        /// Obtém todos os harvestables
+        /// </summary>
+        public IEnumerable<Harvestable> GetAllHarvestables()
+        {
+            return _harvestables.Values;
+        }
+
+        /// <summary>
+        /// Obtém um harvestable específico
+        /// </summary>
+        public Harvestable? GetHarvestable(int id)
+        {
+            _harvestables.TryGetValue(id, out Harvestable? harvestable);
+            return harvestable;
+        }
+
+        /// <summary>
+        /// Limpa todos os harvestables
+        /// </summary>
         public void Clear()
         {
-            lock (HarvestableList)
-                HarvestableList.Clear();
+            lock (_harvestables)
+            {
+                _harvestables.Clear();
+                _logger.LogInformation("Todos os harvestables foram removidos");
+            }
         }
+
+        /// <summary>
+        /// Obtém a contagem de harvestables
+        /// </summary>
+        public int HarvestableCount => _harvestables.Count;
+
+        /// <summary>
+        /// Inicializa os tipos de harvestables
+        /// </summary>
+        private void InitializeHarvestableTypes()
+        {
+            _harvestableTypes[1] = "FIBER";
+            _harvestableTypes[2] = "HIDE";
+            _harvestableTypes[3] = "ORE";
+            _harvestableTypes[4] = "WOOD";
+            _harvestableTypes[5] = "STONE";
+        }
+
+        /// <summary>
+        /// Carrega o tipo de harvestable
+        /// </summary>
         private string LoadHarvestableType(int type)
         {
-            if (_harvestableTypes != null && _harvestableTypes.ContainsKey(type))
-                return _harvestableTypes[type];
-            return "null";
+            lock (_harvestables)
+            {
+                if (_harvestableTypes.ContainsKey(type))
+                    return _harvestableTypes[type];
+
+                return "UNKNOWN";
+            }
+        }
+
+        /// <summary>
+        /// Obtém o ID do tipo baseado na string
+        /// </summary>
+        private int GetTypeId(string typeString)
+        {
+            return typeString switch
+            {
+                "FIBER" => 1,
+                "HIDE" => 2,
+                "ORE" => 3,
+                "WOOD" => 4,
+                "STONE" => 5,
+                _ => 0
+            };
         }
     }
 } 

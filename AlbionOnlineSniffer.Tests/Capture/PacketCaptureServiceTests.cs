@@ -11,7 +11,7 @@ namespace AlbionOnlineSniffer.Tests.Capture
         public void OnUdpPayloadCaptured_ShouldBeRaised_WhenPacketArrives()
         {
             // Arrange
-            var service = new PacketCaptureService(udpPort: 5056);
+            var service = new PacketCaptureService(udpPort: 5050);
             bool eventRaised = false;
             byte[] testPayload = new byte[] { 0x01, 0x02, 0x03 };
             service.OnUdpPayloadCaptured += payload =>

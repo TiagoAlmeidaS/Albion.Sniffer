@@ -1,90 +1,176 @@
-// Classe responsável por gerenciar o estado e a coleção de mobs do jogo.
-// Não processa eventos diretamente, apenas mantém e manipula o estado dos mobs.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using AlbionOnlineSniffer.Core.Interfaces;
+using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
 using AlbionOnlineSniffer.Core.Models.Events;
-using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
-    public class MobsManager : IMobsManager
+    /// <summary>
+    /// Gerenciador de mobs baseado no albion-radar-deatheye-2pc
+    /// </summary>
+    public class MobsManager
     {
-        public ConcurrentDictionary<int, Mob> MobsList { get; } = new();
-        private readonly List<MobInfo> _mobInfos;
-        public MobsManager(List<MobInfo> mobInfos)
+        private readonly ILogger<MobsManager> _logger;
+        private readonly PositionDecryptor _positionDecryptor;
+        private readonly ConcurrentDictionary<int, Mob> _mobs = new();
+        private readonly NewMobEventHandler _newMobHandler;
+        private readonly EventDispatcher _eventDispatcher;
+
+        public MobsManager(ILogger<MobsManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
         {
-            _mobInfos = mobInfos;
+            _logger = logger;
+            _positionDecryptor = positionDecryptor;
+            _eventDispatcher = eventDispatcher;
+            
+            // Criar logger específico para o handler
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var newMobLogger = loggerFactory.CreateLogger<NewMobEventHandler>();
+            
+            _newMobHandler = new NewMobEventHandler(newMobLogger, positionDecryptor);
         }
-        public void AddMob(int id, int typeId, Vector2 position, Health health, byte enchLvl)
+
+        /// <summary>
+        /// Adiciona um novo mob
+        /// </summary>
+        public void AddMob(int id, int typeId, Vector2 position, Health health, byte charge)
         {
-            lock (MobsList)
+            lock (_mobs)
             {
-                if (MobsList.ContainsKey(id))
-                    MobsList.TryRemove(id, out _);
-                MobsList.TryAdd(id, new Mob(id, typeId, position, enchLvl, _mobInfos.Find(x => x.Id == typeId), health));
+                if (_mobs.ContainsKey(id))
+                {
+                    _mobs.TryRemove(id, out Mob? existingMob);
+                }
+
+                var mobInfo = new MobInfo
+                {
+                    Id = typeId,
+                    Tier = 1,
+                    Type = "UNKNOWN",
+                    MobName = $"Mob_{typeId}"
+                };
+
+                var mob = new Mob(id, typeId, position, charge, mobInfo, health);
+                _mobs.TryAdd(id, mob);
+                
+                _logger.LogInformation("Mob adicionado: {MobName} (ID: {Id})", mobInfo.MobName, id);
+
+                // Disparar evento de mob detectado
+                _ = _eventDispatcher.DispatchEvent(new MobDetectedEvent(mob));
             }
         }
-        public void UpdateMobPosition(int id, byte[] positionBytes, byte[] newPositionBytes, float speed, DateTime time)
+
+        /// <summary>
+        /// Remove um mob
+        /// </summary>
+        public void RemoveMob(int id)
         {
-            var position = new Vector2(BitConverter.ToSingle(positionBytes, 4), BitConverter.ToSingle(positionBytes, 0));
-            var newPosition = new Vector2(BitConverter.ToSingle(newPositionBytes, 4), BitConverter.ToSingle(newPositionBytes, 0));
-            lock (MobsList)
+            lock (_mobs)
             {
-                if (MobsList.TryGetValue(id, out var mob))
+                if (_mobs.TryRemove(id, out Mob? mob))
+                {
+                    _logger.LogInformation("Mob removido: {MobName} (ID: {Id})", mob?.MobInfo.MobName ?? "Unknown", id);
+                    
+                    // Disparar evento de mob removido com posição
+                    _ = _eventDispatcher.DispatchEvent(new MobRemovedEvent(id, mob?.Position));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Atualiza a posição de um mob
+        /// </summary>
+        public void UpdateMobPosition(int id, Vector2 position)
+        {
+            lock (_mobs)
+            {
+                if (_mobs.TryGetValue(id, out Mob? mob))
                 {
                     mob.Position = position;
-                    mob.Speed = speed;
-                    mob.Time = time;
-                    mob.NewPosition = newPosition;
+                    mob.Time = DateTime.UtcNow;
+                    
+                    // Disparar evento de mob movido
+                    _ = _eventDispatcher.DispatchEvent(new MobMovedEvent(id, position));
                 }
             }
         }
-        public void SyncMobsPositions()
+
+        /// <summary>
+        /// Atualiza a saúde de um mob
+        /// </summary>
+        public void UpdateMobHealth(int id, int health)
         {
-            lock (MobsList)
+            lock (_mobs)
             {
-                foreach (var p in MobsList.Values.ToList())
-                {
-                    if (p == null || p.Speed == 0) continue;
-                    Vector2 posDiff = p.Position - p.NewPosition;
-                    if (posDiff == Vector2.Zero) continue;
-                    p.Position -= posDiff * (float)((DateTime.UtcNow - p.Time).TotalSeconds / (posDiff.Length() / (p.Speed / 10)));
-                }
-            }
-        }
-        public void Remove(int id)
-        {
-            lock (MobsList)
-                MobsList.TryRemove(id, out _);
-        }
-        public void Clear()
-        {
-            lock (MobsList)
-                MobsList.Clear();
-        }
-        public void UpdateMobCharge(int mobId, int charge)
-        {
-            lock (MobsList)
-            {
-                if (MobsList.TryGetValue(mobId, out var mob))
-                {
-                    mob.Charge = charge;
-                }
-            }
-        }
-        public void UpdateHealth(int id, int health)
-        {
-            lock (MobsList)
-            {
-                if (MobsList.TryGetValue(id, out var mob))
+                if (_mobs.TryGetValue(id, out Mob? mob))
                 {
                     mob.Health.Value = health;
                 }
             }
         }
+
+        /// <summary>
+        /// Atualiza a carga de um mob
+        /// </summary>
+        public void UpdateMobCharge(int id, int charge)
+        {
+            lock (_mobs)
+            {
+                if (_mobs.TryGetValue(id, out Mob? mob))
+                {
+                    mob.Charge = charge;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento NewMob
+        /// </summary>
+        public async Task ProcessNewMob(Dictionary<byte, object> parameters)
+        {
+            var mob = await _newMobHandler.HandleNewMob(parameters);
+            if (mob is not null)
+            {
+                AddMob(mob.Id, mob.TypeId, mob.Position, mob.Health, (byte)mob.Charge);
+            }
+        }
+
+        /// <summary>
+        /// Obtém todos os mobs
+        /// </summary>
+        public IEnumerable<Mob> GetAllMobs()
+        {
+            return _mobs.Values;
+        }
+
+        /// <summary>
+        /// Obtém um mob específico
+        /// </summary>
+        public Mob? GetMob(int id)
+        {
+            _mobs.TryGetValue(id, out Mob? mob);
+            return mob;
+        }
+
+        /// <summary>
+        /// Limpa todos os mobs
+        /// </summary>
+        public void Clear()
+        {
+            lock (_mobs)
+            {
+                _mobs.Clear();
+                _logger.LogInformation("Todos os mobs foram removidos");
+            }
+        }
+
+        /// <summary>
+        /// Obtém a contagem de mobs
+        /// </summary>
+        public int MobCount => _mobs.Count;
     }
 } 

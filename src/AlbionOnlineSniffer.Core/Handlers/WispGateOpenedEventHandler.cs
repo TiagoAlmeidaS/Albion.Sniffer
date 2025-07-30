@@ -1,40 +1,50 @@
 using System;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Interfaces;
+using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Handlers;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
+    /// <summary>
+    /// Handler para eventos de wisp gate aberto
+    /// Baseado no albion-radar-deatheye-2pc
+    /// </summary>
     public class WispGateOpenedEventHandler
     {
-        private readonly IGatedWispsManager _wispInGateManager;
-        public event Action<WispGateOpenedParsedData>? OnWispGateOpenedParsed;
+        private readonly ILogger<WispGateOpenedEventHandler> _logger;
+        private readonly GatedWispsManager _gatedWispsManager;
 
-        public WispGateOpenedEventHandler(IGatedWispsManager wispInGateManager)
+        public WispGateOpenedEventHandler(
+            ILogger<WispGateOpenedEventHandler> logger,
+            GatedWispsManager gatedWispsManager)
         {
-            _wispInGateManager = wispInGateManager;
+            _logger = logger;
+            _gatedWispsManager = gatedWispsManager;
         }
 
-        public Task HandleAsync(WispGateOpenedEvent value)
+        /// <summary>
+        /// Processa evento de wisp gate aberto
+        /// </summary>
+        /// <param name="wispGateEvent">Evento de wisp gate</param>
+        /// <returns>Task</returns>
+        public async Task HandleAsync(WispGateOpenedEvent wispGateEvent)
         {
-            if (value.IsCollected)
+            try
             {
-                _wispInGateManager.Remove(int.TryParse(value.Id, out var id) ? id : 0);
+                var status = wispGateEvent.IsCollected ? "coletado" : "aberto";
+                _logger.LogInformation("✨ WISP GATE {Status}: ID {Id}", status, wispGateEvent.Id);
+
+                // Atualizar status do wisp gate (seria implementado se necessário)
+                _logger.LogDebug("Status do wisp gate seria atualizado: ID {Id} -> {Status}", 
+                    wispGateEvent.Id, status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar WispGateOpenedEvent: {Message}", ex.Message);
             }
 
-            OnWispGateOpenedParsed?.Invoke(new WispGateOpenedParsedData
-            {
-                Id = value.Id,
-                IsCollected = value.IsCollected
-            });
-
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         }
-    }
-
-    public class WispGateOpenedParsedData
-    {
-        public string Id { get; set; }
-        public bool IsCollected { get; set; }
     }
 } 

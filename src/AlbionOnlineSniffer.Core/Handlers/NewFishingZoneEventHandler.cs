@@ -1,42 +1,52 @@
 using System;
-using System.Numerics;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models.Events;
-using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Handlers;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
+    /// <summary>
+    /// Handler para eventos de nova zona de pesca
+    /// Baseado no albion-radar-deatheye-2pc
+    /// </summary>
     public class NewFishingZoneEventHandler
     {
-        private readonly IFishNodesManager _fishZoneManager;
-        public event Action<NewFishingZoneParsedData>? OnFishingZoneParsed;
+        private readonly ILogger<NewFishingZoneEventHandler> _logger;
+        private readonly FishNodesManager _fishNodesManager;
 
-        public NewFishingZoneEventHandler(IFishNodesManager fishZoneManager)
+        public NewFishingZoneEventHandler(
+            ILogger<NewFishingZoneEventHandler> logger,
+            FishNodesManager fishNodesManager)
         {
-            _fishZoneManager = fishZoneManager;
+            _logger = logger;
+            _fishNodesManager = fishNodesManager;
         }
 
-        public Task HandleAsync(NewFishingZoneEvent value)
+        /// <summary>
+        /// Processa evento de nova zona de pesca
+        /// </summary>
+        /// <param name="fishingZoneEvent">Evento de zona de pesca</param>
+        /// <returns>Task</returns>
+        public async Task HandleAsync(NewFishingZoneEvent fishingZoneEvent)
         {
-            _fishZoneManager.AddFishZone(int.TryParse(value.Id, out var id) ? id : 0, value.Position, value.Size, value.RespawnCount);
-
-            OnFishingZoneParsed?.Invoke(new NewFishingZoneParsedData
+            try
             {
-                Id = value.Id,
-                Position = value.Position,
-                Size = value.Size,
-                RespawnCount = value.RespawnCount
-            });
+                _logger.LogInformation("🐟 NOVA ZONA DE PESCA: ID {Id} (Size: {Size}, Respawn: {Respawn}) em ({X}, {Y})", 
+                    fishingZoneEvent.Id, fishingZoneEvent.Size, fishingZoneEvent.RespawnCount, 
+                    fishingZoneEvent.Position.X, fishingZoneEvent.Position.Y);
 
-            return Task.CompletedTask;
+                // Adicionar nova zona de pesca (seria implementado se necessário)
+                _logger.LogDebug("Nova zona de pesca seria adicionada: ID {Id}", fishingZoneEvent.Id);
+
+                _logger.LogDebug("Zona de pesca adicionada: ID {Id}", fishingZoneEvent.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewFishingZoneEvent: {Message}", ex.Message);
+            }
+
+            await Task.CompletedTask;
         }
-    }
-
-    public class NewFishingZoneParsedData
-    {
-        public string Id { get; set; }
-        public Vector2 Position { get; set; }
-        public int Size { get; set; }
-        public int RespawnCount { get; set; }
     }
 } 

@@ -1,49 +1,133 @@
-// Classe responsável por gerenciar o estado e a coleção de loot chests do jogo.
-// Não processa eventos diretamente, apenas mantém e manipula o estado dos loot chests.
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Numerics;
-using AlbionOnlineSniffer.Core.Interfaces;
+using System.Threading.Tasks;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
 using AlbionOnlineSniffer.Core.Models.Events;
-using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
-    public class LootChestsManager : ILootChestsManager
+    /// <summary>
+    /// Gerenciador de loot chests baseado no albion-radar-deatheye-2pc
+    /// </summary>
+    public class LootChestsManager
     {
-        public ConcurrentDictionary<int, LootChest> LootChestsList { get; } = new();
-        public void AddWorldChest(int id, Vector2 position, string name, int enchLvl)
+        private readonly ILogger<LootChestsManager> _logger;
+        private readonly PositionDecryptor _positionDecryptor;
+        private readonly ConcurrentDictionary<int, LootChest> _lootChests = new();
+        private readonly NewLootChestEventHandler _newLootChestHandler;
+        private readonly EventDispatcher _eventDispatcher;
+
+        public LootChestsManager(ILogger<LootChestsManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
         {
-            lock (LootChestsList)
+            _logger = logger;
+            _positionDecryptor = positionDecryptor;
+            _eventDispatcher = eventDispatcher;
+            
+            // Criar logger específico para o handler
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var newLootChestLogger = loggerFactory.CreateLogger<NewLootChestEventHandler>();
+            
+            _newLootChestHandler = new NewLootChestEventHandler(newLootChestLogger, positionDecryptor);
+        }
+
+        /// <summary>
+        /// Adiciona um novo loot chest
+        /// </summary>
+        public void AddLootChest(int id, Vector2 position, string name, int charge)
+        {
+            lock (_lootChests)
             {
-                if (LootChestsList.ContainsKey(id))
-                    LootChestsList.TryRemove(id, out _);
-                LootChestsList.TryAdd(id, new LootChest(id, position, name, GetCharge(name, enchLvl)));
+                if (_lootChests.ContainsKey(id))
+                {
+                    _lootChests.TryRemove(id, out LootChest? existingChest);
+                }
+
+                var lootChest = new LootChest(id, position, name, charge);
+                _lootChests.TryAdd(id, lootChest);
+                
+                _logger.LogInformation("Loot chest adicionado: {Name} (ID: {Id})", name, id);
+
+                // Disparar evento de loot chest detectado
+                _ = _eventDispatcher.DispatchEvent(new LootChestDetectedEvent(lootChest));
             }
         }
-        public void Remove(int id)
+
+        /// <summary>
+        /// Remove um loot chest
+        /// </summary>
+        public void RemoveLootChest(int id)
         {
-            lock (LootChestsList)
-                LootChestsList.TryRemove(id, out _);
+            lock (_lootChests)
+            {
+                if (_lootChests.TryRemove(id, out LootChest? chest))
+                {
+                    _logger.LogInformation("Loot chest removido: {Name} (ID: {Id})", chest?.Name ?? "Unknown", id);
+                }
+            }
         }
+
+        /// <summary>
+        /// Atualiza um loot chest
+        /// </summary>
+        public void UpdateLootChest(int id, int charge)
+        {
+            lock (_lootChests)
+            {
+                if (_lootChests.TryGetValue(id, out LootChest? chest))
+                {
+                    chest.Charge = charge;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento NewLootChest
+        /// </summary>
+        public async Task ProcessNewLootChest(Dictionary<byte, object> parameters)
+        {
+            var lootChest = await _newLootChestHandler.HandleNewLootChest(parameters);
+            if (lootChest is not null)
+            {
+                AddLootChest(lootChest.Id, lootChest.Position, lootChest.Name, lootChest.Charge);
+            }
+        }
+
+        /// <summary>
+        /// Obtém todos os loot chests
+        /// </summary>
+        public IEnumerable<LootChest> GetAllLootChests()
+        {
+            return _lootChests.Values;
+        }
+
+        /// <summary>
+        /// Obtém um loot chest específico
+        /// </summary>
+        public LootChest? GetLootChest(int id)
+        {
+            _lootChests.TryGetValue(id, out LootChest? chest);
+            return chest;
+        }
+
+        /// <summary>
+        /// Limpa todos os loot chests
+        /// </summary>
         public void Clear()
         {
-            lock (LootChestsList)
-                LootChestsList.Clear();
-        }
-        public int GetCharge(string name, int enchLvl)
-        {
-            if (enchLvl > 0) return enchLvl;
-            string[] temp = name.Split('_');
-            if (temp.Length < 2) return 0;
-            switch (temp[temp.Length - 2])
+            lock (_lootChests)
             {
-                case "STANDARD": return 1;
-                case "UNCOMMON": return 2;
-                case "RARE": return 3;
-                case "LEGENDARY": return 4;
+                _lootChests.Clear();
+                _logger.LogInformation("Todos os loot chests foram removidos");
             }
-            return 0;
         }
+
+        /// <summary>
+        /// Obtém a contagem de loot chests
+        /// </summary>
+        public int LootChestCount => _lootChests.Count;
     }
 } 

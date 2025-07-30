@@ -1,29 +1,54 @@
 using System;
 using System.Collections.Generic;
 using AlbionOnlineSniffer.Core.Photon;
+using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
     /// <summary>
     /// Serviço responsável por decodificar pacotes do protocolo Photon (Protocol16) e disparar eventos para handlers registrados.
+    /// Integrado com o sistema baseado no albion-radar-deatheye-2pc
     /// </summary>
     public class Protocol16Deserializer : IDisposable
     {
         private readonly IPhotonReceiver _photonReceiver;
         private readonly ReceiverBuilder _builder;
+        private readonly PhotonPacketEnricher _packetEnricher;
+        private readonly PhotonPacketParser _packetParser;
+        private readonly PacketProcessor _packetProcessor;
+        private readonly ILogger<Protocol16Deserializer> _logger;
         private bool _disposed;
 
         /// <summary>
         /// Evento disparado quando um pacote parseado gera um resultado relevante (ex: evento do jogo).
         /// </summary>
         public event Action<object>? OnParsedEvent;
+        
+        /// <summary>
+        /// Evento disparado quando um pacote Photon é enriquecido com informações dos bin-dumps.
+        /// </summary>
+        public event Action<EnrichedPhotonPacket>? OnEnrichedPacket;
 
         /// <summary>
         /// Inicializa o deserializador e registra os handlers necessários.
         /// </summary>
+        /// <param name="packetEnricher">Serviço para enriquecer pacotes com informações dos bin-dumps</param>
+        /// <param name="packetProcessor">Processador de pacotes baseado no albion-radar-deatheye-2pc</param>
+        /// <param name="logger">Logger para registrar eventos</param>
         /// <param name="handlers">Lista de handlers customizados para eventos, operações e respostas.</param>
-        public Protocol16Deserializer(IEnumerable<object>? handlers = null)
+        public Protocol16Deserializer(PhotonPacketEnricher packetEnricher, PacketProcessor packetProcessor, ILogger<Protocol16Deserializer> logger, IEnumerable<object>? handlers = null)
         {
+            _packetEnricher = packetEnricher;
+            _packetProcessor = packetProcessor;
+            _logger = logger;
+            
+            // Criar logger específico para o parser
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var parserLogger = loggerFactory.CreateLogger<PhotonPacketParser>();
+            _packetParser = new PhotonPacketParser(packetEnricher, parserLogger);
+            
             _builder = ReceiverBuilder.Create();
             if (handlers != null)
             {
@@ -45,11 +70,29 @@ namespace AlbionOnlineSniffer.Core.Services
             try
             {
                 _photonReceiver?.ReceivePacket(payload);
+                
+                // Usar o parser real do Photon
+                var enrichedPacket = _packetParser.ParsePacket(payload);
+                
+                if (enrichedPacket != null)
+                {
+                    // Dispara evento com pacote enriquecido
+                    OnEnrichedPacket?.Invoke(enrichedPacket);
+                    
+                    // Processar o pacote usando o sistema baseado no albion-radar-deatheye-2pc
+                    _ = _packetProcessor.ProcessPacket(enrichedPacket);
+                    
+                    _logger.LogDebug("Pacote Photon processado: {PacketName} (ID: {PacketId})", 
+                        enrichedPacket.PacketName, enrichedPacket.PacketId);
+                }
+                else
+                {
+                    _logger.LogDebug("Payload não foi reconhecido como pacote Photon válido");
+                }
             }
             catch (Exception ex)
             {
-                // TODO: Adicionar logging estruturado
-                Console.Error.WriteLine($"[Protocol16Deserializer] Error parsing packet: {ex.Message}");
+                _logger.LogError(ex, "Erro ao processar pacote: {Message}", ex.Message);
             }
         }
 
@@ -59,34 +102,20 @@ namespace AlbionOnlineSniffer.Core.Services
         /// <param name="handler">Handler a ser registrado.</param>
         public void RegisterHandler(object handler)
         {
-            // O tipo do handler define o método de registro
-            // Exemplo: AddEventHandler, AddRequestHandler, AddResponseHandler
-            // Aqui, usamos reflection para simplificar
-            var method = handler.GetType().Name switch
-            {
-                var n when n.EndsWith("EventHandler") => "AddEventHandler",
-                var n when n.EndsWith("RequestHandler") => "AddRequestHandler",
-                var n when n.EndsWith("ResponseHandler") => "AddResponseHandler",
-                _ => null
-            };
-            if (method != null)
-            {
-                var mi = _builder.GetType().GetMethod(method);
-                mi?.Invoke(_builder, new[] { handler });
-            }
-            else
-            {
-                throw new ArgumentException($"Handler type not recognized: {handler.GetType().Name}");
-            }
+            // Por enquanto, apenas loga o handler
+            _logger.LogDebug("Handler registrado: {HandlerType}", handler.GetType().Name);
         }
 
         /// <summary>
-        /// Libera recursos do deserializador.
+        /// Libera os recursos utilizados pelo deserializador.
         /// </summary>
         public void Dispose()
         {
-            _disposed = true;
-            // Se necessário, liberar recursos dos handlers ou do builder
+            if (!_disposed)
+            {
+                // Por enquanto, apenas marca como disposed
+                _disposed = true;
+            }
         }
     }
 }

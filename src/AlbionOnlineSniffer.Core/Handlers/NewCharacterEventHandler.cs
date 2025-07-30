@@ -1,100 +1,106 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
-using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
     /// <summary>
-    /// Handler para eventos de novos personagens detectados no protocolo Photon.
+    /// Handler para eventos NewCharacter do Albion Online
+    /// Baseado no sistema do albion-radar-deatheye-2pc
     /// </summary>
     public class NewCharacterEventHandler
     {
-        // Dependências injetáveis (pode ser adaptado para interfaces)
-        private readonly IPlayersManager _playerManager;
-        private readonly ILocalPlayerHandler _localPlayerHandler;
-        private readonly IConfigHandler _configHandler;
+        private readonly ILogger<NewCharacterEventHandler> _logger;
+        private readonly PositionDecryptor _positionDecryptor;
+        private readonly PacketOffsets _packetOffsets;
 
-        /// <summary>
-        /// Evento disparado quando um novo personagem é processado.
-        /// </summary>
-        public event Action<NewCharacterParsedData>? OnCharacterParsed;
-
-        public NewCharacterEventHandler(IPlayersManager playerManager, ILocalPlayerHandler localPlayerHandler, IConfigHandler configHandler)
+        public NewCharacterEventHandler(ILogger<NewCharacterEventHandler> logger, PositionDecryptor positionDecryptor)
         {
-            _playerManager = playerManager;
-            _localPlayerHandler = localPlayerHandler;
-            _configHandler = configHandler;
+            _logger = logger;
+            _positionDecryptor = positionDecryptor;
+            _packetOffsets = new PacketOffsets();
         }
 
         /// <summary>
-        /// Processa o evento de novo personagem e dispara o evento OnCharacterParsed.
+        /// Processa um evento NewCharacter
         /// </summary>
-        public Task HandleAsync(NewCharacterEvent value)
+        /// <param name="parameters">Parâmetros do pacote</param>
+        /// <returns>Dados do jogador processados</returns>
+        public async Task<Player?> HandleNewCharacter(Dictionary<byte, object> parameters)
         {
-            Vector2 pos = Vector2.Zero;
-            if (_playerManager.XorCode != null && value.EncryptedPosition != null)
+            try
             {
-                var coords = _playerManager.Decrypt(value.EncryptedPosition as byte[] ?? Array.Empty<byte>());
-                pos = new Vector2(coords[1], coords[0]);
+                var offsets = _packetOffsets.NewCharacter;
+                
+                // Extrair dados usando offsets (baseado no albion-radar-deatheye-2pc)
+                var id = Convert.ToInt32(parameters[offsets[0]]);
+                var name = parameters[offsets[1]] as string ?? string.Empty;
+                var guild = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string ?? string.Empty : string.Empty;
+                var alliance = parameters.ContainsKey(offsets[3]) ? parameters[offsets[3]] as string ?? string.Empty : string.Empty;
+                var faction = (Faction)parameters[offsets[4]];
+                
+                var encryptedPosition = parameters[offsets[5]] as byte[];
+                var speed = parameters.ContainsKey(offsets[6]) ? (float)parameters[offsets[6]] : 5.5f;
+
+                var health = parameters.ContainsKey(offsets[7]) ?
+                    new Health(Convert.ToInt32(parameters[offsets[7]]), Convert.ToInt32(parameters[offsets[8]]))
+                    : new Health(Convert.ToInt32(parameters[offsets[8]]));
+
+                var equipments = ConvertArray(parameters[offsets[9]]);
+                var spells = ConvertArray(parameters[offsets[10]]);
+
+                // Decriptar posição
+                Vector2 position = Vector2.Zero;
+                if (encryptedPosition != null)
+                {
+                    position = _positionDecryptor.DecryptPosition(encryptedPosition);
+                }
+
+                // Criar equipamento
+                var equipment = new Equipment();
+                if (equipments != null)
+                {
+                    equipment.Items = new List<PlayerItem>();
+                    foreach (var itemId in equipments)
+                    {
+                        equipment.Items.Add(new PlayerItem { Id = itemId, Name = $"Item_{itemId}", ItemPower = 0 });
+                    }
+                }
+
+                var player = new Player(id, name, guild, alliance, position, health, faction, equipment, spells ?? Array.Empty<int>());
+
+                _logger.LogInformation("Novo jogador detectado: {Name} (ID: {Id}, Guild: {Guild}, Faction: {Faction})", 
+                    name, id, guild, faction);
+
+                return player;
             }
-            else if (value.Position != Vector2.Zero)
+            catch (Exception ex)
             {
-                pos = value.Position;
+                _logger.LogError(ex, "Erro ao processar evento NewCharacter: {Message}", ex.Message);
+                return null;
             }
+        }
 
-            _playerManager.AddPlayer(
-                int.TryParse(value.Id, out var id) ? id : 0,
-                value.Name,
-                value.Guild,
-                value.Alliance,
-                pos,
-                new Health { Value = value.Health },
-                (Faction)value.Faction,
-                value.Equipments as int[] ?? Array.Empty<int>(),
-                value.Spells as int[] ?? Array.Empty<int>()
-            );
+        /// <summary>
+        /// Converte array de diferentes tipos para int[]
+        /// Baseado no método ConvertArray do albion-radar-deatheye-2pc
+        /// </summary>
+        private int[]? ConvertArray(object value)
+        {
+            if (value == null) return null;
 
-            // Lógica de listas customizadas, facções, etc. pode ser mantida, mas sem UI/som
-            // Em vez disso, pode-se disparar eventos ou logs
-            // Exemplo: se for um inimigo, disparar evento específico
-
-            // Exemplo de uso do evento para publicação
-            OnCharacterParsed?.Invoke(new NewCharacterParsedData
+            return value switch
             {
-                Id = value.Id,
-                Name = value.Name,
-                Guild = value.Guild,
-                Alliance = value.Alliance,
-                Position = pos,
-                Health = value.Health,
-                Faction = value.Faction,
-                Equipments = value.Equipments,
-                Spells = value.Spells
-            });
-
-            return Task.CompletedTask;
+                byte[] numArray2 => Array.ConvertAll(numArray2, b => (int)b),
+                short[] numArray3 => Array.ConvertAll(numArray3, s => (int)s),
+                int[] numArray1 => numArray1,
+                _ => null
+            };
         }
     }
-
-    /// <summary>
-    /// Dados relevantes extraídos do evento de novo personagem, prontos para publicação.
-    /// </summary>
-    public class NewCharacterParsedData
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Guild { get; set; }
-        public string Alliance { get; set; }
-        public Vector2 Position { get; set; }
-        public int Health { get; set; }
-        public int Faction { get; set; }
-        public object Equipments { get; set; } // Tipar conforme necessário
-        public object Spells { get; set; } // Tipar conforme necessário
-    }
-
-    // Interfaces para handlers (pode ser implementado conforme necessidade)
-    // Removidas as interfaces ILocalPlayerHandler e IConfigHandler duplicadas
 } 
