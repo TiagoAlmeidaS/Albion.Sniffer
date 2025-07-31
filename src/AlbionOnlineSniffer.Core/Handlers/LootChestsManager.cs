@@ -27,11 +27,8 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar logger específico para o handler
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            var newLootChestLogger = loggerFactory.CreateLogger<NewLootChestEventHandler>();
-            
-            _newLootChestHandler = new NewLootChestEventHandler(newLootChestLogger, positionDecryptor);
+            // Criar handler usando o ServiceFactory
+            _newLootChestHandler = DependencyProvider.CreateNewLootChestEventHandler();
         }
 
         /// <summary>
@@ -87,12 +84,24 @@ namespace AlbionOnlineSniffer.Core.Handlers
         /// <summary>
         /// Processa um evento NewLootChest
         /// </summary>
-        public async Task ProcessNewLootChest(Dictionary<byte, object> parameters)
+        public async Task<LootChest?> ProcessNewLootChest(Dictionary<byte, object> parameters)
         {
-            var lootChest = await _newLootChestHandler.HandleNewLootChest(parameters);
-            if (lootChest is not null)
+            try
             {
-                AddLootChest(lootChest.Id, lootChest.Position, lootChest.Name, lootChest.Charge);
+                var lootChest = await _newLootChestHandler.HandleNewLootChest(parameters);
+                if (lootChest != null)
+                {
+                    AddLootChest(lootChest.Id, lootChest.Position, lootChest.Name, lootChest.Charge);
+                    
+                    _logger.LogInformation("Novo loot chest processado: {Name} (ID: {Id})", lootChest.Name, lootChest.Id);
+                    return lootChest; // ← RETORNAR O LOOT CHEST CRIADO
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewLootChest: {Message}", ex.Message);
+                return null;
             }
         }
 

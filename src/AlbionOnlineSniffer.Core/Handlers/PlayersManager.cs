@@ -28,13 +28,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar loggers específicos para os handlers
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            var newCharacterLogger = loggerFactory.CreateLogger<NewCharacterEventHandler>();
-            var moveLogger = loggerFactory.CreateLogger<MoveEventHandler>();
-            
-            _newCharacterHandler = new NewCharacterEventHandler(newCharacterLogger, positionDecryptor);
-            _moveHandler = new MoveEventHandler(moveLogger, positionDecryptor);
+            // Criar handlers usando o ServiceFactory
+            _newCharacterHandler = DependencyProvider.CreateNewCharacterEventHandler();
+            _moveHandler = DependencyProvider.CreateMoveEventHandler();
         }
 
         /// <summary>
@@ -111,25 +107,49 @@ namespace AlbionOnlineSniffer.Core.Handlers
         /// <summary>
         /// Processa um evento NewCharacter
         /// </summary>
-        public async Task ProcessNewCharacter(Dictionary<byte, object> parameters)
+        public async Task<Player?> ProcessNewCharacter(Dictionary<byte, object> parameters)
         {
-            var player = await _newCharacterHandler.HandleNewCharacter(parameters);
-            if (player is not null)
+            try
             {
-                AddPlayer(player.Id, player.Name, player.Guild, player.Alliance, 
-                         player.Position, player.Health, player.Faction, player.Equipment, player.Spells);
+                var player = await _newCharacterHandler.HandleNewCharacter(parameters);
+                if (player != null)
+                {
+                    AddPlayer(player.Id, player.Name, player.Guild, player.Alliance, 
+                             player.Position, player.Health, player.Faction, player.Equipment, player.Spells);
+                    
+                    _logger.LogInformation("Novo jogador processado: {Name} (ID: {Id})", player.Name, player.Id);
+                    return player; // ← RETORNAR O PLAYER CRIADO
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewCharacter: {Message}", ex.Message);
+                return null;
             }
         }
 
         /// <summary>
         /// Processa um evento Move
         /// </summary>
-        public async Task ProcessMove(Dictionary<byte, object> parameters)
+        public async Task<MoveData?> ProcessMove(Dictionary<byte, object> parameters)
         {
-            var moveData = await _moveHandler.HandleMove(parameters);
-            if (moveData != null)
+            try
             {
-                UpdatePlayerPosition(moveData.PlayerId, moveData.Position);
+                var moveData = await _moveHandler.HandleMove(parameters);
+                if (moveData != null)
+                {
+                    UpdatePlayerPosition(moveData.PlayerId, moveData.Position);
+                    _logger.LogDebug("Movimento processado: Jogador {PlayerId} -> {Position}", 
+                        moveData.PlayerId, moveData.Position);
+                    return moveData; // ← RETORNAR DADOS DE MOVIMENTO
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar Move: {Message}", ex.Message);
+                return null;
             }
         }
 

@@ -19,11 +19,11 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly PositionDecryptor _positionDecryptor;
         private readonly PacketOffsets _packetOffsets;
 
-        public NewMobEventHandler(ILogger<NewMobEventHandler> logger, PositionDecryptor positionDecryptor)
+        public NewMobEventHandler(ILogger<NewMobEventHandler> logger, PositionDecryptor positionDecryptor, PacketOffsets packetOffsets)
         {
             _logger = logger;
             _positionDecryptor = positionDecryptor;
-            _packetOffsets = new PacketOffsets();
+            _packetOffsets = packetOffsets;
         }
 
         /// <summary>
@@ -37,6 +37,12 @@ namespace AlbionOnlineSniffer.Core.Handlers
             {
                 var offsets = _packetOffsets.NewMobEvent;
                 
+                if (offsets.Length < 6)
+                {
+                    _logger.LogWarning("Offsets insuficientes para NewMobEvent: {OffsetCount}", offsets.Length);
+                    return null;
+                }
+
                 // Extrair dados usando offsets (baseado no albion-radar-deatheye-2pc)
                 var id = Convert.ToInt32(parameters[offsets[0]]);
                 var typeId = Convert.ToInt32(parameters[offsets[1]]) - 15; // Subtrai 15 como no albion-radar-deatheye-2pc
@@ -52,21 +58,21 @@ namespace AlbionOnlineSniffer.Core.Handlers
                     new Health(Convert.ToInt32(parameters[offsets[3]]), Convert.ToInt32(parameters[offsets[4]]))
                     : new Health(Convert.ToInt32(parameters[offsets[4]]));
 
-                var charge = (byte)(parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : 0);
+                var maxHealth = parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : health.MaxValue;
 
-                // Criar MobInfo básico (pode ser enriquecido com dados dos bin-dumps)
+                // Criar MobInfo básico
                 var mobInfo = new MobInfo
                 {
                     Id = typeId,
-                    Tier = 1, // Pode ser extraído de dados adicionais
+                    Tier = 1,
                     Type = "UNKNOWN",
                     MobName = $"Mob_{typeId}"
                 };
 
-                var mob = new Mob(id, typeId, position, charge, mobInfo, health);
+                var mob = new Mob(id, typeId, position, 0, mobInfo, health);
 
-                _logger.LogInformation("Novo mob detectado: {MobName} (ID: {Id}, TypeId: {TypeId})", 
-                    mobInfo.MobName, id, typeId);
+                _logger.LogInformation("Novo mob detectado: ID {Id}, TypeId {TypeId} em ({X}, {Y})", 
+                    id, typeId, position.X, position.Y);
 
                 return mob;
             }

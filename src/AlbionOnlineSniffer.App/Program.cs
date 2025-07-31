@@ -26,6 +26,7 @@ namespace AlbionOnlineSniffer.App
     {
         static void Main(string[] args)
         {
+
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConsole();
@@ -39,7 +40,7 @@ namespace AlbionOnlineSniffer.App
 
                 // Configuração
                 var configuration = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .SetBasePath(AppContext.BaseDirectory)
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                     .Build();
 
@@ -81,6 +82,9 @@ namespace AlbionOnlineSniffer.App
                 {
                     try
                     {
+                        logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", 
+                            gameEvent.EventType, gameEvent.Timestamp);
+                        
                         var topic = $"albion.event.{gameEvent.EventType.ToLowerInvariant()}";
                         var message = new
                         {
@@ -89,25 +93,24 @@ namespace AlbionOnlineSniffer.App
                             Data = gameEvent
                         };
                         
+                        logger.LogInformation("📤 PUBLICANDO: {EventType} -> {Topic}", gameEvent.EventType, topic);
                         await publisher.PublishAsync(topic, message);
-                        logger.LogDebug("Evento publicado na fila: {EventType} -> {Topic}", 
+                        logger.LogInformation("✅ Evento publicado na fila: {EventType} -> {Topic}", 
                             gameEvent.EventType, topic);
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, "Erro ao publicar evento na fila: {EventType}", gameEvent.EventType);
+                        logger.LogError(ex, "❌ Erro ao publicar evento na fila: {EventType} - {Message}", 
+                            gameEvent.EventType, ex.Message);
                     }
                 });
 
                 logger.LogInformation("✅ EventDispatcher conectado ao sistema de mensageria!");
 
-                // Configurar serviços de parsing
-                var definitionLoader = Core.DependencyProvider.CreatePhotonDefinitionLoader(
-                    loggerFactory.CreateLogger<Core.Services.PhotonDefinitionLoader>());
-                
-                var packetEnricher = Core.DependencyProvider.CreatePhotonPacketEnricher(
-                    definitionLoader, 
-                    loggerFactory.CreateLogger<Core.Services.PhotonPacketEnricher>());
+                // Configurar serviços de parsing usando DI
+                var definitionLoader = serviceProvider.GetRequiredService<Core.Services.PhotonDefinitionLoader>();
+                var packetEnricher = serviceProvider.GetRequiredService<Core.Services.PhotonPacketEnricher>();
+                var protocol16Deserializer = serviceProvider.GetRequiredService<Core.Services.Protocol16Deserializer>();
 
                 // Carregar definições dos bin-dumps se habilitado
                 if (binDumpsEnabled)
@@ -131,17 +134,11 @@ namespace AlbionOnlineSniffer.App
                     }
                 }
 
-                // Configurar parser
-                var parser = Core.DependencyProvider.CreateProtocol16Deserializer(
-                    packetEnricher, 
-                    packetProcessor,
-                    loggerFactory.CreateLogger<Core.Services.Protocol16Deserializer>());
-
                 logger.LogInformation("Sistema de eventos e parsing configurado com sucesso!");
 
                 // Capture
                 var capture = Capture.DependencyProvider.CreatePacketCaptureService(udpPort: 5050);
-                capture.OnUdpPayloadCaptured += parser.ReceivePacket;
+                capture.OnUdpPayloadCaptured += protocol16Deserializer.ReceivePacket;
 
                 // Iniciar captura
                 logger.LogInformation("Iniciando captura de pacotes na porta UDP {Port}...", 5050);

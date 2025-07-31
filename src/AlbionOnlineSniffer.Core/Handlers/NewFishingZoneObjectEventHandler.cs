@@ -10,16 +10,16 @@ using Microsoft.Extensions.Logging;
 namespace AlbionOnlineSniffer.Core.Handlers
 {
     /// <summary>
-    /// Handler para eventos NewLootChest do Albion Online
+    /// Handler para eventos NewFishingZoneObject do Albion Online
     /// Baseado no sistema do albion-radar-deatheye-2pc
     /// </summary>
-    public class NewLootChestEventHandler
+    public class NewFishingZoneObjectEventHandler
     {
-        private readonly ILogger<NewLootChestEventHandler> _logger;
+        private readonly ILogger<NewFishingZoneObjectEventHandler> _logger;
         private readonly PositionDecryptor _positionDecryptor;
         private readonly PacketOffsets _packetOffsets;
 
-        public NewLootChestEventHandler(ILogger<NewLootChestEventHandler> logger, PositionDecryptor positionDecryptor, PacketOffsets packetOffsets)
+        public NewFishingZoneObjectEventHandler(ILogger<NewFishingZoneObjectEventHandler> logger, PositionDecryptor positionDecryptor, PacketOffsets packetOffsets)
         {
             _logger = logger;
             _positionDecryptor = positionDecryptor;
@@ -27,19 +27,19 @@ namespace AlbionOnlineSniffer.Core.Handlers
         }
 
         /// <summary>
-        /// Processa um evento NewLootChest
+        /// Processa um evento NewFishingZoneObject
         /// </summary>
         /// <param name="parameters">Parâmetros do pacote</param>
-        /// <returns>Dados do baú processados</returns>
-        public async Task<LootChest?> HandleNewLootChest(Dictionary<byte, object> parameters)
+        /// <returns>Dados do fish node processados</returns>
+        public async Task<FishNode?> HandleNewFishingZoneObject(Dictionary<byte, object> parameters)
         {
             try
             {
-                var offsets = _packetOffsets.NewLootChest;
+                var offsets = _packetOffsets.NewFishingZoneObject;
                 
                 if (offsets.Length < 4)
                 {
-                    _logger.LogWarning("Offsets insuficientes para NewLootChest: {OffsetCount}", offsets.Length);
+                    _logger.LogWarning("Offsets insuficientes para NewFishingZoneObject: {OffsetCount}", offsets.Length);
                     return null;
                 }
 
@@ -53,19 +53,19 @@ namespace AlbionOnlineSniffer.Core.Handlers
                     position = new Vector2(positionBytes[0], positionBytes[1]);
                 }
 
-                var name = parameters[offsets[2]] as string ?? "Unknown Chest";
-                var charge = parameters.ContainsKey(offsets[3]) ? Convert.ToInt32(parameters[offsets[3]]) : 0;
+                var size = parameters.ContainsKey(offsets[2]) ? Convert.ToInt32(parameters[offsets[2]]) : 0;
+                var respawnCount = parameters.ContainsKey(offsets[3]) ? Convert.ToInt32(parameters[offsets[3]]) : 0;
 
-                var lootChest = new LootChest(id, position, name, charge);
+                var fishNode = new FishNode(id, position, size, respawnCount);
 
-                _logger.LogInformation("Novo baú detectado: {Name} (ID: {Id}, Charge: {Charge})", 
-                    name, id, charge);
+                _logger.LogInformation("Nova zona de pesca detectada: ID {Id} (Size: {Size}, Respawn: {Respawn}) em ({X}, {Y})", 
+                    id, size, respawnCount, position.X, position.Y);
 
-                return lootChest;
+                return fishNode;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao processar evento NewLootChest: {Message}", ex.Message);
+                _logger.LogError(ex, "Erro ao processar evento NewFishingZoneObject: {Message}", ex.Message);
                 return null;
             }
         }

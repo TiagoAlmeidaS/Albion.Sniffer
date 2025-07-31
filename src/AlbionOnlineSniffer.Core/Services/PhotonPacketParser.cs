@@ -32,6 +32,8 @@ namespace AlbionOnlineSniffer.Core.Services
         {
             try
             {
+                _logger.LogInformation("🔍 PARSEANDO PACOTE: {Length} bytes", payload?.Length ?? 0);
+                
                 if (payload == null || payload.Length < 4)
                 {
                     _logger.LogDebug("Payload inválido ou muito pequeno: {Length} bytes", payload?.Length ?? 0);
@@ -42,37 +44,45 @@ namespace AlbionOnlineSniffer.Core.Services
                 using var reader = new BinaryReader(stream);
 
                 // Verificar cabeçalho do protocolo Photon
+                _logger.LogInformation("🔍 VERIFICANDO VALIDACAO PHOTON...");
                 if (!IsValidPhotonPacket(reader))
                 {
-                    _logger.LogDebug("Payload não é um pacote Photon válido");
+                    _logger.LogWarning("❌ Payload não é um pacote Photon válido");
                     return null;
                 }
+                _logger.LogInformation("✅ Validacao Photon passou!");
 
                 // Extrair informações do pacote
+                _logger.LogInformation("🔍 EXTRAINDO INFORMACOES DO PACOTE...");
                 var packetInfo = ExtractPacketInfo(reader);
                 if (packetInfo == null)
                 {
-                    _logger.LogWarning("Não foi possível extrair informações do pacote");
+                    _logger.LogWarning("❌ Não foi possível extrair informações do pacote");
                     return null;
                 }
+                _logger.LogInformation("✅ Informacoes extraidas: ID={PacketId}, Timestamp={Timestamp}, Params={ParamCount}", 
+                    packetInfo.Value.PacketId, packetInfo.Value.Timestamp, packetInfo.Value.ParameterCount);
 
                 // Parsear parâmetros do pacote
+                _logger.LogInformation("🔍 PARSEANDO PARAMETROS...");
                 var parameters = ParseParameters(reader, packetInfo.Value);
+                _logger.LogInformation("✅ Parametros parseados: {ParamCount} parametros", parameters.Count);
 
                 // Enriquece o pacote com informações dos bin-dumps
+                _logger.LogInformation("🔍 ENRIQUECENDO PACOTE...");
                 var enrichedPacket = _packetEnricher.EnrichPacket(
                     packetInfo.Value.PacketId, 
                     parameters, 
                     payload);
 
-                _logger.LogDebug("Pacote parseado com sucesso: {PacketName} (ID: {PacketId}, Parâmetros: {ParamCount})", 
+                _logger.LogInformation("✅ PACOTE ENRIQUECIDO: {PacketName} (ID: {PacketId}, Parâmetros: {ParamCount})", 
                     enrichedPacket.PacketName, enrichedPacket.PacketId, parameters.Count);
 
                 return enrichedPacket;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao parsear pacote Photon: {Message}", ex.Message);
+                _logger.LogError(ex, "❌ Erro ao parsear pacote Photon: {Message}", ex.Message);
                 return null;
             }
         }
@@ -89,13 +99,20 @@ namespace AlbionOnlineSniffer.Core.Services
                 // Verificar assinatura do protocolo Photon (exemplo)
                 // Na implementação real, isso dependeria da versão específica do protocolo
                 var signature = reader.ReadBytes(2);
+                _logger.LogInformation("🔍 Signature: [{Signature}]", BitConverter.ToString(signature));
                 
                 // Verificar se é um pacote de evento (0x01) ou operação (0x02)
                 var messageType = reader.ReadByte();
-                return messageType == 0x01 || messageType == 0x02;
+                _logger.LogInformation("🔍 Message Type: 0x{MessageType:X2}", messageType);
+                
+                var isValid = messageType == 0x01 || messageType == 0x02;
+                _logger.LogInformation("🔍 Validacao: {IsValid} (esperado: 0x01 ou 0x02)", isValid);
+                
+                return isValid;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning("❌ Erro na validacao Photon: {Message}", ex.Message);
                 return false;
             }
         }

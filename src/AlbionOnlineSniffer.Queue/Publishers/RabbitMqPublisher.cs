@@ -6,7 +6,7 @@ using AlbionOnlineSniffer.Queue.Interfaces;
 
 namespace AlbionOnlineSniffer.Queue.Publishers
 {
-    public class RabbitMqPublisher : IQueuePublisher
+    public class RabbitMqPublisher : IQueuePublisher, IDisposable
     {
         private readonly IConnection _connection;
         private readonly IModel _channel;
@@ -23,9 +23,26 @@ namespace AlbionOnlineSniffer.Queue.Publishers
 
         public Task PublishAsync(string topic, object message)
         {
-            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
-            _channel.BasicPublish(exchange: _exchange, routingKey: topic, basicProperties: null, body: body);
-            return Task.CompletedTask;
+            try
+            {
+                var jsonMessage = JsonSerializer.Serialize(message);
+                var body = Encoding.UTF8.GetBytes(jsonMessage);
+                
+                // Log detalhado para debug
+                Console.WriteLine($"[RabbitMQ] Publicando: {topic}");
+                Console.WriteLine($"[RabbitMQ] Mensagem: {jsonMessage}");
+                Console.WriteLine($"[RabbitMQ] Tamanho: {body.Length} bytes");
+                
+                _channel.BasicPublish(exchange: _exchange, routingKey: topic, basicProperties: null, body: body);
+                
+                Console.WriteLine($"[RabbitMQ] ✅ Mensagem publicada com sucesso: {topic}");
+                return Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RabbitMQ] ❌ Erro ao publicar: {ex.Message}");
+                return Task.FromException(ex);
+            }
         }
 
         public void Dispose()

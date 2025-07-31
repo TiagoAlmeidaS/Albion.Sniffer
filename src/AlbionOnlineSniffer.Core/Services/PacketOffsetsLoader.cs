@@ -1,0 +1,56 @@
+using System;
+using System.IO;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using AlbionOnlineSniffer.Core.Models;
+
+namespace AlbionOnlineSniffer.Core.Services
+{
+    /// <summary>
+    /// Serviço responsável por carregar os offsets dos pacotes do JSON
+    /// Baseado no albion-radar-deatheye-2pc
+    /// </summary>
+    public class PacketOffsetsLoader
+    {
+        private readonly ILogger<PacketOffsetsLoader> _logger;
+
+        public PacketOffsetsLoader(ILogger<PacketOffsetsLoader> logger)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Carrega os offsets do arquivo JSON
+        /// </summary>
+        /// <param name="jsonPath">Caminho para o arquivo offsets.json</param>
+        /// <returns>PacketOffsets carregado</returns>
+        public PacketOffsets LoadOffsets(string jsonPath)
+        {
+            try
+            {
+                if (!File.Exists(jsonPath))
+                {
+                    _logger.LogWarning("Arquivo offsets.json não encontrado em: {Path}", jsonPath);
+                    return new PacketOffsets();
+                }
+
+                var jsonContent = File.ReadAllText(jsonPath);
+                var offsets = JsonSerializer.Deserialize<PacketOffsets>(jsonContent);
+                
+                if (offsets != null)
+                {
+                    _logger.LogInformation("Offsets carregados com sucesso de: {Path}", jsonPath);
+                    return offsets;
+                }
+                
+                _logger.LogWarning("Falha ao deserializar offsets.json");
+                return new PacketOffsets();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar offsets: {Message}", ex.Message);
+                return new PacketOffsets();
+            }
+        }
+    }
+} 

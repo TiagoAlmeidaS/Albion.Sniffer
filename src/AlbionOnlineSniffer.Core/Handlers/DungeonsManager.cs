@@ -2,23 +2,69 @@
 // Não processa eventos diretamente, apenas mantém e manipula o estado das dungeons.
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
 using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
     public class DungeonsManager : IDungeonsManager
     {
+        private readonly ILogger<DungeonsManager> _logger;
+        private readonly EventDispatcher _eventDispatcher;
+        private readonly NewDungeonExitEventHandler _newDungeonExitHandler;
         public ConcurrentDictionary<int, Dungeon> DungeonsList { get; } = new();
+
+        public DungeonsManager(ILogger<DungeonsManager> logger, EventDispatcher eventDispatcher, NewDungeonExitEventHandler newDungeonExitHandler)
+        {
+            _logger = logger;
+            _eventDispatcher = eventDispatcher;
+            _newDungeonExitHandler = newDungeonExitHandler;
+        }
+
         public void AddDungeon(int id, string type, Vector2 position, int charges)
         {
             lock (DungeonsList)
             {
                 if (DungeonsList.ContainsKey(id))
                     DungeonsList.TryRemove(id, out _);
-                DungeonsList.TryAdd(id, new Dungeon(id, type, position, charges));
+                
+                var dungeon = new Dungeon(id, type, position, charges);
+                DungeonsList.TryAdd(id, dungeon);
+                
+                _logger.LogInformation("Dungeon adicionado: {Type} (ID: {Id})", type, id);
+                
+                // Disparar evento de dungeon detectado
+                _ = _eventDispatcher.DispatchEvent(new DungeonDetectedEvent(dungeon));
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento NewDungeonExit
+        /// </summary>
+        public async Task<Dungeon?> ProcessNewDungeonExit(Dictionary<byte, object> parameters)
+        {
+            try
+            {
+                var dungeon = await _newDungeonExitHandler.HandleNewDungeonExit(parameters);
+                if (dungeon != null)
+                {
+                    AddDungeon(dungeon.Id, dungeon.Type.ToString(), dungeon.Position, dungeon.Charges);
+                    
+                    _logger.LogInformation("Novo dungeon processado: {Type} (ID: {Id})", dungeon.Type, dungeon.Id);
+                    return dungeon;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewDungeonExit: {Message}", ex.Message);
+                return null;
             }
         }
         public void Remove(int id)

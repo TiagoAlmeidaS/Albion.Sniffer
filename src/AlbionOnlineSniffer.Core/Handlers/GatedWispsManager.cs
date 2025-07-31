@@ -16,13 +16,18 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly ILogger<GatedWispsManager> _logger;
         private readonly EventDispatcher _eventDispatcher;
+        private readonly NewWispGateEventHandler _newWispGateHandler;
+        private readonly WispGateOpenedEventHandler _wispGateOpenedHandler;
 
         public ConcurrentDictionary<int, GatedWisp> GatedWispsList { get; } = new();
 
-        public GatedWispsManager(ILogger<GatedWispsManager> logger, EventDispatcher eventDispatcher)
+        public GatedWispsManager(ILogger<GatedWispsManager> logger, EventDispatcher eventDispatcher, 
+            NewWispGateEventHandler newWispGateHandler, WispGateOpenedEventHandler wispGateOpenedHandler)
         {
             _logger = logger;
             _eventDispatcher = eventDispatcher;
+            _newWispGateHandler = newWispGateHandler;
+            _wispGateOpenedHandler = wispGateOpenedHandler;
         }
 
         public void AddWispInGate(int id, Vector2 position)
@@ -32,12 +37,62 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 if (GatedWispsList.ContainsKey(id))
                     GatedWispsList.TryRemove(id, out _);
                 
-                GatedWispsList.TryAdd(id, new GatedWisp(id, position));
+                var wisp = new GatedWisp(id, position);
+                GatedWispsList.TryAdd(id, wisp);
                 
                 _logger.LogInformation("Gated Wisp detectado: ID {Id} em ({X}, {Y})", id, position.X, position.Y);
                 
                 // Disparar evento de gated wisp detectado
                 _ = _eventDispatcher.DispatchEvent(new GatedWispDetectedEvent(id, position));
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento NewWispGate
+        /// </summary>
+        public async Task<GatedWisp?> ProcessNewGatedWisp(Dictionary<byte, object> parameters)
+        {
+            try
+            {
+                var gatedWisp = await _newWispGateHandler.HandleNewWispGate(parameters);
+                if (gatedWisp != null)
+                {
+                    AddWispInGate(gatedWisp.Id, gatedWisp.Position);
+                    
+                    _logger.LogInformation("Novo gated wisp processado: ID {Id}", gatedWisp.Id);
+                    return gatedWisp;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewGatedWisp: {Message}", ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento WispGateOpened
+        /// </summary>
+        public async Task<GatedWisp?> ProcessWispGateOpened(Dictionary<byte, object> parameters)
+        {
+            try
+            {
+                var gatedWisp = await _wispGateOpenedHandler.HandleWispGateOpened(parameters);
+                if (gatedWisp != null)
+                {
+                    // Remover o wisp quando o gate é aberto
+                    Remove(gatedWisp.Id);
+                    
+                    _logger.LogInformation("Wisp Gate aberto processado: ID {Id}", gatedWisp.Id);
+                    return gatedWisp;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar WispGateOpened: {Message}", ex.Message);
+                return null;
             }
         }
 

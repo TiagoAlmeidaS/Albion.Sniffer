@@ -1,26 +1,25 @@
-using System;
 using System.Numerics;
+using AlbionOnlineSniffer.Core.Models.GameObjects;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     /// <summary>
-    /// Evento de nova zona de pesca
-    /// Baseado no albion-radar-deatheye-2pc
+    /// Evento específico para quando uma nova zona de pesca é detectada
     /// </summary>
     public class NewFishingZoneEvent : GameEvent
     {
-        public NewFishingZoneEvent(int id, Vector2 position, int size, int respawnCount)
-        {
-            EventType = "NewFishingZone";
-            Id = id;
-            Position = position;
-            Size = size;
-            RespawnCount = respawnCount;
-        }
-
-        public int Id { get; set; }
+        public int FishNodeId { get; set; }
         public Vector2 Position { get; set; }
         public int Size { get; set; }
         public int RespawnCount { get; set; }
+        
+        public NewFishingZoneEvent(FishNode fishNode)
+        {
+            EventType = "NewFishingZoneObject";
+            FishNodeId = fishNode.Id;
+            Position = fishNode.Position;
+            Size = fishNode.Size;
+            RespawnCount = fishNode.RespawnCount;
+        }
     }
 } 

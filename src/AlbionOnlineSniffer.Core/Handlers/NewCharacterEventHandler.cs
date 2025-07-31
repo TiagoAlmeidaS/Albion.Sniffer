@@ -19,11 +19,11 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly PositionDecryptor _positionDecryptor;
         private readonly PacketOffsets _packetOffsets;
 
-        public NewCharacterEventHandler(ILogger<NewCharacterEventHandler> logger, PositionDecryptor positionDecryptor)
+        public NewCharacterEventHandler(ILogger<NewCharacterEventHandler> logger, PositionDecryptor positionDecryptor, PacketOffsets packetOffsets)
         {
             _logger = logger;
             _positionDecryptor = positionDecryptor;
-            _packetOffsets = new PacketOffsets();
+            _packetOffsets = packetOffsets;
         }
 
         /// <summary>
@@ -37,6 +37,12 @@ namespace AlbionOnlineSniffer.Core.Handlers
             {
                 var offsets = _packetOffsets.NewCharacter;
                 
+                if (offsets.Length < 11)
+                {
+                    _logger.LogWarning("Offsets insuficientes para NewCharacter: {OffsetCount}", offsets.Length);
+                    return null;
+                }
+
                 // Extrair dados usando offsets (baseado no albion-radar-deatheye-2pc)
                 var id = Convert.ToInt32(parameters[offsets[0]]);
                 var name = parameters[offsets[1]] as string ?? string.Empty;

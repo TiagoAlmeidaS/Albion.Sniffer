@@ -32,14 +32,14 @@ namespace AlbionOnlineSniffer.Core.Handlers
         {
             try
             {
-                _logger.LogInformation("🐟 NOVA ZONA DE PESCA: ID {Id} (Size: {Size}, Respawn: {Respawn}) em ({X}, {Y})", 
-                    fishingZoneEvent.Id, fishingZoneEvent.Size, fishingZoneEvent.RespawnCount, 
+                _logger.LogInformation("🐟 NOVA ZONA DE PESCA: ID {FishNodeId} (Size: {Size}, Respawn: {Respawn}) em ({X}, {Y})", 
+                    fishingZoneEvent.FishNodeId, fishingZoneEvent.Size, fishingZoneEvent.RespawnCount, 
                     fishingZoneEvent.Position.X, fishingZoneEvent.Position.Y);
 
                 // Adicionar nova zona de pesca (seria implementado se necessário)
-                _logger.LogDebug("Nova zona de pesca seria adicionada: ID {Id}", fishingZoneEvent.Id);
+                _logger.LogDebug("Nova zona de pesca seria adicionada: ID {FishNodeId}", fishingZoneEvent.FishNodeId);
 
-                _logger.LogDebug("Zona de pesca adicionada: ID {Id}", fishingZoneEvent.Id);
+                _logger.LogDebug("Zona de pesca adicionada: ID {FishNodeId}", fishingZoneEvent.FishNodeId);
             }
             catch (Exception ex)
             {

@@ -110,16 +110,12 @@ namespace AlbionOnlineSniffer.Core.Services
             // 7. Handler para mudanças de cluster
             eventDispatcher.RegisterHandler("ClusterChanged", async gameEvent =>
             {
-                if (gameEvent is ClusterChangedEvent clusterEvent)
-                {
-                    logger.LogInformation("🗺️ CLUSTER MUDOU: {DisplayName} ({Color})", 
-                        clusterEvent.NewCluster.DisplayName, clusterEvent.NewCluster.ClusterColor);
-                    
-                    // Aqui você pode enviar para:
-                    // - Sistema de tracking de localização
-                    // - Alertas de mudança de zona
-                    // - Analytics de movimento
-                }
+                logger.LogInformation("🗺️ CLUSTER MUDOU: {EventType}", gameEvent.EventType);
+                
+                // Aqui você pode enviar para:
+                // - Sistema de tracking de localização
+                // - Alertas de mudança de zona
+                // - Analytics de movimento
                 await Task.CompletedTask;
             });
 
@@ -180,16 +176,12 @@ namespace AlbionOnlineSniffer.Core.Services
             // 11. Handler para mobs movidos
             eventDispatcher.RegisterHandler("MobMoved", async gameEvent =>
             {
-                if (gameEvent is MobMovedEvent mobEvent)
-                {
-                    logger.LogDebug("🐉 MOB MOVEU: ID {MobId} -> ({X}, {Y})", 
-                        mobEvent.MobId, mobEvent.NewPosition.X, mobEvent.NewPosition.Y);
-                    
-                    // Aqui você pode enviar para:
-                    // - Sistema de tracking de movimento
-                    // - Analytics de comportamento
-                    // - Sistema de radar
-                }
+                logger.LogDebug("🐉 MOB MOVEU: {EventType}", gameEvent.EventType);
+                
+                // Aqui você pode enviar para:
+                // - Sistema de tracking de movimento
+                // - Analytics de comportamento
+                // - Sistema de radar
                 await Task.CompletedTask;
             });
 
@@ -353,8 +345,8 @@ namespace AlbionOnlineSniffer.Core.Services
             {
                 if (gameEvent is WispGateOpenedEvent wispGateEvent)
                 {
-                    var status = wispGateEvent.IsCollected ? "coletado" : "aberto";
-                    logger.LogInformation("✨ WISP GATE {Status}: ID {Id}", status, wispGateEvent.Id);
+                    logger.LogInformation("✨ WISP GATE ABERTO: ID {WispId} em ({X}, {Y})", 
+                        wispGateEvent.WispId, wispGateEvent.Position.X, wispGateEvent.Position.Y);
                     // Aqui você pode integrar com serviços de wisp
                     // await wispService.ProcessWispGateOpened(wispGateEvent);
                 }
@@ -362,12 +354,12 @@ namespace AlbionOnlineSniffer.Core.Services
             });
 
             // 24. Handler para nova zona de pesca
-            eventDispatcher.RegisterHandler("NewFishingZone", async gameEvent =>
+            eventDispatcher.RegisterHandler("NewFishingZoneObject", async gameEvent =>
             {
                 if (gameEvent is NewFishingZoneEvent fishingZoneEvent)
                 {
-                    logger.LogInformation("🐟 NOVA ZONA DE PESCA: ID {Id} (Size: {Size}, Respawn: {Respawn}) em ({X}, {Y})", 
-                        fishingZoneEvent.Id, fishingZoneEvent.Size, fishingZoneEvent.RespawnCount, 
+                    logger.LogInformation("🐟 NOVA ZONA DE PESCA: ID {FishNodeId} (Size: {Size}, Respawn: {Respawn}) em ({X}, {Y})", 
+                        fishingZoneEvent.FishNodeId, fishingZoneEvent.Size, fishingZoneEvent.RespawnCount, 
                         fishingZoneEvent.Position.X, fishingZoneEvent.Position.Y);
                     // Aqui você pode integrar com serviços de pesca
                     // await fishingService.ProcessNewFishingZone(fishingZoneEvent);
@@ -380,8 +372,8 @@ namespace AlbionOnlineSniffer.Core.Services
             {
                 if (gameEvent is NewDungeonExitEvent dungeonExitEvent)
                 {
-                    logger.LogInformation("🏰 NOVA SAÍDA DE DUNGEON: ID {Id} ({Type}, Charges: {Charges}) em ({X}, {Y})", 
-                        dungeonExitEvent.Id, dungeonExitEvent.Type, dungeonExitEvent.Charges, 
+                    logger.LogInformation("🏰 NOVA SAÍDA DE DUNGEON: ID {DungeonId} ({Type}, Charges: {Charges}) em ({X}, {Y})", 
+                        dungeonExitEvent.DungeonId, dungeonExitEvent.Type, dungeonExitEvent.Charges, 
                         dungeonExitEvent.Position.X, dungeonExitEvent.Position.Y);
                     // Aqui você pode integrar com serviços de dungeon
                     // await dungeonService.ProcessNewDungeonExit(dungeonExitEvent);

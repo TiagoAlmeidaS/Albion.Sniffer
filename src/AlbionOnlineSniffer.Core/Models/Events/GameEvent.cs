@@ -30,6 +30,57 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         }
     }
 
+    // Classes de dados para eventos
+    public class HealthData
+    {
+        public int PlayerId { get; set; }
+        public int Health { get; set; }
+
+        public HealthData(int playerId, int health)
+        {
+            PlayerId = playerId;
+            Health = health;
+        }
+    }
+
+    public class MountData
+    {
+        public int PlayerId { get; set; }
+        public bool IsMounted { get; set; }
+
+        public MountData(int playerId, bool isMounted)
+        {
+            PlayerId = playerId;
+            IsMounted = isMounted;
+        }
+    }
+
+    public class MobStateData
+    {
+        public int MobId { get; set; }
+        public int State { get; set; }
+
+        public MobStateData(int mobId, int state)
+        {
+            MobId = mobId;
+            State = state;
+        }
+    }
+
+    public class HarvestableStateData
+    {
+        public int HarvestableId { get; set; }
+        public int Count { get; set; }
+        public int Charge { get; set; }
+
+        public HarvestableStateData(int harvestableId, int count, int charge)
+        {
+            HarvestableId = harvestableId;
+            Count = count;
+            Charge = charge;
+        }
+    }
+
     /// <summary>
     /// Evento de novo jogador detectado
     /// </summary>
@@ -153,7 +204,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     }
 
     /// <summary>
-    /// Evento de nova dungeon detectada
+    /// Evento de novo dungeon detectado
     /// </summary>
     public class DungeonDetectedEvent : GameEvent
     {
@@ -167,33 +218,17 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     }
 
     /// <summary>
-    /// Evento de mudança de cluster
+    /// Evento de cluster detectado
     /// </summary>
-    public class ClusterChangedEvent : GameEvent
+    public class ClusterDetectedEvent : GameEvent
     {
-        public ClusterChangedEvent(Cluster newCluster)
+        public ClusterDetectedEvent(Cluster cluster)
         {
-            EventType = "ClusterChanged";
-            NewCluster = newCluster;
+            EventType = "ClusterDetected";
+            Cluster = cluster;
         }
 
-        public Cluster NewCluster { get; set; }
-    }
-
-    /// <summary>
-    /// Evento de movimento de mob
-    /// </summary>
-    public class MobMovedEvent : GameEvent
-    {
-        public MobMovedEvent(int mobId, Vector2 newPosition)
-        {
-            EventType = "MobMoved";
-            MobId = mobId;
-            NewPosition = newPosition;
-        }
-
-        public int MobId { get; set; }
-        public Vector2 NewPosition { get; set; }
+        public Cluster Cluster { get; set; }
     }
 
     /// <summary>

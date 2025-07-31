@@ -10,16 +10,16 @@ using Microsoft.Extensions.Logging;
 namespace AlbionOnlineSniffer.Core.Handlers
 {
     /// <summary>
-    /// Handler para eventos NewLootChest do Albion Online
+    /// Handler para eventos NewWispGate do Albion Online
     /// Baseado no sistema do albion-radar-deatheye-2pc
     /// </summary>
-    public class NewLootChestEventHandler
+    public class NewWispGateEventHandler
     {
-        private readonly ILogger<NewLootChestEventHandler> _logger;
+        private readonly ILogger<NewWispGateEventHandler> _logger;
         private readonly PositionDecryptor _positionDecryptor;
         private readonly PacketOffsets _packetOffsets;
 
-        public NewLootChestEventHandler(ILogger<NewLootChestEventHandler> logger, PositionDecryptor positionDecryptor, PacketOffsets packetOffsets)
+        public NewWispGateEventHandler(ILogger<NewWispGateEventHandler> logger, PositionDecryptor positionDecryptor, PacketOffsets packetOffsets)
         {
             _logger = logger;
             _positionDecryptor = positionDecryptor;
@@ -27,19 +27,19 @@ namespace AlbionOnlineSniffer.Core.Handlers
         }
 
         /// <summary>
-        /// Processa um evento NewLootChest
+        /// Processa um evento NewWispGate
         /// </summary>
         /// <param name="parameters">Parâmetros do pacote</param>
-        /// <returns>Dados do baú processados</returns>
-        public async Task<LootChest?> HandleNewLootChest(Dictionary<byte, object> parameters)
+        /// <returns>Dados do gated wisp processados</returns>
+        public async Task<GatedWisp?> HandleNewWispGate(Dictionary<byte, object> parameters)
         {
             try
             {
-                var offsets = _packetOffsets.NewLootChest;
+                var offsets = _packetOffsets.NewWispGate;
                 
-                if (offsets.Length < 4)
+                if (offsets.Length < 3)
                 {
-                    _logger.LogWarning("Offsets insuficientes para NewLootChest: {OffsetCount}", offsets.Length);
+                    _logger.LogWarning("Offsets insuficientes para NewWispGate: {OffsetCount}", offsets.Length);
                     return null;
                 }
 
@@ -53,19 +53,18 @@ namespace AlbionOnlineSniffer.Core.Handlers
                     position = new Vector2(positionBytes[0], positionBytes[1]);
                 }
 
-                var name = parameters[offsets[2]] as string ?? "Unknown Chest";
-                var charge = parameters.ContainsKey(offsets[3]) ? Convert.ToInt32(parameters[offsets[3]]) : 0;
+                var isCollected = parameters.ContainsKey(offsets[2]) && parameters[offsets[2]].ToString() == "2";
 
-                var lootChest = new LootChest(id, position, name, charge);
+                var gatedWisp = new GatedWisp(id, position);
 
-                _logger.LogInformation("Novo baú detectado: {Name} (ID: {Id}, Charge: {Charge})", 
-                    name, id, charge);
+                _logger.LogInformation("Novo gated wisp detectado: ID {Id} (Collected: {IsCollected}) em ({X}, {Y})", 
+                    id, isCollected, position.X, position.Y);
 
-                return lootChest;
+                return gatedWisp;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao processar evento NewLootChest: {Message}", ex.Message);
+                _logger.LogError(ex, "Erro ao processar evento NewWispGate: {Message}", ex.Message);
                 return null;
             }
         }

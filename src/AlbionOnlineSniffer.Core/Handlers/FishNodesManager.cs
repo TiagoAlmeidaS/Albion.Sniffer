@@ -16,13 +16,15 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly ILogger<FishNodesManager> _logger;
         private readonly EventDispatcher _eventDispatcher;
+        private readonly NewFishingZoneObjectEventHandler _newFishingZoneObjectHandler;
 
         public ConcurrentDictionary<int, FishNode> FishNodesList { get; } = new();
 
-        public FishNodesManager(ILogger<FishNodesManager> logger, EventDispatcher eventDispatcher)
+        public FishNodesManager(ILogger<FishNodesManager> logger, EventDispatcher eventDispatcher, NewFishingZoneObjectEventHandler newFishingZoneObjectHandler)
         {
             _logger = logger;
             _eventDispatcher = eventDispatcher;
+            _newFishingZoneObjectHandler = newFishingZoneObjectHandler;
         }
 
         public void AddFishZone(int id, Vector2 position, int size, int respawnCount)
@@ -32,12 +34,38 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 if (FishNodesList.ContainsKey(id))
                     FishNodesList.TryRemove(id, out _);
                 
-                FishNodesList.TryAdd(id, new FishNode(id, position, size, respawnCount));
+                var fishNode = new FishNode(id, position, size, respawnCount);
+                FishNodesList.TryAdd(id, fishNode);
                 
                 _logger.LogInformation("Fish Node detectado: ID {Id} em ({X}, {Y})", id, position.X, position.Y);
                 
                 // Disparar evento de fish node detectado
                 _ = _eventDispatcher.DispatchEvent(new FishNodeDetectedEvent(id, position, size, respawnCount));
+            }
+        }
+
+        /// <summary>
+        /// Processa um evento NewFishingZoneObject
+        /// </summary>
+        public async Task<FishNode?> ProcessNewFishingZone(Dictionary<byte, object> parameters)
+        {
+            try
+            {
+                var fishNode = await _newFishingZoneObjectHandler.HandleNewFishingZoneObject(parameters);
+                if (fishNode != null)
+                {
+                    AddFishZone(fishNode.Id, fishNode.Position, fishNode.Size, fishNode.RespawnCount);
+                    
+                    _logger.LogInformation("Nova zona de pesca processada: ID {Id} (Size: {Size}, Respawn: {Respawn})", 
+                        fishNode.Id, fishNode.Size, fishNode.RespawnCount);
+                    return fishNode;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewFishingZone: {Message}", ex.Message);
+                return null;
             }
         }
 

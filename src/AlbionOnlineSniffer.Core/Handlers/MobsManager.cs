@@ -27,11 +27,8 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar logger específico para o handler
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            var newMobLogger = loggerFactory.CreateLogger<NewMobEventHandler>();
-            
-            _newMobHandler = new NewMobEventHandler(newMobLogger, positionDecryptor);
+            // Criar handler usando o ServiceFactory
+            _newMobHandler = DependencyProvider.CreateNewMobEventHandler();
         }
 
         /// <summary>
@@ -94,7 +91,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
                     mob.Time = DateTime.UtcNow;
                     
                     // Disparar evento de mob movido
-                    _ = _eventDispatcher.DispatchEvent(new MobMovedEvent(id, position));
+                    _ = _eventDispatcher.DispatchEvent(new GenericGameEvent("MobMoved"));
                 }
             }
         }
@@ -130,12 +127,24 @@ namespace AlbionOnlineSniffer.Core.Handlers
         /// <summary>
         /// Processa um evento NewMob
         /// </summary>
-        public async Task ProcessNewMob(Dictionary<byte, object> parameters)
+        public async Task<Mob?> ProcessNewMob(Dictionary<byte, object> parameters)
         {
-            var mob = await _newMobHandler.HandleNewMob(parameters);
-            if (mob is not null)
+            try
             {
-                AddMob(mob.Id, mob.TypeId, mob.Position, mob.Health, (byte)mob.Charge);
+                var mob = await _newMobHandler.HandleNewMob(parameters);
+                if (mob != null)
+                {
+                    AddMob(mob.Id, mob.TypeId, mob.Position, mob.Health, (byte)mob.Charge);
+                    
+                    _logger.LogInformation("Novo mob processado: {MobName} (ID: {Id})", mob.MobInfo.MobName, mob.Id);
+                    return mob; // ← RETORNAR O MOB CRIADO
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewMob: {Message}", ex.Message);
+                return null;
             }
         }
 

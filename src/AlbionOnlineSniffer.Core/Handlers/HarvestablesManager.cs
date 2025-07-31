@@ -28,11 +28,8 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar logger específico para o handler
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            var newHarvestableLogger = loggerFactory.CreateLogger<NewHarvestableEventHandler>();
-            
-            _newHarvestableHandler = new NewHarvestableEventHandler(newHarvestableLogger, positionDecryptor);
+            // Criar handler usando o ServiceFactory
+            _newHarvestableHandler = DependencyProvider.CreateNewHarvestableEventHandler();
             
             // Inicializar tipos de harvestables básicos
             InitializeHarvestableTypes();
@@ -110,13 +107,26 @@ namespace AlbionOnlineSniffer.Core.Handlers
         /// <summary>
         /// Processa um evento NewHarvestable
         /// </summary>
-        public async Task ProcessNewHarvestable(Dictionary<byte, object> parameters)
+        public async Task<Harvestable?> ProcessNewHarvestable(Dictionary<byte, object> parameters)
         {
-            var harvestable = await _newHarvestableHandler.HandleNewHarvestable(parameters);
-            if (harvestable is not null)
+            try
             {
-                AddHarvestable(harvestable.Id, GetTypeId(harvestable.Type), harvestable.Tier, 
-                              harvestable.Position, harvestable.Count, harvestable.Charge);
+                var harvestable = await _newHarvestableHandler.HandleNewHarvestable(parameters);
+                if (harvestable != null)
+                {
+                    AddHarvestable(harvestable.Id, GetTypeId(harvestable.Type), harvestable.Tier, 
+                                  harvestable.Position, harvestable.Count, harvestable.Charge);
+                    
+                    _logger.LogInformation("Novo harvestable processado: {Type} T{Level} (ID: {Id})", 
+                        harvestable.Type, harvestable.Tier, harvestable.Id);
+                    return harvestable; // ← RETORNAR O HARVESTABLE CRIADO
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar NewHarvestable: {Message}", ex.Message);
+                return null;
             }
         }
 

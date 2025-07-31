@@ -69,6 +69,8 @@ namespace AlbionOnlineSniffer.Core.Services
             if (_disposed) throw new ObjectDisposedException(nameof(Protocol16Deserializer));
             try
             {
+                _logger.LogInformation("📥 RECEBENDO PACOTE UDP: {Length} bytes", payload.Length);
+                
                 _photonReceiver?.ReceivePacket(payload);
                 
                 // Usar o parser real do Photon
@@ -76,6 +78,9 @@ namespace AlbionOnlineSniffer.Core.Services
                 
                 if (enrichedPacket != null)
                 {
+                    _logger.LogInformation("✅ PACOTE ENRIQUECIDO: {PacketName} (ID: {PacketId})", 
+                        enrichedPacket.PacketName, enrichedPacket.PacketId);
+                    
                     // Dispara evento com pacote enriquecido
                     OnEnrichedPacket?.Invoke(enrichedPacket);
                     

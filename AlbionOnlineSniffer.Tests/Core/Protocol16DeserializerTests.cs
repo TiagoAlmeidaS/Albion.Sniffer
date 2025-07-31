@@ -34,6 +34,9 @@ namespace AlbionOnlineSniffer.Tests.Core
                 null!, // MobsManager
                 null!, // HarvestablesManager
                 null!, // LootChestsManager
+                null!, // DungeonsManager
+                null!, // FishNodesManager
+                null!, // GatedWispsManager
                 null!, // PositionDecryptor
                 eventDispatcher // EventDispatcher
             );
@@ -61,6 +64,9 @@ namespace AlbionOnlineSniffer.Tests.Core
                 null!, // MobsManager
                 null!, // HarvestablesManager
                 null!, // LootChestsManager
+                null!, // DungeonsManager
+                null!, // FishNodesManager
+                null!, // GatedWispsManager
                 null!, // PositionDecryptor
                 eventDispatcher // EventDispatcher
             );
@@ -88,6 +94,9 @@ namespace AlbionOnlineSniffer.Tests.Core
                 null!, // MobsManager
                 null!, // HarvestablesManager
                 null!, // LootChestsManager
+                null!, // DungeonsManager
+                null!, // FishNodesManager
+                null!, // GatedWispsManager
                 null!, // PositionDecryptor
                 eventDispatcher // EventDispatcher
             );
