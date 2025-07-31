@@ -21,6 +21,7 @@ namespace AlbionOnlineSniffer.Core.Models
         public byte[] MoveRequest { get; set; } = new byte[0];
         public byte[] NewCharacter { get; set; } = new byte[0];
         public byte[] NewDungeonExit { get; set; } = new byte[0];
+        public byte[] NewDungeon { get; set; } = new byte[0];
         public byte[] NewFishingZoneObject { get; set; } = new byte[0];
         public byte[] NewHarvestableObject { get; set; } = new byte[0];
         public byte[] NewLootChest { get; set; } = new byte[0];

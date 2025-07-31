@@ -74,9 +74,6 @@ namespace AlbionOnlineSniffer.App
                 var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
                 var packetProcessor = serviceProvider.GetRequiredService<Core.Services.PacketProcessor>();
                 
-                // Configure event handlers (exemplos de uso)
-                Core.Services.EventServiceExamples.ConfigureEventHandlers(eventDispatcher, logger);
-
                 // 🔧 INTEGRAÇÃO COM MENSAGERIA - Conectar EventDispatcher ao Publisher
                 eventDispatcher.RegisterGlobalHandler(async gameEvent =>
                 {

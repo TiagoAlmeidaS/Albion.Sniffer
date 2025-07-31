@@ -80,7 +80,6 @@ namespace AlbionOnlineSniffer.Core
             // Serviços de parsing e enriquecimento
             services.AddSingleton<PhotonDefinitionLoader>();
             services.AddSingleton<PhotonPacketEnricher>();
-            services.AddSingleton<PhotonPacketParser>();
             services.AddSingleton<Protocol16Deserializer>();
 
             // Serviços de decriptação e offsets

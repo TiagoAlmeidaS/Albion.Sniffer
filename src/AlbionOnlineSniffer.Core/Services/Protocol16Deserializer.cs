@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using AlbionOnlineSniffer.Core.Photon;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -13,10 +13,9 @@ namespace AlbionOnlineSniffer.Core.Services
     /// </summary>
     public class Protocol16Deserializer : IDisposable
     {
-        private readonly IPhotonReceiver _photonReceiver;
-        private readonly ReceiverBuilder _builder;
+        private readonly Albion.Network.IPhotonReceiver _photonReceiver;
+        private readonly Albion.Network.ReceiverBuilder _builder;
         private readonly PhotonPacketEnricher _packetEnricher;
-        private readonly PhotonPacketParser _packetParser;
         private readonly PacketProcessor _packetProcessor;
         private readonly ILogger<Protocol16Deserializer> _logger;
         private bool _disposed;
@@ -44,12 +43,7 @@ namespace AlbionOnlineSniffer.Core.Services
             _packetProcessor = packetProcessor;
             _logger = logger;
             
-            // Criar logger específico para o parser
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            var parserLogger = loggerFactory.CreateLogger<PhotonPacketParser>();
-            _packetParser = new PhotonPacketParser(packetEnricher, parserLogger);
-            
-            _builder = ReceiverBuilder.Create();
+            _builder = Albion.Network.ReceiverBuilder.Create();
             if (handlers != null)
             {
                 foreach (var handler in handlers)
@@ -73,27 +67,13 @@ namespace AlbionOnlineSniffer.Core.Services
                 
                 _photonReceiver?.ReceivePacket(payload);
                 
-                // Usar o parser real do Photon
-                var enrichedPacket = _packetParser.ParsePacket(payload);
+                // Processar o pacote diretamente com Albion.Network
+                // O parsing é feito pela biblioteca Albion.Network
                 
-                if (enrichedPacket != null)
-                {
-                    _logger.LogInformation("✅ PACOTE ENRIQUECIDO: {PacketName} (ID: {PacketId})", 
-                        enrichedPacket.PacketName, enrichedPacket.PacketId);
-                    
-                    // Dispara evento com pacote enriquecido
-                    OnEnrichedPacket?.Invoke(enrichedPacket);
-                    
-                    // Processar o pacote usando o sistema baseado no albion-radar-deatheye-2pc
-                    _ = _packetProcessor.ProcessPacket(enrichedPacket);
-                    
-                    _logger.LogDebug("Pacote Photon processado: {PacketName} (ID: {PacketId})", 
-                        enrichedPacket.PacketName, enrichedPacket.PacketId);
-                }
-                else
-                {
-                    _logger.LogDebug("Payload não foi reconhecido como pacote Photon válido");
-                }
+                _logger.LogInformation("✅ Pacote processado pela biblioteca Albion.Network");
+                
+                // O processamento dos eventos é feito pelos handlers registrados
+                // na biblioteca Albion.Network
             }
             catch (Exception ex)
             {
