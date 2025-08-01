@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
