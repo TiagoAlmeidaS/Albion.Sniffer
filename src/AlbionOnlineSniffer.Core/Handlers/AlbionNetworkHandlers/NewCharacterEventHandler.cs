@@ -23,6 +23,7 @@ namespace AlbionOnlineSniffer.Core.Handlers.AlbionNetworkHandlers
         {
             _eventDispatcher = eventDispatcher;
             _logger = logger;
+            _logger.LogInformation("🔧 NewCharacterEventHandler criado com PacketIndex: {Index}", packetIndexes.NewCharacter);
         }
 
         protected override async Task OnActionAsync(AlbionNetworkNewCharacterEvent value)

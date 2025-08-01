@@ -70,6 +70,22 @@ namespace AlbionOnlineSniffer.App
                 // Build service provider
                 var serviceProvider = services.BuildServiceProvider();
                 
+                // 🔧 CARREGAR OFFSETS E INDEXES ANTES DE CONFIGURAR HANDLERS
+                var packetOffsetsLoader = serviceProvider.GetRequiredService<Core.Services.PacketOffsetsLoader>();
+                var packetIndexesLoader = serviceProvider.GetRequiredService<Core.Services.PacketIndexesLoader>();
+                
+                // Carregar offsets e indexes
+                var offsetsPath = Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json");
+                var indexesPath = Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json");
+                
+                logger.LogInformation("📂 Carregando offsets de: {Path}", offsetsPath);
+                var packetOffsets = packetOffsetsLoader.LoadOffsets(offsetsPath);
+                
+                logger.LogInformation("📂 Carregando indexes de: {Path}", indexesPath);
+                var packetIndexes = packetIndexesLoader.LoadIndexes(indexesPath);
+                
+                logger.LogInformation("✅ Offsets e Indexes carregados com sucesso");
+                
                 // Get services from DI container
                 var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
                 var packetProcessor = serviceProvider.GetRequiredService<Core.Services.PacketProcessor>();
@@ -103,6 +119,8 @@ namespace AlbionOnlineSniffer.App
                 });
 
                 logger.LogInformation("✅ EventDispatcher conectado ao sistema de mensageria!");
+                logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados", 
+                    eventDispatcher.GetHandlerCount("*"));
 
                 // Configurar serviços de parsing usando DI
                 var definitionLoader = serviceProvider.GetRequiredService<Core.Services.PhotonDefinitionLoader>();

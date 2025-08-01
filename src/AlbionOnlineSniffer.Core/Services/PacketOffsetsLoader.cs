@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models;
@@ -41,7 +42,29 @@ namespace AlbionOnlineSniffer.Core.Services
                 }
 
                 var jsonContent = File.ReadAllText(jsonPath);
-                var offsets = JsonSerializer.Deserialize<PacketOffsets>(jsonContent);
+                // Deserializar primeiro como Dictionary para converter arrays de int para byte[]
+                var tempDict = JsonSerializer.Deserialize<Dictionary<string, int[]>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (tempDict == null)
+                {
+                    _logger.LogWarning("Falha ao deserializar offsets.json");
+                    return new PacketOffsets();
+                }
+
+                // Converter para PacketOffsets
+                var offsets = new PacketOffsets();
+                foreach (var kvp in tempDict)
+                {
+                    var property = typeof(PacketOffsets).GetProperty(kvp.Key);
+                    if (property != null)
+                    {
+                        var byteArray = kvp.Value.Select(x => (byte)x).ToArray();
+                        property.SetValue(offsets, byteArray);
+                    }
+                }
                 
                 if (offsets != null)
                 {

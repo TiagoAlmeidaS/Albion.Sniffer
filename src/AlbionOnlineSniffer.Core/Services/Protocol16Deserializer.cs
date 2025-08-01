@@ -56,7 +56,13 @@ namespace AlbionOnlineSniffer.Core.Services
             {
                 _logger.LogInformation("📥 RECEBENDO PACOTE UDP: {Length} bytes", payload.Length);
                 
-                _photonReceiver?.ReceivePacket(payload);
+                if (_photonReceiver == null)
+                {
+                    _logger.LogWarning("⚠️ PhotonReceiver não configurado!");
+                    return;
+                }
+                
+                _photonReceiver.ReceivePacket(payload);
                 
                 // Processar o pacote diretamente com Albion.Network
                 // O parsing é feito pela biblioteca Albion.Network
