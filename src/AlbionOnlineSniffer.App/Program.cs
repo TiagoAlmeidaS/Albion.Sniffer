@@ -64,15 +64,9 @@ namespace AlbionOnlineSniffer.App
                 // Add logging
                 services.AddLogging(builder => builder.AddConsole());
                 
-                // Register Core services
-                Core.DependencyProvider.RegisterServices(services);
-                
-                // Build service provider
-                var serviceProvider = services.BuildServiceProvider();
-                
-                // 🔧 CARREGAR OFFSETS E INDEXES ANTES DE CONFIGURAR HANDLERS
-                var packetOffsetsLoader = serviceProvider.GetRequiredService<Core.Services.PacketOffsetsLoader>();
-                var packetIndexesLoader = serviceProvider.GetRequiredService<Core.Services.PacketIndexesLoader>();
+                // 🔧 CARREGAR OFFSETS E INDEXES PRIMEIRO
+                var packetOffsetsLoader = new Core.Services.PacketOffsetsLoader(loggerFactory.CreateLogger<Core.Services.PacketOffsetsLoader>());
+                var packetIndexesLoader = new Core.Services.PacketIndexesLoader(loggerFactory.CreateLogger<Core.Services.PacketIndexesLoader>());
                 
                 // Carregar offsets e indexes
                 var offsetsPath = Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json");
@@ -85,6 +79,23 @@ namespace AlbionOnlineSniffer.App
                 var packetIndexes = packetIndexesLoader.LoadIndexes(indexesPath);
                 
                 logger.LogInformation("✅ Offsets e Indexes carregados com sucesso");
+                
+                // 🔧 VERIFICAR SE OS OFFSETS FORAM CARREGADOS CORRETAMENTE
+                logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS:");
+                logger.LogInformation("  - Leave: [{Offsets}]", string.Join(", ", packetOffsets.Leave));
+                logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
+                logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
+                logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
+                
+                // 🔧 REGISTRAR OS OFFSETS CARREGADOS NO CONTAINER DI
+                services.AddSingleton(packetOffsets);
+                services.AddSingleton(packetIndexes);
+                
+                // Register Core services (agora com os offsets já carregados)
+                Core.DependencyProvider.RegisterServices(services);
+                
+                // Build service provider
+                var serviceProvider = services.BuildServiceProvider();
                 
                 // Get services from DI container
                 var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();

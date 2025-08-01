@@ -109,9 +109,8 @@ namespace AlbionOnlineSniffer.Core
             // Serviços de decriptação e offsets
             services.AddSingleton<PositionDecryptor>();
             services.AddSingleton<PacketOffsetsLoader>();
-            services.AddSingleton<PacketOffsets>();
             services.AddSingleton<PacketIndexesLoader>();
-            services.AddSingleton<PacketIndexes>();
+            // PacketOffsets e PacketIndexes são registrados externamente após carregamento
 
             // Sistema de eventos
             services.AddSingleton<EventDispatcher>();

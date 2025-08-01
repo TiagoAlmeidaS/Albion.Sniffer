@@ -73,6 +73,12 @@ namespace AlbionOnlineSniffer.Core.Services
             _gatedWispsManager = gatedWispsManager;
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
+            
+            // 🔧 VERIFICAR SE OS OFFSETS FORAM INJETADOS CORRETAMENTE
+            _logger.LogInformation("🔧 PacketProcessor criado com offsets:");
+            _logger.LogInformation("  - Leave offsets: [{Offsets}]", string.Join(", ", _packetOffsets.Leave));
+            _logger.LogInformation("  - HealthUpdateEvent offsets: [{Offsets}]", string.Join(", ", _packetOffsets.HealthUpdateEvent));
+            _logger.LogInformation("  - NewCharacter offsets: [{Offsets}]", string.Join(", ", _packetOffsets.NewCharacter));
         }
 
         /// <summary>
