@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Handlers.AlbionNetworkHandlers;
 using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Core.Services
@@ -14,7 +15,6 @@ namespace AlbionOnlineSniffer.Core.Services
     public class Protocol16Deserializer : IDisposable
     {
         private readonly Albion.Network.IPhotonReceiver _photonReceiver;
-        private readonly Albion.Network.ReceiverBuilder _builder;
         private readonly PhotonPacketEnricher _packetEnricher;
         private readonly PacketProcessor _packetProcessor;
         private readonly ILogger<Protocol16Deserializer> _logger;
@@ -31,27 +31,18 @@ namespace AlbionOnlineSniffer.Core.Services
         public event Action<EnrichedPhotonPacket>? OnEnrichedPacket;
 
         /// <summary>
-        /// Inicializa o deserializador e registra os handlers necessários.
+        /// Inicializa o deserializador com o ReceiverBuilder configurado externamente.
         /// </summary>
         /// <param name="packetEnricher">Serviço para enriquecer pacotes com informações dos bin-dumps</param>
         /// <param name="packetProcessor">Processador de pacotes baseado no albion-radar-deatheye-2pc</param>
+        /// <param name="photonReceiver">Receiver do Albion.Network já configurado com handlers</param>
         /// <param name="logger">Logger para registrar eventos</param>
-        /// <param name="handlers">Lista de handlers customizados para eventos, operações e respostas.</param>
-        public Protocol16Deserializer(PhotonPacketEnricher packetEnricher, PacketProcessor packetProcessor, ILogger<Protocol16Deserializer> logger, IEnumerable<object>? handlers = null)
+        public Protocol16Deserializer(PhotonPacketEnricher packetEnricher, PacketProcessor packetProcessor, Albion.Network.IPhotonReceiver photonReceiver, ILogger<Protocol16Deserializer> logger)
         {
             _packetEnricher = packetEnricher;
             _packetProcessor = packetProcessor;
+            _photonReceiver = photonReceiver;
             _logger = logger;
-            
-            _builder = Albion.Network.ReceiverBuilder.Create();
-            if (handlers != null)
-            {
-                foreach (var handler in handlers)
-                {
-                    RegisterHandler(handler);
-                }
-            }
-            _photonReceiver = _builder.Build();
         }
 
         /// <summary>
@@ -69,26 +60,17 @@ namespace AlbionOnlineSniffer.Core.Services
                 
                 // Processar o pacote diretamente com Albion.Network
                 // O parsing é feito pela biblioteca Albion.Network
+                // Os handlers registrados processam os eventos e disparam para o EventDispatcher
                 
                 _logger.LogInformation("✅ Pacote processado pela biblioteca Albion.Network");
                 
                 // O processamento dos eventos é feito pelos handlers registrados
-                // na biblioteca Albion.Network
+                // na biblioteca Albion.Network, que disparam para o EventDispatcher
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao processar pacote: {Message}", ex.Message);
             }
-        }
-
-        /// <summary>
-        /// Registra um handler customizado no builder (event, request ou response handler).
-        /// </summary>
-        /// <param name="handler">Handler a ser registrado.</param>
-        public void RegisterHandler(object handler)
-        {
-            // Por enquanto, apenas loga o handler
-            _logger.LogDebug("Handler registrado: {HandlerType}", handler.GetType().Name);
         }
 
         /// <summary>

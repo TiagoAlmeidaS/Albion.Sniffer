@@ -18,7 +18,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly ILogger<MobsManager> _logger;
         private readonly PositionDecryptor _positionDecryptor;
         private readonly ConcurrentDictionary<int, Mob> _mobs = new();
-        private readonly NewMobEventHandler _newMobHandler;
+        // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         private readonly EventDispatcher _eventDispatcher;
 
         public MobsManager(ILogger<MobsManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
@@ -27,8 +27,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar handler usando o ServiceFactory
-            _newMobHandler = DependencyProvider.CreateNewMobEventHandler();
+            // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         }
 
         /// <summary>
@@ -124,29 +123,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
         }
 
-        /// <summary>
-        /// Processa um evento NewMob
-        /// </summary>
-        public async Task<Mob?> ProcessNewMob(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var mob = await _newMobHandler.HandleNewMob(parameters);
-                if (mob != null)
-                {
-                    AddMob(mob.Id, mob.TypeId, mob.Position, mob.Health, (byte)mob.Charge);
-                    
-                    _logger.LogInformation("Novo mob processado: {MobName} (ID: {Id})", mob.MobInfo.MobName, mob.Id);
-                    return mob; // ← RETORNAR O MOB CRIADO
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar NewMob: {Message}", ex.Message);
-                return null;
-            }
-        }
+        // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
 
         /// <summary>
         /// Obtém todos os mobs

@@ -18,8 +18,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly ILogger<PlayersManager> _logger;
         private readonly PositionDecryptor _positionDecryptor;
         private readonly ConcurrentDictionary<int, Player> _players = new();
-        private readonly NewCharacterEventHandler _newCharacterHandler;
-        private readonly MoveEventHandler _moveHandler;
+        // Handlers agora gerenciados pelo AlbionNetworkHandlerManager
         private readonly EventDispatcher _eventDispatcher;
 
         public PlayersManager(ILogger<PlayersManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
@@ -28,9 +27,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar handlers usando o ServiceFactory
-            _newCharacterHandler = DependencyProvider.CreateNewCharacterEventHandler();
-            _moveHandler = DependencyProvider.CreateMoveEventHandler();
+            // Handlers agora gerenciados pelo AlbionNetworkHandlerManager
         }
 
         /// <summary>
@@ -104,54 +101,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
         }
 
-        /// <summary>
-        /// Processa um evento NewCharacter
-        /// </summary>
-        public async Task<Player?> ProcessNewCharacter(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var player = await _newCharacterHandler.HandleNewCharacter(parameters);
-                if (player != null)
-                {
-                    AddPlayer(player.Id, player.Name, player.Guild, player.Alliance, 
-                             player.Position, player.Health, player.Faction, player.Equipment, player.Spells);
-                    
-                    _logger.LogInformation("Novo jogador processado: {Name} (ID: {Id})", player.Name, player.Id);
-                    return player; // ← RETORNAR O PLAYER CRIADO
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar NewCharacter: {Message}", ex.Message);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Processa um evento Move
-        /// </summary>
-        public async Task<MoveData?> ProcessMove(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var moveData = await _moveHandler.HandleMove(parameters);
-                if (moveData != null)
-                {
-                    UpdatePlayerPosition(moveData.PlayerId, moveData.Position);
-                    _logger.LogDebug("Movimento processado: Jogador {PlayerId} -> {Position}", 
-                        moveData.PlayerId, moveData.Position);
-                    return moveData; // ← RETORNAR DADOS DE MOVIMENTO
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar Move: {Message}", ex.Message);
-                return null;
-            }
-        }
+        // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
 
         /// <summary>
         /// Obtém todos os jogadores

@@ -16,15 +16,15 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly ILogger<FishNodesManager> _logger;
         private readonly EventDispatcher _eventDispatcher;
-        private readonly NewFishingZoneObjectEventHandler _newFishingZoneObjectHandler;
+        // Handler agora gerenciado pelo AlbionNetworkHandlerManager
 
         public ConcurrentDictionary<int, FishNode> FishNodesList { get; } = new();
 
-        public FishNodesManager(ILogger<FishNodesManager> logger, EventDispatcher eventDispatcher, NewFishingZoneObjectEventHandler newFishingZoneObjectHandler)
+        public FishNodesManager(ILogger<FishNodesManager> logger, EventDispatcher eventDispatcher)
         {
             _logger = logger;
             _eventDispatcher = eventDispatcher;
-            _newFishingZoneObjectHandler = newFishingZoneObjectHandler;
+            // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         }
 
         public void AddFishZone(int id, Vector2 position, int size, int respawnCount)
@@ -44,30 +44,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
         }
 
-        /// <summary>
-        /// Processa um evento NewFishingZoneObject
-        /// </summary>
-        public async Task<FishNode?> ProcessNewFishingZone(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var fishNode = await _newFishingZoneObjectHandler.HandleNewFishingZoneObject(parameters);
-                if (fishNode != null)
-                {
-                    AddFishZone(fishNode.Id, fishNode.Position, fishNode.Size, fishNode.RespawnCount);
-                    
-                    _logger.LogInformation("Nova zona de pesca processada: ID {Id} (Size: {Size}, Respawn: {Respawn})", 
-                        fishNode.Id, fishNode.Size, fishNode.RespawnCount);
-                    return fishNode;
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar NewFishingZone: {Message}", ex.Message);
-                return null;
-            }
-        }
+        // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
 
         public void Remove(int id)
         {

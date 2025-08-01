@@ -18,7 +18,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly ILogger<LootChestsManager> _logger;
         private readonly PositionDecryptor _positionDecryptor;
         private readonly ConcurrentDictionary<int, LootChest> _lootChests = new();
-        private readonly NewLootChestEventHandler _newLootChestHandler;
+        // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         private readonly EventDispatcher _eventDispatcher;
 
         public LootChestsManager(ILogger<LootChestsManager> logger, PositionDecryptor positionDecryptor, EventDispatcher eventDispatcher)
@@ -27,8 +27,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar handler usando o ServiceFactory
-            _newLootChestHandler = DependencyProvider.CreateNewLootChestEventHandler();
+            // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         }
 
         /// <summary>
@@ -81,29 +80,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
         }
 
-        /// <summary>
-        /// Processa um evento NewLootChest
-        /// </summary>
-        public async Task<LootChest?> ProcessNewLootChest(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var lootChest = await _newLootChestHandler.HandleNewLootChest(parameters);
-                if (lootChest != null)
-                {
-                    AddLootChest(lootChest.Id, lootChest.Position, lootChest.Name, lootChest.Charge);
-                    
-                    _logger.LogInformation("Novo loot chest processado: {Name} (ID: {Id})", lootChest.Name, lootChest.Id);
-                    return lootChest; // ← RETORNAR O LOOT CHEST CRIADO
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar NewLootChest: {Message}", ex.Message);
-                return null;
-            }
-        }
+        // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
 
         /// <summary>
         /// Obtém todos os loot chests

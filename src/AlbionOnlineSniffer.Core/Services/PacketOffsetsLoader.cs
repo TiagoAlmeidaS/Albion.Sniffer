@@ -20,6 +20,12 @@ namespace AlbionOnlineSniffer.Core.Services
         }
 
         /// <summary>
+        /// Propriedade estática para acesso global aos offsets
+        /// Baseado no padrão do albion-radar-deatheye-2pc
+        /// </summary>
+        public static PacketOffsets? GlobalPacketOffsets { get; private set; }
+
+        /// <summary>
         /// Carrega os offsets do arquivo JSON
         /// </summary>
         /// <param name="jsonPath">Caminho para o arquivo offsets.json</param>
@@ -40,6 +46,7 @@ namespace AlbionOnlineSniffer.Core.Services
                 if (offsets != null)
                 {
                     _logger.LogInformation("Offsets carregados com sucesso de: {Path}", jsonPath);
+                    GlobalPacketOffsets = offsets; // Atualizar a propriedade estática
                     return offsets;
                 }
                 

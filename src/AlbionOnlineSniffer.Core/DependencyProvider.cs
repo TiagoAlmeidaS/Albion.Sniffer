@@ -13,6 +13,7 @@ namespace AlbionOnlineSniffer.Core
     {
         private static readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         private static readonly string _offsetsPath = "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json";
+        private static readonly string _indexesPath = "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json";
 
         /// <summary>
         /// Cria um logger para o tipo especificado
@@ -48,6 +49,15 @@ namespace AlbionOnlineSniffer.Core
         }
 
         /// <summary>
+        /// Cria uma instância do PacketIndexes carregado do JSON
+        /// </summary>
+        public static PacketIndexes CreatePacketIndexes()
+        {
+            var loader = new PacketIndexesLoader(CreateLogger<PacketIndexesLoader>());
+            return loader.LoadIndexes(_indexesPath);
+        }
+
+        /// <summary>
         /// Cria um handler com dependências comuns
         /// </summary>
         public static T CreateHandler<T>(Func<ILogger<T>, PositionDecryptor, PacketOffsets, T> factory)
@@ -80,28 +90,33 @@ namespace AlbionOnlineSniffer.Core
             // Serviços de parsing e enriquecimento
             services.AddSingleton<PhotonDefinitionLoader>();
             services.AddSingleton<PhotonPacketEnricher>();
+            
+            // Sistema de eventos
+            services.AddSingleton<EventDispatcher>();
+            
+            // Gerenciador de handlers do Albion.Network
+            services.AddSingleton<AlbionNetworkHandlerManager>(provider =>
+            {
+                var eventDispatcher = provider.GetRequiredService<EventDispatcher>();
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var packetIndexes = provider.GetRequiredService<PacketIndexes>();
+                return new AlbionNetworkHandlerManager(eventDispatcher, loggerFactory, packetIndexes);
+            });
+            
+            // Protocol16Deserializer (configurado externamente)
             services.AddSingleton<Protocol16Deserializer>();
 
             // Serviços de decriptação e offsets
             services.AddSingleton<PositionDecryptor>();
             services.AddSingleton<PacketOffsetsLoader>();
             services.AddSingleton<PacketOffsets>();
+            services.AddSingleton<PacketIndexesLoader>();
+            services.AddSingleton<PacketIndexes>();
 
             // Sistema de eventos
             services.AddSingleton<EventDispatcher>();
 
-            // Handlers específicos
-            services.AddSingleton<NewCharacterEventHandler>();
-            services.AddSingleton<MoveEventHandler>();
-            services.AddSingleton<NewMobEventHandler>();
-            services.AddSingleton<NewHarvestableEventHandler>();
-            services.AddSingleton<NewLootChestEventHandler>();
-            
-            // Novos handlers para parsing real
-            services.AddSingleton<NewDungeonExitEventHandler>();
-            services.AddSingleton<NewFishingZoneObjectEventHandler>();
-            services.AddSingleton<NewWispGateEventHandler>();
-            services.AddSingleton<WispGateOpenedEventHandler>();
+            // Handlers agora gerenciados pelo AlbionNetworkHandlerManager
 
             // Managers
             services.AddSingleton<PlayersManager>();
@@ -116,85 +131,7 @@ namespace AlbionOnlineSniffer.Core
             services.AddSingleton<PacketProcessor>();
         }
 
-        /// <summary>
-        /// Cria uma instância do NewCharacterEventHandler
-        /// </summary>
-        public static NewCharacterEventHandler CreateNewCharacterEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewCharacterEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewCharacterEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do MoveEventHandler
-        /// </summary>
-        public static MoveEventHandler CreateMoveEventHandler()
-        {
-            return ServiceFactory.CreateHandler<MoveEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new MoveEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do NewMobEventHandler
-        /// </summary>
-        public static NewMobEventHandler CreateNewMobEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewMobEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewMobEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do NewHarvestableEventHandler
-        /// </summary>
-        public static NewHarvestableEventHandler CreateNewHarvestableEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewHarvestableEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewHarvestableEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do NewLootChestEventHandler
-        /// </summary>
-        public static NewLootChestEventHandler CreateNewLootChestEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewLootChestEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewLootChestEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do NewDungeonExitEventHandler
-        /// </summary>
-        public static NewDungeonExitEventHandler CreateNewDungeonExitEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewDungeonExitEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewDungeonExitEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do NewFishingZoneObjectEventHandler
-        /// </summary>
-        public static NewFishingZoneObjectEventHandler CreateNewFishingZoneObjectEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewFishingZoneObjectEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewFishingZoneObjectEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do NewWispGateEventHandler
-        /// </summary>
-        public static NewWispGateEventHandler CreateNewWispGateEventHandler()
-        {
-            return ServiceFactory.CreateHandler<NewWispGateEventHandler>((logger, positionDecryptor, packetOffsets) =>
-                new NewWispGateEventHandler(logger, positionDecryptor, packetOffsets));
-        }
-
-        /// <summary>
-        /// Cria uma instância do WispGateOpenedEventHandler
-        /// </summary>
-        public static WispGateOpenedEventHandler CreateWispGateOpenedEventHandler()
-        {
-            return new WispGateOpenedEventHandler(ServiceFactory.CreateLogger<WispGateOpenedEventHandler>(), ServiceFactory.CreatePacketOffsets());
-        }
+        // Handlers antigos removidos - agora gerenciados pelo AlbionNetworkHandlerManager
 
         /// <summary>
         /// Cria uma instância do PlayersManager
@@ -238,7 +175,7 @@ namespace AlbionOnlineSniffer.Core
         public static DungeonsManager CreateDungeonsManager()
         {
             return ServiceFactory.CreateManager<DungeonsManager>((logger, eventDispatcher) =>
-                new DungeonsManager(logger, eventDispatcher, CreateNewDungeonExitEventHandler()));
+                new DungeonsManager(logger, eventDispatcher));
         }
 
         /// <summary>
@@ -247,7 +184,7 @@ namespace AlbionOnlineSniffer.Core
         public static FishNodesManager CreateFishNodesManager()
         {
             return ServiceFactory.CreateManager<FishNodesManager>((logger, eventDispatcher) =>
-                new FishNodesManager(logger, eventDispatcher, CreateNewFishingZoneObjectEventHandler()));
+                new FishNodesManager(logger, eventDispatcher));
         }
 
         /// <summary>
@@ -256,7 +193,7 @@ namespace AlbionOnlineSniffer.Core
         public static GatedWispsManager CreateGatedWispsManager()
         {
             return ServiceFactory.CreateManager<GatedWispsManager>((logger, eventDispatcher) =>
-                new GatedWispsManager(logger, eventDispatcher, CreateNewWispGateEventHandler(), CreateWispGateOpenedEventHandler()));
+                new GatedWispsManager(logger, eventDispatcher));
         }
 
         /// <summary>

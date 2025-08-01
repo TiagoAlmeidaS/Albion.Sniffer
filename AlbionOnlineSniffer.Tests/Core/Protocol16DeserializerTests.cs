@@ -4,6 +4,7 @@ using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Albion.Network;
 
 namespace AlbionOnlineSniffer.Tests.Core
 {
@@ -41,9 +42,12 @@ namespace AlbionOnlineSniffer.Tests.Core
                 eventDispatcher // EventDispatcher
             );
 
+            // Criar um IPhotonReceiver mock para teste
+            var mockPhotonReceiver = ReceiverBuilder.Create().Build();
+
             // Act & Assert
             var exception = Record.Exception(() => 
-                new Protocol16Deserializer(packetEnricher, packetProcessor, logger));
+                new Protocol16Deserializer(packetEnricher, packetProcessor, mockPhotonReceiver, logger));
 
             Assert.Null(exception);
         }
@@ -71,7 +75,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 eventDispatcher // EventDispatcher
             );
             
-            var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, logger);
+            var mockPhotonReceiver = ReceiverBuilder.Create().Build();
+            var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, mockPhotonReceiver, logger);
 
             // Act & Assert
             var exception = Record.Exception(() => deserializer.ReceivePacket(null!));
@@ -101,7 +106,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 eventDispatcher // EventDispatcher
             );
             
-            var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, logger);
+            var mockPhotonReceiver = ReceiverBuilder.Create().Build();
+            var deserializer = new Protocol16Deserializer(packetEnricher, packetProcessor, mockPhotonReceiver, logger);
 
             // Act & Assert
             var exception = Record.Exception(() => deserializer.ReceivePacket(new byte[0]));

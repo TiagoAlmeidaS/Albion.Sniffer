@@ -145,55 +145,14 @@ namespace AlbionOnlineSniffer.Core.Services
             {
                 switch (packetType)
                 {
+                    // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
                     case "NewCharacter":
-                        var player = await _playersManager.ProcessNewCharacter(parameters);
-                        if (player != null)
-                        {
-                            // Disparar evento específico com dados do jogador
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewCharacter para {PlayerName}", player.Name);
-                            await _eventDispatcher.DispatchEvent(new NewCharacterEvent(player));
-                        }
-                        break;
-
                     case "Move":
-                        var moveData = await _playersManager.ProcessMove(parameters);
-                        if (moveData != null)
-                        {
-                            // Disparar evento específico com dados de movimento
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: Move para jogador {PlayerId}", moveData.PlayerId);
-                            await _eventDispatcher.DispatchEvent(new MoveEvent(moveData.PlayerId, moveData.Position, 0.0f)); // Speed não disponível no MoveData
-                        }
-                        break;
-
                     case "NewMobEvent":
-                        var mob = await _mobsManager.ProcessNewMob(parameters);
-                        if (mob != null)
-                        {
-                            // Disparar evento específico com dados do mob
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewMobEvent para {MobName}", mob.MobInfo.MobName);
-                            await _eventDispatcher.DispatchEvent(new NewMobEvent(mob));
-                        }
-                        break;
-
                     case "NewHarvestableObject":
-                        var harvestable = await _harvestablesManager.ProcessNewHarvestable(parameters);
-                        if (harvestable != null)
-                        {
-                            // Disparar evento específico com dados do harvestable
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewHarvestableObject para {Type} T{Level}", 
-                                harvestable.Type, harvestable.Tier);
-                            await _eventDispatcher.DispatchEvent(new NewHarvestableEvent(harvestable));
-                        }
-                        break;
-
                     case "NewLootChest":
-                        var lootChest = await _lootChestsManager.ProcessNewLootChest(parameters);
-                        if (lootChest != null)
-                        {
-                            // Disparar evento específico com dados do loot chest
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewLootChest para {ChestName}", lootChest.Name);
-                            await _eventDispatcher.DispatchEvent(new NewLootChestEvent(lootChest));
-                        }
+                        // Eventos processados pelo AlbionNetworkHandlerManager
+                        _logger.LogDebug("Evento {PacketType} processado pelo AlbionNetworkHandlerManager", packetType);
                         break;
 
                     case "Leave":
@@ -227,43 +186,11 @@ namespace AlbionOnlineSniffer.Core.Services
                         break;
 
                     case "NewDungeonExit":
-                        var dungeon = await _dungeonsManager.ProcessNewDungeonExit(parameters);
-                        if (dungeon != null)
-                        {
-                            // Disparar evento específico com dados do dungeon
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewDungeonExit para {DungeonType}", dungeon.Type);
-                            await _eventDispatcher.DispatchEvent(new NewDungeonExitEvent(dungeon));
-                        }
-                        break;
-
                     case "NewFishingZoneObject":
-                        var fishNode = await _fishNodesManager.ProcessNewFishingZone(parameters);
-                        if (fishNode != null)
-                        {
-                            // Disparar evento específico com dados do fish node
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewFishingZoneObject para ID {FishNodeId}", fishNode.Id);
-                            await _eventDispatcher.DispatchEvent(new NewFishingZoneEvent(fishNode));
-                        }
-                        break;
-
                     case "NewWispGate":
-                        var wisp = await _gatedWispsManager.ProcessNewGatedWisp(parameters);
-                        if (wisp != null)
-                        {
-                            // Disparar evento específico com dados do wisp
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: NewWispGate para ID {WispId}", wisp.Id);
-                            await _eventDispatcher.DispatchEvent(new NewGatedWispEvent(wisp));
-                        }
-                        break;
-
                     case "WispGateOpened":
-                        var openedWisp = await _gatedWispsManager.ProcessWispGateOpened(parameters);
-                        if (openedWisp != null)
-                        {
-                            // Disparar evento específico com dados do wisp aberto
-                            _logger.LogInformation("🚀 DISPARANDO EVENTO: WispGateOpened para ID {WispId}", openedWisp.Id);
-                            await _eventDispatcher.DispatchEvent(new WispGateOpenedEvent(openedWisp));
-                        }
+                        // Eventos processados pelo AlbionNetworkHandlerManager
+                        _logger.LogDebug("Evento {PacketType} processado pelo AlbionNetworkHandlerManager", packetType);
                         break;
 
                     default:

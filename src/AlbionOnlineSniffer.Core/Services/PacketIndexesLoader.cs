@@ -1,0 +1,63 @@
+using System;
+using System.IO;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using AlbionOnlineSniffer.Core.Models;
+
+namespace AlbionOnlineSniffer.Core.Services
+{
+    /// <summary>
+    /// Carregador de índices de pacotes do arquivo JSON
+    /// Baseado no albion-radar-deatheye-2pc
+    /// </summary>
+    public class PacketIndexesLoader
+    {
+        private readonly ILogger<PacketIndexesLoader> _logger;
+
+        public PacketIndexesLoader(ILogger<PacketIndexesLoader> logger)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Carrega os índices de pacotes do arquivo JSON
+        /// </summary>
+        /// <param name="filePath">Caminho para o arquivo indexes.json</param>
+        /// <returns>Instância de PacketIndexes carregada</returns>
+        public PacketIndexes LoadIndexes(string filePath)
+        {
+            try
+            {
+                _logger.LogInformation("📂 Carregando PacketIndexes de: {FilePath}", filePath);
+
+                if (!File.Exists(filePath))
+                {
+                    _logger.LogError("❌ Arquivo de índices não encontrado: {FilePath}", filePath);
+                    throw new FileNotFoundException($"Arquivo de índices não encontrado: {filePath}");
+                }
+
+                var jsonContent = File.ReadAllText(filePath);
+                var indexes = JsonSerializer.Deserialize<PacketIndexes>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (indexes == null)
+                {
+                    _logger.LogError("❌ Falha ao deserializar PacketIndexes");
+                    throw new InvalidOperationException("Falha ao deserializar PacketIndexes");
+                }
+
+                _logger.LogInformation("✅ PacketIndexes carregado com sucesso: {IndexesCount} índices", 
+                    typeof(PacketIndexes).GetProperties().Length);
+
+                return indexes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Erro ao carregar PacketIndexes: {Message}", ex.Message);
+                throw;
+            }
+        }
+    }
+} 

@@ -107,7 +107,19 @@ namespace AlbionOnlineSniffer.App
                 // Configurar serviços de parsing usando DI
                 var definitionLoader = serviceProvider.GetRequiredService<Core.Services.PhotonDefinitionLoader>();
                 var packetEnricher = serviceProvider.GetRequiredService<Core.Services.PhotonPacketEnricher>();
-                var protocol16Deserializer = serviceProvider.GetRequiredService<Core.Services.Protocol16Deserializer>();
+                
+                // Configurar Albion.Network com handlers
+                var albionNetworkHandlerManager = serviceProvider.GetRequiredService<Core.Services.AlbionNetworkHandlerManager>();
+                var receiverBuilder = albionNetworkHandlerManager.ConfigureReceiverBuilder();
+                var photonReceiver = receiverBuilder.Build();
+                
+                // Criar Protocol16Deserializer com o receiver configurado
+                var protocol16Deserializer = new Core.Services.Protocol16Deserializer(
+                    packetEnricher, 
+                    packetProcessor, 
+                    photonReceiver, 
+                    loggerFactory.CreateLogger<Core.Services.Protocol16Deserializer>()
+                );
 
                 // Carregar definições dos bin-dumps se habilitado
                 if (binDumpsEnabled)

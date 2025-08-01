@@ -17,14 +17,14 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly ILogger<DungeonsManager> _logger;
         private readonly EventDispatcher _eventDispatcher;
-        private readonly NewDungeonExitEventHandler _newDungeonExitHandler;
+        // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         public ConcurrentDictionary<int, Dungeon> DungeonsList { get; } = new();
 
-        public DungeonsManager(ILogger<DungeonsManager> logger, EventDispatcher eventDispatcher, NewDungeonExitEventHandler newDungeonExitHandler)
+        public DungeonsManager(ILogger<DungeonsManager> logger, EventDispatcher eventDispatcher)
         {
             _logger = logger;
             _eventDispatcher = eventDispatcher;
-            _newDungeonExitHandler = newDungeonExitHandler;
+            // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         }
 
         public void AddDungeon(int id, string type, Vector2 position, int charges)
@@ -44,29 +44,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
         }
 
-        /// <summary>
-        /// Processa um evento NewDungeonExit
-        /// </summary>
-        public async Task<Dungeon?> ProcessNewDungeonExit(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var dungeon = await _newDungeonExitHandler.HandleNewDungeonExit(parameters);
-                if (dungeon != null)
-                {
-                    AddDungeon(dungeon.Id, dungeon.Type.ToString(), dungeon.Position, dungeon.Charges);
-                    
-                    _logger.LogInformation("Novo dungeon processado: {Type} (ID: {Id})", dungeon.Type, dungeon.Id);
-                    return dungeon;
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar NewDungeonExit: {Message}", ex.Message);
-                return null;
-            }
-        }
+        // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
         public void Remove(int id)
         {
             lock (DungeonsList)

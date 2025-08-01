@@ -18,7 +18,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly ILogger<HarvestablesManager> _logger;
         private readonly PositionDecryptor _positionDecryptor;
         private readonly ConcurrentDictionary<int, Harvestable> _harvestables = new();
-        private readonly NewHarvestableEventHandler _newHarvestableHandler;
+        // Handler agora gerenciado pelo AlbionNetworkHandlerManager
         private readonly EventDispatcher _eventDispatcher;
         private readonly Dictionary<int, string> _harvestableTypes = new();
 
@@ -28,8 +28,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             _positionDecryptor = positionDecryptor;
             _eventDispatcher = eventDispatcher;
             
-            // Criar handler usando o ServiceFactory
-            _newHarvestableHandler = DependencyProvider.CreateNewHarvestableEventHandler();
+            // Handler agora gerenciado pelo AlbionNetworkHandlerManager
             
             // Inicializar tipos de harvestables básicos
             InitializeHarvestableTypes();
@@ -104,31 +103,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
         }
 
-        /// <summary>
-        /// Processa um evento NewHarvestable
-        /// </summary>
-        public async Task<Harvestable?> ProcessNewHarvestable(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                var harvestable = await _newHarvestableHandler.HandleNewHarvestable(parameters);
-                if (harvestable != null)
-                {
-                    AddHarvestable(harvestable.Id, GetTypeId(harvestable.Type), harvestable.Tier, 
-                                  harvestable.Position, harvestable.Count, harvestable.Charge);
-                    
-                    _logger.LogInformation("Novo harvestable processado: {Type} T{Level} (ID: {Id})", 
-                        harvestable.Type, harvestable.Tier, harvestable.Id);
-                    return harvestable; // ← RETORNAR O HARVESTABLE CRIADO
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao processar NewHarvestable: {Message}", ex.Message);
-                return null;
-            }
-        }
+        // Processamento de eventos agora gerenciado pelo AlbionNetworkHandlerManager
 
         /// <summary>
         /// Obtém todos os harvestables
