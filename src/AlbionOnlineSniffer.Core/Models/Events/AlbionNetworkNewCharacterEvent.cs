@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
-using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -11,29 +11,43 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento NewCharacter compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkNewCharacterEvent : BaseEvent
+    public class AlbionNetworkNewCharacterEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkNewCharacterEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkNewCharacterEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            _offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewCharacter ?? new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            var offsets = GetOffsets("NewCharacter");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            Name = parameters[_offsets[1]] as string ?? string.Empty;
-            Guild = parameters.ContainsKey(_offsets[2]) ? parameters[_offsets[2]] as string ?? string.Empty : string.Empty;
-            Alliance = parameters.ContainsKey(_offsets[3]) ? parameters[_offsets[3]] as string ?? string.Empty : string.Empty;
-            Faction = (Faction)parameters[_offsets[4]];
-            
-            EncryptedPosition = parameters[_offsets[5]] as byte[];
-            Speed = parameters.ContainsKey(_offsets[6]) ? (float)parameters[_offsets[6]] : 5.5f;
+            if (offsets.Length >= 11)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                Name = parameters[offsets[1]] as string ?? string.Empty;
+                Guild = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string ?? string.Empty : string.Empty;
+                Alliance = parameters.ContainsKey(offsets[3]) ? parameters[offsets[3]] as string ?? string.Empty : string.Empty;
+                Faction = (Faction)parameters[offsets[4]];
+                
+                EncryptedPosition = parameters[offsets[5]] as byte[];
+                Speed = parameters.ContainsKey(offsets[6]) ? (float)parameters[offsets[6]] : 5.5f;
 
-            Health = parameters.ContainsKey(_offsets[7]) ?
-                new Health(Convert.ToInt32(parameters[_offsets[7]]), Convert.ToInt32(parameters[_offsets[8]]))
-                : new Health(Convert.ToInt32(parameters[_offsets[8]]));
+                Health = parameters.ContainsKey(offsets[7]) ?
+                    new Health(Convert.ToInt32(parameters[offsets[7]]), Convert.ToInt32(parameters[offsets[8]]))
+                    : new Health(Convert.ToInt32(parameters[offsets[8]]));
 
-            Equipments = ConvertArray(parameters[_offsets[9]]);
-            Spells = ConvertArray(parameters[_offsets[10]]);
+                Equipments = ConvertArray(parameters[offsets[9]]);
+                Spells = ConvertArray(parameters[offsets[10]]);
+            }
+            else
+            {
+                Id = 0;
+                Name = string.Empty;
+                Guild = string.Empty;
+                Alliance = string.Empty;
+                Faction = Faction.NoPVP;
+                EncryptedPosition = null;
+                Speed = 5.5f;
+                Health = new Health(100);
+                Equipments = null;
+                Spells = null;
+            }
         }
 
         public int Id { get; }

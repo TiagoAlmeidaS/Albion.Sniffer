@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Albion.Network;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -9,19 +10,26 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento HarvestableChangeState compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkHarvestableChangeStateEvent : BaseEvent
+    public class AlbionNetworkHarvestableChangeStateEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkHarvestableChangeStateEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkHarvestableChangeStateEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0, 1, 2, 3 }; // Placeholder
+            var offsets = GetOffsets("HarvestableChangeState");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            Position = (Vector2)parameters[_offsets[1]];
-            Count = Convert.ToInt32(parameters[_offsets[2]]);
-            Charge = Convert.ToInt32(parameters[_offsets[3]]);
+            if (offsets.Length >= 4)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                Position = (Vector2)parameters[offsets[1]];
+                Count = Convert.ToInt32(parameters[offsets[2]]);
+                Charge = Convert.ToInt32(parameters[offsets[3]]);
+            }
+            else
+            {
+                Id = 0;
+                Position = Vector2.Zero;
+                Count = 0;
+                Charge = 0;
+            }
         }
 
         public int Id { get; }

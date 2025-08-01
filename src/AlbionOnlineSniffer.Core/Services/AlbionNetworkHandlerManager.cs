@@ -19,12 +19,14 @@ namespace AlbionOnlineSniffer.Core.Services
         private readonly ILogger<AlbionNetworkHandlerManager> _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly PacketIndexes _packetIndexes;
+        private readonly PacketOffsets _packetOffsets;
 
-        public AlbionNetworkHandlerManager(EventDispatcher eventDispatcher, ILoggerFactory loggerFactory, PacketIndexes packetIndexes)
+        public AlbionNetworkHandlerManager(EventDispatcher eventDispatcher, ILoggerFactory loggerFactory, PacketIndexes packetIndexes, PacketOffsets packetOffsets)
         {
             _eventDispatcher = eventDispatcher;
             _loggerFactory = loggerFactory;
             _packetIndexes = packetIndexes;
+            _packetOffsets = packetOffsets;
             _logger = loggerFactory.CreateLogger<AlbionNetworkHandlerManager>();
         }
 

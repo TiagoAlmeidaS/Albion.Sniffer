@@ -100,7 +100,8 @@ namespace AlbionOnlineSniffer.Core
                 var eventDispatcher = provider.GetRequiredService<EventDispatcher>();
                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
                 var packetIndexes = provider.GetRequiredService<PacketIndexes>();
-                return new AlbionNetworkHandlerManager(eventDispatcher, loggerFactory, packetIndexes);
+                var packetOffsets = provider.GetRequiredService<PacketOffsets>();
+                return new AlbionNetworkHandlerManager(eventDispatcher, loggerFactory, packetIndexes, packetOffsets);
             });
             
             // Protocol16Deserializer (configurado externamente)

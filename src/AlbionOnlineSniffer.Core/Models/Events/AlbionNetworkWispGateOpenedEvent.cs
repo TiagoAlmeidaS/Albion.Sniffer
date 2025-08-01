@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Albion.Network;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -8,17 +9,22 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento WispGateOpened compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkWispGateOpenedEvent : BaseEvent
+    public class AlbionNetworkWispGateOpenedEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkWispGateOpenedEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkWispGateOpenedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0, 1 }; // Placeholder
+            var offsets = GetOffsets("WispGateOpened");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            IsOpened = Convert.ToBoolean(parameters[_offsets[1]]);
+            if (offsets.Length >= 2)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                IsOpened = Convert.ToBoolean(parameters[offsets[1]]);
+            }
+            else
+            {
+                Id = 0;
+                IsOpened = false;
+            }
         }
 
         public int Id { get; }

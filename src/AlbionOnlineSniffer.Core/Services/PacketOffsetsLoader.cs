@@ -70,6 +70,8 @@ namespace AlbionOnlineSniffer.Core.Services
                 {
                     _logger.LogInformation("Offsets carregados com sucesso de: {Path}", jsonPath);
                     GlobalPacketOffsets = offsets; // Atualizar a propriedade estática
+                    _logger.LogInformation("✅ GlobalPacketOffsets atualizado com {Count} tipos de eventos", 
+                        typeof(PacketOffsets).GetProperties().Length);
                     return offsets;
                 }
                 

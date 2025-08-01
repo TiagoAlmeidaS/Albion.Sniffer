@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
-using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -10,19 +10,25 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento HealthUpdate compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkHealthUpdateEvent : BaseEvent
+    public class AlbionNetworkHealthUpdateEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkHealthUpdateEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkHealthUpdateEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            _offsets = PacketOffsetsLoader.GlobalPacketOffsets?.HealthUpdateEvent ?? new byte[] { 0, 1, 2 };
+            var offsets = GetOffsets("HealthUpdateEvent");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            
-            Health = parameters.ContainsKey(_offsets[1]) ? 
-                new Health(Convert.ToInt32(parameters[_offsets[1]]), Convert.ToInt32(parameters[_offsets[2]])) 
-                : new Health(Convert.ToInt32(parameters[_offsets[2]]));
+            if (offsets.Length >= 2)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                
+                Health = parameters.ContainsKey(offsets[1]) ? 
+                    new Health(Convert.ToInt32(parameters[offsets[1]]), Convert.ToInt32(parameters[offsets[2]])) 
+                    : new Health(Convert.ToInt32(parameters[offsets[2]]));
+            }
+            else
+            {
+                Id = 0;
+                Health = new Health(100);
+            }
         }
 
         public int Id { get; }

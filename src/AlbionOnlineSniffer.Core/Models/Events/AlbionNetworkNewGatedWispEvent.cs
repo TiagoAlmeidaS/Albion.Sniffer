@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Albion.Network;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -9,19 +10,26 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento NewGatedWisp compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkNewGatedWispEvent : BaseEvent
+    public class AlbionNetworkNewGatedWispEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkNewGatedWispEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkNewGatedWispEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0, 1, 2, 3 }; // Placeholder
+            var offsets = GetOffsets("NewWispGate");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            TypeId = Convert.ToInt32(parameters[_offsets[1]]);
-            Position = (Vector2)parameters[_offsets[2]];
-            Tier = (byte)(parameters.ContainsKey(_offsets[3]) ? Convert.ToInt32(parameters[_offsets[3]]) : 0);
+            if (offsets.Length >= 3)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                TypeId = Convert.ToInt32(parameters[offsets[1]]);
+                Position = (Vector2)parameters[offsets[2]];
+                Tier = (byte)(parameters.ContainsKey(offsets[3]) ? Convert.ToInt32(parameters[offsets[3]]) : 0);
+            }
+            else
+            {
+                Id = 0;
+                TypeId = 0;
+                Position = Vector2.Zero;
+                Tier = 0;
+            }
         }
 
         public int Id { get; }

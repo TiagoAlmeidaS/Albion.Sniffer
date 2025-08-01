@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Albion.Network;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -9,18 +10,24 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento NewFishingZone compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkNewFishingZoneEvent : BaseEvent
+    public class AlbionNetworkNewFishingZoneEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkNewFishingZoneEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkNewFishingZoneEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0, 1, 2 }; // Placeholder
+            var offsets = GetOffsets("NewFishingZoneObject");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            TypeId = Convert.ToInt32(parameters[_offsets[1]]);
-            Position = (Vector2)parameters[_offsets[2]];
+            if (offsets.Length >= 3)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                TypeId = Convert.ToInt32(parameters[offsets[1]]);
+                Position = (Vector2)parameters[offsets[2]];
+            }
+            else
+            {
+                Id = 0;
+                TypeId = 0;
+                Position = Vector2.Zero;
+            }
         }
 
         public int Id { get; }

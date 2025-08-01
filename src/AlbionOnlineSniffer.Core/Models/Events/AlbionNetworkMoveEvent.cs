@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Albion.Network;
-using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -10,17 +10,24 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento Move compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkMoveEvent : BaseEvent
+    public class AlbionNetworkMoveEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkMoveEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkMoveEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            _offsets = PacketOffsetsLoader.GlobalPacketOffsets?.Move ?? new byte[] { 0, 1, 2 };
+            var offsets = GetOffsets("Move");
             
-            Id = Convert.ToInt32(parameters[_offsets[0]]);
-            Position = (Vector2)parameters[_offsets[1]];
-            Speed = parameters.ContainsKey(_offsets[2]) ? (float)parameters[_offsets[2]] : 0f;
+            if (offsets.Length >= 2)
+            {
+                Id = Convert.ToInt32(parameters[offsets[0]]);
+                Position = (Vector2)parameters[offsets[1]];
+                Speed = parameters.ContainsKey(offsets[2]) ? (float)parameters[offsets[2]] : 0f;
+            }
+            else
+            {
+                Id = 0;
+                Position = Vector2.Zero;
+                Speed = 0f;
+            }
         }
 
         public int Id { get; }

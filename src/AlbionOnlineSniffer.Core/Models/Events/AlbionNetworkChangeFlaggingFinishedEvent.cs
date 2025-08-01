@@ -11,14 +11,21 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     public class AlbionNetworkChangeFlaggingFinishedEvent : BaseEvent
     {
         private readonly byte[] _offsets;
-
+ 
         public AlbionNetworkChangeFlaggingFinishedEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0, 1 }; // Placeholder
+            var offsets = GetOffsets("ChangeFlaggingFinished");
             
-            PlayerId = Convert.ToInt32(parameters[_offsets[0]]);
-            IsFlagged = Convert.ToBoolean(parameters[_offsets[1]]);
+            if (offsets.Length >= 2)
+            {
+                PlayerId = Convert.ToInt32(parameters[offsets[0]]);
+                IsFlagged = Convert.ToBoolean(parameters[offsets[1]]);
+            }
+            else
+            {
+                PlayerId = 0;
+                IsFlagged = false;
+            }
         }
 
         public int PlayerId { get; }

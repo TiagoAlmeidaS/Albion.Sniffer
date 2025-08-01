@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -9,17 +10,21 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento NewHarvestablesList compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkNewHarvestablesListEvent : BaseEvent
+    public class AlbionNetworkNewHarvestablesListEvent : BaseAlbionNetworkEvent
     {
-        private readonly byte[] _offsets;
-
-        public AlbionNetworkNewHarvestablesListEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkNewHarvestablesListEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0 }; // Placeholder
+            var offsets = GetOffsets("NewHarvestableList");
             
-            // TODO: Implementar parsing da lista de harvestables
-            Harvestables = new List<Harvestable>();
+            if (offsets.Length >= 1)
+            {
+                // TODO: Implementar parsing da lista de harvestables
+                Harvestables = new List<Harvestable>();
+            }
+            else
+            {
+                Harvestables = new List<Harvestable>();
+            }
         }
 
         public List<Harvestable> Harvestables { get; }

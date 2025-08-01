@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Albion.Network;
+using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -14,11 +16,18 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public AlbionNetworkJoinResponseEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            // TODO: Carregar offsets do PacketOffsets
-            _offsets = new byte[] { 0, 1 }; // Placeholder
+            _offsets = PacketOffsetsLoader.GlobalPacketOffsets?.JoinResponse ?? new byte[] { 0, 1 };
             
-            Success = Convert.ToBoolean(parameters[_offsets[0]]);
-            Message = parameters[_offsets[1]]?.ToString() ?? string.Empty;
+            if (_offsets.Length >= 2)
+            {
+                Success = Convert.ToBoolean(parameters[_offsets[0]]);
+                Message = parameters[_offsets[1]]?.ToString() ?? string.Empty;
+            }
+            else
+            {
+                Success = false;
+                Message = string.Empty;
+            }
         }
 
         public bool Success { get; }
