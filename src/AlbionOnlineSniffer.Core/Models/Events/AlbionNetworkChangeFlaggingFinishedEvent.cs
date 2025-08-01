@@ -8,11 +8,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     /// Evento ChangeFlaggingFinished compatível com Albion.Network.BaseEvent
     /// Baseado no albion-radar-deatheye-2pc
     /// </summary>
-    public class AlbionNetworkChangeFlaggingFinishedEvent : BaseEvent
+    public class AlbionNetworkChangeFlaggingFinishedEvent : BaseAlbionNetworkEvent
     {
         private readonly byte[] _offsets;
  
-        public AlbionNetworkChangeFlaggingFinishedEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public AlbionNetworkChangeFlaggingFinishedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters, packetOffsets)
         {
             var offsets = GetOffsets("ChangeFlaggingFinished");
             
