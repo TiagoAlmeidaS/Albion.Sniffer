@@ -12,19 +12,21 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly LocalPlayerHandler localPlayerHandler;
         private readonly ConfigHandler configHandler;
+        private readonly EventDispatcher eventDispatcher;
 
         // Removido o uso de Properties.Resources - será implementado quando necessário
         // private Stream announce = Properties.Resources.announce;
         // private SoundPlayer player;
 
-        public LoadClusterObjectsEventHandler(LocalPlayerHandler localPlayerHandler, ConfigHandler configHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.LoadClusterObjects ?? 0)
+        public LoadClusterObjectsEventHandler(LocalPlayerHandler localPlayerHandler, ConfigHandler configHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.LoadClusterObjects ?? 0)
         {
             // player = new SoundPlayer(announce);
             this.localPlayerHandler = localPlayerHandler;
             this.configHandler = configHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(LoadClusterObjectsEvent value)
+        protected override async Task OnActionAsync(LoadClusterObjectsEvent value)
         {
             if (localPlayerHandler.localPlayer.CurrentCluster.Subtype != ClusterSubtype.Unknown)
             {
@@ -33,9 +35,10 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 //     player.Play();
 
                 localPlayerHandler.UpdateClusterObjectives(value.ClusterObjectives);
+                
+                // Emitir evento para o EventDispatcher
+                await eventDispatcher.DispatchEvent(value);
             }
-
-            return Task.CompletedTask;
         }
     }
 }

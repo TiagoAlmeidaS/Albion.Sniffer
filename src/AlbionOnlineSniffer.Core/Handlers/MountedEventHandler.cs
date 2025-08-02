@@ -8,17 +8,21 @@ namespace AlbionOnlineSniffer.Core.Handlers
     class MountedEventHandler : EventPacketHandler<MountedEvent>
     {
         private readonly PlayersHandler playerHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public MountedEventHandler(PlayersHandler playerHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.Mounted ?? 0)
+        public MountedEventHandler(PlayersHandler playerHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.Mounted ?? 0)
         {
             this.playerHandler = playerHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(MountedEvent value)
+        protected override async Task OnActionAsync(MountedEvent value)
         {
             playerHandler.Mounted(value.Id, value.IsMounted);
 
-            return Task.CompletedTask;
+            await eventDispatcher.DispatchEvent(value);
+
+            return;
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using Albion.Network;
-using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Dungeons;
 using AlbionOnlineSniffer.Core.Models.GameObjects.FishNodes;
@@ -9,7 +8,6 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
-using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Handlers
@@ -24,8 +22,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly FishNodesHandler fishNodesHandler;
         private readonly GatedWispsHandler gatedWispsHandler;
         private readonly LootChestsHandler lootChestsHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public ChangeClusterEventHandler(LocalPlayerHandler localPlayerHandler, PlayersHandler playersHandler, HarvestablesHandler harvestablesHandler, MobsHandler mobsHandler, DungeonsHandler dungeonsHandler, FishNodesHandler fishNodesHandler, GatedWispsHandler gatedWispsHandler, LootChestsHandler lootChestsHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.ChangeCluster ?? 0)
+        public ChangeClusterEventHandler(LocalPlayerHandler localPlayerHandler, PlayersHandler playersHandler, HarvestablesHandler harvestablesHandler, MobsHandler mobsHandler, DungeonsHandler dungeonsHandler, FishNodesHandler fishNodesHandler, GatedWispsHandler gatedWispsHandler, LootChestsHandler lootChestsHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.ChangeCluster ?? 0)
         {
             this.localPlayerHandler = localPlayerHandler;
             this.playersHandler = playersHandler;
@@ -35,9 +34,10 @@ namespace AlbionOnlineSniffer.Core.Handlers
             this.fishNodesHandler = fishNodesHandler;
             this.gatedWispsHandler = gatedWispsHandler;
             this.lootChestsHandler = lootChestsHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(ChangeClusterEvent value)
+        protected override async Task OnActionAsync(ChangeClusterEvent value)
         {
             localPlayerHandler.ChangeCluster(value.LocationId, value.DynamicClusterData);
 
@@ -49,7 +49,8 @@ namespace AlbionOnlineSniffer.Core.Handlers
             gatedWispsHandler.Clear();
             lootChestsHandler.Clear();
 
-            return Task.CompletedTask;
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

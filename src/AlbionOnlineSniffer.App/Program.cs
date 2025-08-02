@@ -105,26 +105,29 @@ namespace AlbionOnlineSniffer.App
                 {
                     try
                     {
-                        logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", 
-                            gameEvent.EventType, gameEvent.Timestamp);
+                        var eventType = gameEvent.GetType().Name;
+                        var timestamp = DateTime.UtcNow;
                         
-                        var topic = $"albion.event.{gameEvent.EventType.ToLowerInvariant()}";
+                        logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", 
+                            eventType, timestamp);
+                        
+                        var topic = $"albion.event.{eventType.ToLowerInvariant()}";
                         var message = new
                         {
-                            EventType = gameEvent.EventType,
-                            Timestamp = gameEvent.Timestamp,
+                            EventType = eventType,
+                            Timestamp = timestamp,
                             Data = gameEvent
                         };
                         
-                        logger.LogInformation("📤 PUBLICANDO: {EventType} -> {Topic}", gameEvent.EventType, topic);
+                        logger.LogInformation("📤 PUBLICANDO: {EventType} -> {Topic}", eventType, topic);
                         await publisher.PublishAsync(topic, message);
                         logger.LogInformation("✅ Evento publicado na fila: {EventType} -> {Topic}", 
-                            gameEvent.EventType, topic);
+                            eventType, topic);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "❌ Erro ao publicar evento na fila: {EventType} - {Message}", 
-                            gameEvent.EventType, ex.Message);
+                            gameEvent.GetType().Name, ex.Message);
                     }
                 });
 

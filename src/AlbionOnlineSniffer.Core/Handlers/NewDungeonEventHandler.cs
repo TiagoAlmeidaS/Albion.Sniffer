@@ -8,17 +8,20 @@ namespace AlbionOnlineSniffer.Core.Handlers
     public class NewDungeonEventHandler : EventPacketHandler<NewDungeonEvent>
     {
         private readonly DungeonsHandler dungeonsHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public NewDungeonEventHandler(DungeonsHandler dungeonsHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewDungeonExit ?? 0)
+        public NewDungeonEventHandler(DungeonsHandler dungeonsHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewDungeonExit ?? 0)
         {
             this.dungeonsHandler = dungeonsHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(NewDungeonEvent value)
+        protected override async Task OnActionAsync(NewDungeonEvent value)
         {
             dungeonsHandler.AddDungeon(value.Id, value.Type, value.Position, value.Charges);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

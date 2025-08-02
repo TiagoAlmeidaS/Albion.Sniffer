@@ -4,7 +4,17 @@ using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using AlbionOnlineSniffer.Core.Models.Events;
+using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Dungeons;
+using AlbionOnlineSniffer.Core.Models.GameObjects.FishNodes;
+using AlbionOnlineSniffer.Core.Models.GameObjects.GatedWisps;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
+using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
@@ -14,10 +24,12 @@ namespace AlbionOnlineSniffer.Core.Services
     public class AlbionNetworkHandlerManager
     {
         private readonly ILogger<AlbionNetworkHandlerManager> _logger;
+        private readonly IServiceProvider _serviceProvider;
 
-        public AlbionNetworkHandlerManager(ILogger<AlbionNetworkHandlerManager> logger)
+        public AlbionNetworkHandlerManager(ILogger<AlbionNetworkHandlerManager> logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         /// <summary>
@@ -28,142 +40,155 @@ namespace AlbionOnlineSniffer.Core.Services
         {
             var builder = new ReceiverBuilder();
             
-            // Registrar handlers para diferentes tipos de eventos
-            builder.AddRequestHandler<NewCharacterEvent>(OnNewCharacter);
-            builder.RegisterHandler<MoveEvent>(OnMove);
-            builder.RegisterHandler<NewMobEvent>(OnNewMob);
-            builder.RegisterHandler<NewHarvestableEvent>(OnNewHarvestable);
-            builder.RegisterHandler<NewLootChestEvent>(OnNewLootChest);
-            builder.RegisterHandler<NewDungeonEvent>(OnNewDungeon);
-            builder.RegisterHandler<NewFishingZoneEvent>(OnNewFishingZone);
-            builder.RegisterHandler<NewGatedWispEvent>(OnNewGatedWisp);
-            builder.RegisterHandler<LeaveEvent>(OnLeave);
-            builder.RegisterHandler<HealthUpdateEvent>(OnHealthUpdate);
-            builder.RegisterHandler<MountedEvent>(OnMounted);
-            builder.RegisterHandler<MobChangeStateEvent>(OnMobChangeState);
-            builder.RegisterHandler<HarvestableChangeStateEvent>(OnHarvestableChangeState);
-            builder.RegisterHandler<KeySyncEvent>(OnKeySync);
-            builder.RegisterHandler<RegenerationChangedEvent>(OnRegenerationChanged);
-            builder.RegisterHandler<MistsPlayerJoinedInfoEvent>(OnMistsPlayerJoinedInfo);
-            builder.RegisterHandler<LoadClusterObjectsEvent>(OnLoadClusterObjects);
-            builder.RegisterHandler<CharacterEquipmentChanged>(OnCharacterEquipmentChanged);
-            builder.RegisterHandler<ChangeFlaggingFinishedEvent>(OnChangeFlaggingFinished);
-            builder.RegisterHandler<WispGateOpenedEvent>(OnWispGateOpened);
-            builder.RegisterHandler<NewHarvestablesListEvent>(OnNewHarvestablesList);
-            builder.RegisterHandler<ChangeClusterEvent>(OnChangeCluster);
+            // Registrar handlers usando a abordagem correta baseada nos handlers existentes
+            builder.AddEventHandler(new LeaveEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<DungeonsHandler>(),
+                _serviceProvider.GetRequiredService<FishNodesHandler>(),
+                _serviceProvider.GetRequiredService<GatedWispsHandler>(),
+                _serviceProvider.GetRequiredService<LootChestsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddResponseHandler(new ChangeClusterEventHandler(
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<HarvestablesHandler>(),
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<DungeonsHandler>(),
+                _serviceProvider.GetRequiredService<FishNodesHandler>(),
+                _serviceProvider.GetRequiredService<GatedWispsHandler>(),
+                _serviceProvider.GetRequiredService<LootChestsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddResponseHandler(new JoinResponseOperationHandler(
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<HarvestablesHandler>(),
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<DungeonsHandler>(),
+                _serviceProvider.GetRequiredService<FishNodesHandler>(),
+                _serviceProvider.GetRequiredService<GatedWispsHandler>(),
+                _serviceProvider.GetRequiredService<LootChestsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddRequestHandler(new MoveRequestOperationHandler(
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<HarvestablesHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new MistsPlayerJoinedInfoEventHandler(
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new LoadClusterObjectsEventHandler(
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<ConfigHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewCharacterEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<ConfigHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new MountedEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new ChangeFlaggingFinishedEventHandler(
+                _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new CharacterEquipmentChangedEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new MoveEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new HealthUpdateEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new RegenerationChangedEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewHarvestableEventHandler(
+                _serviceProvider.GetRequiredService<HarvestablesHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewHarvestablesListEventHandler(
+                _serviceProvider.GetRequiredService<HarvestablesHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewMobEventHandler(
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new MobChangeStateEventHandler(
+                _serviceProvider.GetRequiredService<MobsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new HarvestableChangeStateEventHandler(
+                _serviceProvider.GetRequiredService<HarvestablesHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new KeySyncEventHandler(
+                _serviceProvider.GetRequiredService<PlayersHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewDungeonEventHandler(
+                _serviceProvider.GetRequiredService<DungeonsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewFishingZoneEventHandler(
+                _serviceProvider.GetRequiredService<FishNodesHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewGatedWispEventHandler(
+                _serviceProvider.GetRequiredService<GatedWispsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new NewLootChestEventHandler(
+                _serviceProvider.GetRequiredService<LootChestsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
+            builder.AddEventHandler(new WispGateOpenedEventHandler(
+                _serviceProvider.GetRequiredService<GatedWispsHandler>(),
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
 
-            _logger.LogInformation("ReceiverBuilder configurado com {HandlerCount} handlers", 22);
+            _logger.LogInformation("ReceiverBuilder configurado com {HandlerCount} handlers", 25);
             return builder;
-        }
-
-        private void OnNewCharacter(NewCharacterEvent evt)
-        {
-            _logger.LogDebug("Handler: NewCharacter - ID: {Id}, Name: {Name}", evt.Id, evt.Name);
-        }
-
-        private void OnMove(MoveEvent evt)
-        {
-            _logger.LogDebug("Handler: Move - ID: {Id}", evt.Id);
-        }
-
-        private void OnNewMob(NewMobEvent evt)
-        {
-            _logger.LogDebug("Handler: NewMob - ID: {Id}, TypeId: {TypeId}", evt.Id, evt.TypeId);
-        }
-
-        private void OnNewHarvestable(NewHarvestableEvent evt)
-        {
-            _logger.LogDebug("Handler: NewHarvestable - ID: {Id}, Type: {Type}", evt.Id, evt.Type);
-        }
-
-        private void OnNewLootChest(NewLootChestEvent evt)
-        {
-            _logger.LogDebug("Handler: NewLootChest - ID: {Id}, Name: {Name}", evt.Id, evt.Name);
-        }
-
-        private void OnNewDungeon(NewDungeonEvent evt)
-        {
-            _logger.LogDebug("Handler: NewDungeon - ID: {Id}, Type: {Type}", evt.Id, evt.Type);
-        }
-
-        private void OnNewFishingZone(NewFishingZoneEvent evt)
-        {
-            _logger.LogDebug("Handler: NewFishingZone - ID: {Id}, Size: {Size}", evt.Id, evt.Size);
-        }
-
-        private void OnNewGatedWisp(NewGatedWispEvent evt)
-        {
-            _logger.LogDebug("Handler: NewGatedWisp - ID: {Id}, Collected: {IsCollected}", evt.Id, evt.isCollected);
-        }
-
-        private void OnLeave(LeaveEvent evt)
-        {
-            _logger.LogDebug("Handler: Leave - ID: {Id}", evt.Id);
-        }
-
-        private void OnHealthUpdate(HealthUpdateEvent evt)
-        {
-            _logger.LogDebug("Handler: HealthUpdate - ID: {Id}, Health: {Health}", evt.Id, evt.Health);
-        }
-
-        private void OnMounted(MountedEvent evt)
-        {
-            _logger.LogDebug("Handler: Mounted - ID: {Id}, IsMounted: {IsMounted}", evt.Id, evt.IsMounted);
-        }
-
-        private void OnMobChangeState(MobChangeStateEvent evt)
-        {
-            _logger.LogDebug("Handler: MobChangeState - ID: {Id}, Charge: {Charge}", evt.Id, evt.Charge);
-        }
-
-        private void OnHarvestableChangeState(HarvestableChangeStateEvent evt)
-        {
-            _logger.LogDebug("Handler: HarvestableChangeState - ID: {Id}, Count: {Count}, Charge: {Charge}", evt.Id, evt.Count, evt.Charge);
-        }
-
-        private void OnKeySync(KeySyncEvent evt)
-        {
-            _logger.LogDebug("Handler: KeySync - Code: {CodeLength}", evt.Code?.Length ?? 0);
-        }
-
-        private void OnRegenerationChanged(RegenerationChangedEvent evt)
-        {
-            _logger.LogDebug("Handler: RegenerationChanged - ID: {Id}", evt.Id);
-        }
-
-        private void OnMistsPlayerJoinedInfo(MistsPlayerJoinedInfoEvent evt)
-        {
-            _logger.LogDebug("Handler: MistsPlayerJoinedInfo - TimeCycle: {TimeCycle}", evt.TimeCycle);
-        }
-
-        private void OnLoadClusterObjects(LoadClusterObjectsEvent evt)
-        {
-            _logger.LogDebug("Handler: LoadClusterObjects - Objectives: {Count}", evt.ClusterObjectives?.Count ?? 0);
-        }
-
-        private void OnCharacterEquipmentChanged(CharacterEquipmentChanged evt)
-        {
-            _logger.LogDebug("Handler: CharacterEquipmentChanged - ID: {Id}", evt.Id);
-        }
-
-        private void OnChangeFlaggingFinished(ChangeFlaggingFinishedEvent evt)
-        {
-            _logger.LogDebug("Handler: ChangeFlaggingFinished - ID: {Id}, Faction: {Faction}", evt.Id, evt.Faction);
-        }
-
-        private void OnWispGateOpened(WispGateOpenedEvent evt)
-        {
-            _logger.LogDebug("Handler: WispGateOpened - ID: {Id}, Collected: {IsCollected}", evt.Id, evt.isCollected);
-        }
-
-        private void OnNewHarvestablesList(NewHarvestablesListEvent evt)
-        {
-            _logger.LogDebug("Handler: NewHarvestablesList - Count: {Count}", evt.HarvestableObjects.Count);
-        }
-
-        private void OnChangeCluster(ChangeClusterEvent evt)
-        {
-            _logger.LogDebug("Handler: ChangeCluster - LocationId: {LocationId}, Type: {Type}", evt.LocationId, evt.Type);
         }
     }
 } 

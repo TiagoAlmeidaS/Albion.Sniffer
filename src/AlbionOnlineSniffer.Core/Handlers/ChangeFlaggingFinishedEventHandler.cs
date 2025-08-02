@@ -12,19 +12,22 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly LocalPlayerHandler localPlayerHandler;
         private readonly PlayersHandler playerHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public ChangeFlaggingFinishedEventHandler(LocalPlayerHandler localPlayerHandler, PlayersHandler playerHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.ChangeFlaggingFinished ?? 0)
+        public ChangeFlaggingFinishedEventHandler(LocalPlayerHandler localPlayerHandler, PlayersHandler playerHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.ChangeFlaggingFinished ?? 0)
         {
             this.localPlayerHandler = localPlayerHandler;
             this.playerHandler = playerHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(ChangeFlaggingFinishedEvent value)
+        protected override async Task OnActionAsync(ChangeFlaggingFinishedEvent value)
         {
             localPlayerHandler.SetFaction(value.Id, value.Faction);
             playerHandler.SetFaction(value.Id, value.Faction);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

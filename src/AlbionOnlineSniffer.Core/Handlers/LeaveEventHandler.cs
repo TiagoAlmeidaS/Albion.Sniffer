@@ -18,8 +18,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly FishNodesHandler fishNodesHandler;
         private readonly GatedWispsHandler gatedWispsHandler;
         private readonly LootChestsHandler lootChestsHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public LeaveEventHandler(PlayersHandler playersHandler, MobsHandler mobsHandler, DungeonsHandler dungeonsHandler, FishNodesHandler fishNodesHandler, GatedWispsHandler gatedWispsHandler, LootChestsHandler lootChestsHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.Leave ?? 0)
+        public LeaveEventHandler(PlayersHandler playersHandler, MobsHandler mobsHandler, DungeonsHandler dungeonsHandler, FishNodesHandler fishNodesHandler, GatedWispsHandler gatedWispsHandler, LootChestsHandler lootChestsHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.Leave ?? 0)
         {
             this.playersHandler = playersHandler;
             this.mobsHandler = mobsHandler;
@@ -27,9 +28,10 @@ namespace AlbionOnlineSniffer.Core.Handlers
             this.fishNodesHandler = fishNodesHandler;
             this.gatedWispsHandler = gatedWispsHandler;
             this.lootChestsHandler = lootChestsHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(LeaveEvent value)
+        protected override async Task OnActionAsync(LeaveEvent value)
         {
             playersHandler.Remove(value.Id);
             mobsHandler.Remove(value.Id);
@@ -37,8 +39,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
             fishNodesHandler.Remove(value.Id);
             gatedWispsHandler.Remove(value.Id);
             lootChestsHandler.Remove(value.Id);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

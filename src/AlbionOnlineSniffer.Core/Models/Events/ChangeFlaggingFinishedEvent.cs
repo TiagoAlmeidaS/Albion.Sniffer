@@ -6,7 +6,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class ChangeFlaggingFinishedEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.ChangeFlaggingFinished;
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.ChangeFlaggingFinished ?? new byte[] { 0 };
 
         public ChangeFlaggingFinishedEvent(Dictionary<byte, object> parameters): base(parameters)
         {

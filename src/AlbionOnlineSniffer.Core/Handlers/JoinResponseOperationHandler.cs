@@ -21,8 +21,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly FishNodesHandler fishNodesHandler;
         private readonly GatedWispsHandler gatedWispsHandler;
         private readonly LootChestsHandler lootChestsHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public JoinResponseOperationHandler(LocalPlayerHandler localPlayerHandler, PlayersHandler playersHandler, HarvestablesHandler harvestablesHandler, MobsHandler mobsHandler, DungeonsHandler dungeonsHandler, FishNodesHandler fishNodesHandler, GatedWispsHandler gatedWispsHandler, LootChestsHandler lootChestsHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.JoinResponse ?? 0)
+        public JoinResponseOperationHandler(LocalPlayerHandler localPlayerHandler, PlayersHandler playersHandler, HarvestablesHandler harvestablesHandler, MobsHandler mobsHandler, DungeonsHandler dungeonsHandler, FishNodesHandler fishNodesHandler, GatedWispsHandler gatedWispsHandler, LootChestsHandler lootChestsHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.JoinResponse ?? 0)
         {
             this.localPlayerHandler = localPlayerHandler;
             this.playersHandler = playersHandler;
@@ -32,9 +33,10 @@ namespace AlbionOnlineSniffer.Core.Handlers
             this.fishNodesHandler = fishNodesHandler;
             this.gatedWispsHandler = gatedWispsHandler;
             this.lootChestsHandler = lootChestsHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(JoinResponseOperation value)
+        protected override async Task OnActionAsync(JoinResponseOperation value)
         {
             localPlayerHandler.UpdateInfo(value.Id, value.Nick, value.Guild, value.Alliance, value.Faction, value.Position);
 
@@ -49,7 +51,10 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 lootChestsHandler.Clear();
             }
 
-            return Task.CompletedTask;
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
+
+            return;
         }
     }
 }

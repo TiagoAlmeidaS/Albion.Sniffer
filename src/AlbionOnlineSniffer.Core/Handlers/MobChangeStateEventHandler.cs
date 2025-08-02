@@ -8,16 +8,19 @@ namespace AlbionOnlineSniffer.Core.Handlers
     public class MobChangeStateEventHandler : EventPacketHandler<MobChangeStateEvent>
     {
         private readonly MobsHandler mobHandler;
-        public MobChangeStateEventHandler(MobsHandler mobHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.MobChangeState ?? 0)
+        private readonly EventDispatcher eventDispatcher;
+        public MobChangeStateEventHandler(MobsHandler mobHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.MobChangeState ?? 0)
         {
             this.mobHandler = mobHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(MobChangeStateEvent value)
+        protected override async Task OnActionAsync(MobChangeStateEvent value)
         {
             mobHandler.UpdateMobCharge(value.Id, value.Charge);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

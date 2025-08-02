@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
@@ -128,7 +129,7 @@ namespace AlbionOnlineSniffer.Core.Services
         public bool IsPvpZone(string clusterId)
         {
             var color = GetClusterColor(clusterId);
-            return color == ClusterColor.Red || color == ClusterColor.Green;
+            return color == ClusterColor.Black;
         }
     }
 

@@ -8,17 +8,20 @@ namespace AlbionOnlineSniffer.Core.Handlers
     public class NewLootChestEventHandler : EventPacketHandler<NewLootChestEvent>
     {
         private readonly LootChestsHandler worldChestHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public NewLootChestEventHandler(LootChestsHandler worldChestHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewLootChest ?? 0)
+        public NewLootChestEventHandler(LootChestsHandler worldChestHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewLootChest ?? 0)
         {
             this.worldChestHandler = worldChestHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(NewLootChestEvent value)
+        protected override async Task OnActionAsync(NewLootChestEvent value)
         {
             worldChestHandler.AddWorldChest(value.Id, value.Position, value.Name, value.EnchLvl);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

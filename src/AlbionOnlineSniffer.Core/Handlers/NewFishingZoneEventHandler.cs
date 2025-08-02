@@ -8,16 +8,20 @@ namespace AlbionOnlineSniffer.Core.Handlers
     public class NewFishingZoneEventHandler : EventPacketHandler<NewFishingZoneEvent>
     {
         private readonly FishNodesHandler fishZoneHandler;
-        public NewFishingZoneEventHandler(FishNodesHandler fishZoneHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewFishingZoneObject ?? 0)
+        private readonly EventDispatcher eventDispatcher;
+        
+        public NewFishingZoneEventHandler(FishNodesHandler fishZoneHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewFishingZoneObject ?? 0)
         {
             this.fishZoneHandler = fishZoneHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(NewFishingZoneEvent value)
+        protected override async Task OnActionAsync(NewFishingZoneEvent value)
         {
             fishZoneHandler.AddFishZone(value.Id, value.Position, value.Size, value.RespawnCount);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

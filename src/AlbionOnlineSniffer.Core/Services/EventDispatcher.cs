@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using AlbionOnlineSniffer.Core.Models.Events;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 using Albion.Network;
 
 namespace AlbionOnlineSniffer.Core.Services
@@ -15,8 +10,8 @@ namespace AlbionOnlineSniffer.Core.Services
     public class EventDispatcher
     {
         private readonly ILogger<EventDispatcher> _logger;
-        private readonly Dictionary<string, List<Func<BaseEvent, Task>>> _eventHandlers = new();
-        private readonly List<Func<BaseEvent, Task>> _globalHandlers = new();
+        private readonly Dictionary<string, List<Func<object, Task>>> _eventHandlers = new();
+        private readonly List<Func<object, Task>> _globalHandlers = new();
 
         public EventDispatcher(ILogger<EventDispatcher> logger)
         {
@@ -28,10 +23,10 @@ namespace AlbionOnlineSniffer.Core.Services
         /// </summary>
         /// <param name="eventType">Tipo do evento (ex: "NewCharacter", "Move")</param>
         /// <param name="handler">Função que processa o evento</param>
-        public void RegisterHandler(string eventType, Func<BaseEvent, Task> handler)
+        public void RegisterHandler(string eventType, Func<object, Task> handler)
         {
             if (!_eventHandlers.ContainsKey(eventType))
-                _eventHandlers[eventType] = new List<Func<BaseEvent, Task>>();
+                _eventHandlers[eventType] = new List<Func<object, Task>>();
 
             _eventHandlers[eventType].Add(handler);
             _logger.LogDebug("Handler registrado para evento: {EventType}", eventType);
@@ -41,7 +36,7 @@ namespace AlbionOnlineSniffer.Core.Services
         /// Registra um handler global que recebe todos os eventos
         /// </summary>
         /// <param name="handler">Função que processa todos os eventos</param>
-        public void RegisterGlobalHandler(Func<BaseEvent, Task> handler)
+        public void RegisterGlobalHandler(Func<object, Task> handler)
         {
             _globalHandlers.Add(handler);
             _logger.LogDebug("Handler global registrado");
@@ -50,15 +45,15 @@ namespace AlbionOnlineSniffer.Core.Services
         /// <summary>
         /// Despacha um evento para todos os handlers registrados
         /// </summary>
-        /// <param name="gameEvent">Evento a ser disparado</param>
-        public async Task DispatchEvent(BaseEvent gameEvent)
+        /// <param name="gameEvent">Evento a ser disparado (BaseEvent ou BaseOperation)</param>
+        public async Task DispatchEvent(object gameEvent)
         {
             try
             {
                 var tasks = new List<Task>();
 
                 // Handlers específicos para o tipo de evento
-                var eventType = gameEvent.EventType;
+                var eventType = gameEvent.GetType().Name;
                 if (_eventHandlers.ContainsKey(eventType))
                 {
                     foreach (var handler in _eventHandlers[eventType])
@@ -84,7 +79,7 @@ namespace AlbionOnlineSniffer.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao disparar evento: {EventType}", gameEvent.EventType);
+                _logger.LogError(ex, "Erro ao disparar evento: {EventType}", gameEvent.GetType().Name);
             }
         }
 

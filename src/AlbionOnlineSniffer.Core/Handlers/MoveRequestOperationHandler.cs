@@ -9,21 +9,25 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly LocalPlayerHandler localPlayerHandler;
         private readonly HarvestablesHandler harvestablesHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public MoveRequestOperationHandler(LocalPlayerHandler localPlayerHandler, HarvestablesHandler harvestablesHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.MoveRequest ?? 0)
+        public MoveRequestOperationHandler(LocalPlayerHandler localPlayerHandler, HarvestablesHandler harvestablesHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.MoveRequest ?? 0)
         {
             this.localPlayerHandler = localPlayerHandler;
             this.harvestablesHandler = harvestablesHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(MoveRequestOperation value)
+        protected override async Task OnActionAsync(MoveRequestOperation value)
         {
             localPlayerHandler.Move(value.Position, value.NewPosition, value.Speed, value.Time);
             
             if(!localPlayerHandler.localPlayer.IsStanding)
                 harvestablesHandler.RemoveHarvestables();
 
-            return Task.CompletedTask;
+            await eventDispatcher.DispatchEvent(value);
+
+            return;
         }
     }
 }

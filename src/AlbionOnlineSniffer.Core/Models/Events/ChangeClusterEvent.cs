@@ -6,7 +6,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class ChangeClusterEvent : BaseOperation
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.ChangeCluster;
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.ChangeCluster ?? new byte[] { 0 } ;
 
         public ChangeClusterEvent(Dictionary<byte, object> parameters) : base(parameters)
         {

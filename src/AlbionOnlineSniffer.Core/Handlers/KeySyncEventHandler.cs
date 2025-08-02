@@ -8,16 +8,19 @@ namespace AlbionOnlineSniffer.Core.Handlers
     public class KeySyncEventHandler : EventPacketHandler<KeySyncEvent>
     {
         private readonly PlayersHandler playersHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public KeySyncEventHandler(PlayersHandler playersHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.KeySync ?? 0)
+        public KeySyncEventHandler(PlayersHandler playersHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.KeySync ?? 0)
         {
             this.playersHandler = playersHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(KeySyncEvent value)
+        protected override async Task OnActionAsync(KeySyncEvent value)
         {
             playersHandler.XorCode = value.Code;
-            return Task.CompletedTask;
+            await eventDispatcher.DispatchEvent(value);
+            return;
         }
     }
 }

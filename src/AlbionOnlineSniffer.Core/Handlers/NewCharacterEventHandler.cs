@@ -16,21 +16,23 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly ConfigHandler configHandler;
         private readonly LocalPlayerHandler localPlayerHandler;
         private readonly PlayersHandler playerHandler;
+        private readonly EventDispatcher eventDispatcher;
 
         // Removido o uso de Properties.Resources - será implementado quando necessário
         // Stream beep = Properties.Resources.beep;
         // SoundPlayer player;
 
-        public NewCharacterEventHandler(PlayersHandler playerHandler, LocalPlayerHandler localPlayerHandler, ConfigHandler configHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewCharacter ?? 0)
+        public NewCharacterEventHandler(PlayersHandler playerHandler, LocalPlayerHandler localPlayerHandler, ConfigHandler configHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewCharacter ?? 0)
         {
             // player = new SoundPlayer(beep);
 
             this.playerHandler = playerHandler;
             this.localPlayerHandler = localPlayerHandler;
             this.configHandler = configHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(NewCharacterEvent value)
+        protected override async Task OnActionAsync(NewCharacterEvent value)
         {
             Vector2 pos = Vector2.Zero;
             
@@ -45,6 +47,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
             }
             
             playerHandler.AddPlayer(value.Id, value.Name, value.Guild, value.Alliance, pos, value.Health, value.Faction, value.Equipments, value.Spells);
+
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
 
             if (localPlayerHandler.localPlayer.CurrentCluster.ClusterColor != ClusterColor.City)
             {
@@ -168,8 +173,6 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 }
                 */
             }
-
-            return Task.CompletedTask;
         }
 
         private void PlayBeep(int play)

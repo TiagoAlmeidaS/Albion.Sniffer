@@ -8,18 +8,21 @@ namespace AlbionOnlineSniffer.Core.Handlers
     public class NewGatedWispEventHandler : EventPacketHandler<NewGatedWispEvent>
     {
         private readonly GatedWispsHandler wispInGateHandler;
+        private readonly EventDispatcher eventDispatcher;
 
-        public NewGatedWispEventHandler(GatedWispsHandler wispInGateHandler) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewWispGate ?? 0)
+        public NewGatedWispEventHandler(GatedWispsHandler wispInGateHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewWispGate ?? 0)
         {
             this.wispInGateHandler = wispInGateHandler;
+            this.eventDispatcher = eventDispatcher;
         }
 
-        protected override Task OnActionAsync(NewGatedWispEvent value)
+        protected override async Task OnActionAsync(NewGatedWispEvent value)
         {
             if (!value.isCollected)
                 wispInGateHandler.AddWispInGate(value.Id, value.Position);
-
-            return Task.CompletedTask;
+            
+            // Emitir evento para o EventDispatcher
+            await eventDispatcher.DispatchEvent(value);
         }
     }
 }

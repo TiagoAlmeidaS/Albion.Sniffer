@@ -86,8 +86,12 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
             
             try
             {
-                template = XmlTools.Deserialize<Template>(Path.Combine(Pathfinder.mainFolder, $"ao-bin-dumps/templates/{path}/{name}"));
-                Templates.TryAdd(name, template);
+                // Usar Directory.GetCurrentDirectory() em vez de Pathfinder.mainFolder
+                var basePath = Directory.GetCurrentDirectory();
+                var templatePath = Path.Combine(basePath, $"ao-bin-dumps/templates/{path}/{name}");
+                
+                template = XmlTools.Deserialize<Template>(templatePath);
+                Templates.TryAdd(key, template);
                 return template;
             }
             catch (Exception e)

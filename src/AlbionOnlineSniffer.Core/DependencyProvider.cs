@@ -1,7 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Services;
-using AlbionOnlineSniffer.Core.Managers;
+using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Dungeons;
+using AlbionOnlineSniffer.Core.Models.GameObjects.FishNodes;
+using AlbionOnlineSniffer.Core.Models.GameObjects.GatedWisps;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
+using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
 
 namespace AlbionOnlineSniffer.Core
 {
@@ -26,15 +33,19 @@ namespace AlbionOnlineSniffer.Core
             services.AddSingleton<ClusterService>();
             services.AddSingleton<ItemDataService>();
             services.AddSingleton<AlbionNetworkHandlerManager>();
-
-            // Managers
-            services.AddSingleton<PlayersManager>();
-            services.AddSingleton<MobsManager>();
-            services.AddSingleton<HarvestablesManager>();
-            services.AddSingleton<LootChestsManager>();
-            services.AddSingleton<DungeonsManager>();
-            services.AddSingleton<FishNodesManager>();
-            services.AddSingleton<GatedWispsManager>();
+            
+            // Game Object Handlers (substituem os Managers removidos)
+            services.AddSingleton<PlayersHandler>();
+            services.AddSingleton<MobsHandler>();
+            services.AddSingleton<DungeonsHandler>();
+            services.AddSingleton<FishNodesHandler>();
+            services.AddSingleton<GatedWispsHandler>();
+            services.AddSingleton<HarvestablesHandler>();
+            services.AddSingleton<LocalPlayerHandler>();
+            services.AddSingleton<LootChestsHandler>();
+            
+            // Configuration
+            services.AddSingleton<ConfigHandler>();
         }
     }
 } 

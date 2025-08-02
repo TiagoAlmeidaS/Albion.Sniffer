@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using System.Reflection;
 
-namespace X975.Radar.GameObjects.Dungeons
+namespace AlbionOnlineSniffer.Core.Models.GameObjects.Dungeons
 {
     [Obfuscation(Feature = "mutation", Exclude = false)]
     public class Dungeon
