@@ -1,26 +1,23 @@
-using System;
-using System.Numerics;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de mudança de estado de harvestable
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class HarvestableChangeStateEvent : GameEvent
+    public class HarvestableChangeStateEvent : BaseEvent
     {
-        public HarvestableChangeStateEvent(int id, Vector2 position, int count, int charge)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.HarvestableChangeState;
+
+        public HarvestableChangeStateEvent(Dictionary<byte, object> parameters): base(parameters)
         {
-            EventType = "HarvestableChangeState";
-            Id = id;
-            Position = position;
-            Count = count;
-            Charge = charge;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+
+            Count = parameters.ContainsKey(offsets[1]) ? Convert.ToInt32(parameters[offsets[1]]) : 0;
+            Charge = parameters.ContainsKey(offsets[2]) ? Convert.ToInt32(parameters[offsets[2]]) : 0;
         }
 
-        public int Id { get; set; }
-        public Vector2 Position { get; set; }
-        public int Count { get; set; }
-        public int Charge { get; set; }
+        public int Id { get; }
+
+        public int Count { get; }
+        public int Charge { get; }
     }
-} 
+}

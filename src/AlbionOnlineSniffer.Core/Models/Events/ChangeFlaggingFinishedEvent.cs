@@ -1,22 +1,20 @@
-using System;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Utility;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de mudança de flagging finalizada
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class ChangeFlaggingFinishedEvent : GameEvent
+    public class ChangeFlaggingFinishedEvent : BaseEvent
     {
-        public ChangeFlaggingFinishedEvent(int id, Faction faction)
-        {
-            EventType = "ChangeFlaggingFinished";
-            Id = id;
-            Faction = faction;
-        }
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.ChangeFlaggingFinished;
 
-        public int Id { get; set; }
-        public Faction Faction { get; set; }
+        public ChangeFlaggingFinishedEvent(Dictionary<byte, object> parameters): base(parameters)
+        {
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Faction = (Faction)parameters[offsets[1]];
+        }
+        
+        public int Id { get; }
+        public Faction Faction { get; }
     }
-} 
+}

@@ -1,29 +1,35 @@
-using System.Numerics;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using System.Numerics;
+using Albion.Network;
+using AlbionOnlineSniffer.Core.Utility;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento específico para quando um novo harvestable é detectado
-    /// </summary>
-    public class NewHarvestableEvent : GameEvent
+    public class NewHarvestableEvent : BaseEvent
     {
-        public int HarvestableId { get; set; }
-        public string Type { get; set; }
-        public int Tier { get; set; }
-        public Vector2 Position { get; set; }
-        public int Count { get; set; }
-        public int Charge { get; set; }
-        
-        public NewHarvestableEvent(Harvestable harvestable)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewHarvestableObject;
+
+        public NewHarvestableEvent(Dictionary<byte, object> parameters): base(parameters)
         {
-            EventType = "NewHarvestableObject";
-            HarvestableId = harvestable.Id;
-            Type = harvestable.Type;
-            Tier = harvestable.Tier;
-            Position = harvestable.Position;
-            Count = harvestable.Count;
-            Charge = harvestable.Charge;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+
+            Type = Convert.ToInt32(parameters[offsets[1]]);
+            Tier = Convert.ToInt32(parameters[offsets[2]]);
+
+            Position = Additions.fromFArray((float[])parameters[offsets[3]]);
+
+            Count = parameters.ContainsKey(offsets[4]) ? Convert.ToInt32(parameters[offsets[4]]) : 0;
+            Charge = parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : 0;
         }
+
+        public int Id { get; }
+
+        public int Type { get; }
+        public int Tier { get; }
+
+        public Vector2 Position { get; }
+
+        public int Count { get; }
+        public int Charge { get; }
     }
-} 
+}

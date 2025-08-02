@@ -1,21 +1,17 @@
-using System;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de saída de entidade
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class LeaveEvent : GameEvent
+    public class LeaveEvent : BaseEvent
     {
-        public int Id { get; set; }
-        public string EntityType { get; set; } = string.Empty;
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.Leave;
 
-        public LeaveEvent(int id, string entityType)
+        public LeaveEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "Leave";
-            Id = id;
-            EntityType = entityType;
+            Id = parameters.ContainsKey(offsets[0]) ? Convert.ToInt32(parameters[offsets[0]]) : 0;
         }
+
+        public int Id { get; }
     }
-} 
+}

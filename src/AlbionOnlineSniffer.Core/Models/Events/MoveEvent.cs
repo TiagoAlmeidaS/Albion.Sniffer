@@ -1,22 +1,49 @@
-using System.Numerics;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Utility;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento específico para quando um jogador se move
-    /// </summary>
-    public class MoveEvent : GameEvent
+    public class MoveEvent : BaseEvent
     {
-        public int PlayerId { get; set; }
-        public Vector2 Position { get; set; }
-        public float Speed { get; set; }
-        
-        public MoveEvent(int playerId, Vector2 position, float speed)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.Move;
+
+        public MoveEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "Move";
-            PlayerId = playerId;
-            Position = position;
-            Speed = speed;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+
+            byte[] parameter = (byte[])parameters[offsets[1]];
+            Flags flags = (Flags)parameter[offsets[0]];
+
+            Time = DateTime.UtcNow;
+
+            int index = 9;
+            PositionBytes = new byte[8];
+            Array.Copy(parameter, index, PositionBytes, 0, 8);
+
+            index *= 2;
+
+            if (flags.HasFlag(Flags.Speed))
+            {
+                Speed = BitConverter.ToSingle(parameter, index);
+                index += 4;
+            }
+            else
+                Speed = 0f;
+
+            if (flags.HasFlag(Flags.NewPosition))
+            {
+                NewPositionBytes = new byte[8];
+                Array.Copy(parameter, index, NewPositionBytes, 0, 8);
+            }
+            else
+                NewPositionBytes = PositionBytes;
         }
+
+        public int Id { get; }
+        public byte[] PositionBytes { get; }
+        public byte[] NewPositionBytes { get; }
+        public float Speed { get; }
+        public DateTime Time { get; }
     }
-} 
+}

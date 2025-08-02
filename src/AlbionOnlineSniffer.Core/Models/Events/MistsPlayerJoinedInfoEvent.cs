@@ -1,19 +1,14 @@
-using System;
+﻿using Albion.Network;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de informação de jogador entrando nos mists
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class MistsPlayerJoinedInfoEvent : GameEvent
+    class MistsPlayerJoinedInfoEvent : BaseEvent
     {
-        public MistsPlayerJoinedInfoEvent(DateTime timeCycle)
+        public MistsPlayerJoinedInfoEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "MistsPlayerJoinedInfo";
-            TimeCycle = timeCycle;
+            TimeCycle = parameters.ContainsKey(5) ? new DateTime(Convert.ToInt64(parameters[5])) : DateTime.MinValue;
         }
 
-        public DateTime TimeCycle { get; set; }
+        public DateTime TimeCycle { get; }
     }
-} 
+}

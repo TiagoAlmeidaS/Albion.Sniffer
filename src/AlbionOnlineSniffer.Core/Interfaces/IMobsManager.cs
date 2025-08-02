@@ -1,5 +1,6 @@
 using System.Numerics;
 using AlbionOnlineSniffer.Core.Models.GameObjects;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 
 namespace AlbionOnlineSniffer.Core.Interfaces
 {

@@ -1,22 +1,21 @@
-using System;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de atualização de vida
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class HealthUpdateEvent : GameEvent
+    class HealthUpdateEvent : BaseEvent
     {
-        public HealthUpdateEvent(int id, Health health)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.HealthUpdateEvent;
+
+        public HealthUpdateEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "HealthUpdate";
-            Id = id;
-            Health = health;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+
+            Health = parameters.ContainsKey(offsets[1]) ? Convert.ToInt32(parameters[offsets[1]]) : 0;
         }
 
-        public int Id { get; set; }
-        public Health Health { get; set; }
+        public int Id { get; }
+
+        public int Health { get; }
     }
-} 
+}

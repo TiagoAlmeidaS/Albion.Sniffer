@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Services
 {

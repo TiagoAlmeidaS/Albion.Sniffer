@@ -99,7 +99,6 @@ namespace AlbionOnlineSniffer.App
                 
                 // Get services from DI container
                 var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
-                var packetProcessor = serviceProvider.GetRequiredService<Core.Services.PacketProcessor>();
                 
                 // 🔧 INTEGRAÇÃO COM MENSAGERIA - Conectar EventDispatcher ao Publisher
                 eventDispatcher.RegisterGlobalHandler(async gameEvent =>
@@ -135,7 +134,6 @@ namespace AlbionOnlineSniffer.App
 
                 // Configurar serviços de parsing usando DI
                 var definitionLoader = serviceProvider.GetRequiredService<Core.Services.PhotonDefinitionLoader>();
-                var packetEnricher = serviceProvider.GetRequiredService<Core.Services.PhotonPacketEnricher>();
                 
                 // Configurar Albion.Network com handlers
                 var albionNetworkHandlerManager = serviceProvider.GetRequiredService<Core.Services.AlbionNetworkHandlerManager>();
@@ -144,8 +142,6 @@ namespace AlbionOnlineSniffer.App
                 
                 // Criar Protocol16Deserializer com o receiver configurado
                 var protocol16Deserializer = new Core.Services.Protocol16Deserializer(
-                    packetEnricher, 
-                    packetProcessor, 
                     photonReceiver, 
                     loggerFactory.CreateLogger<Core.Services.Protocol16Deserializer>()
                 );

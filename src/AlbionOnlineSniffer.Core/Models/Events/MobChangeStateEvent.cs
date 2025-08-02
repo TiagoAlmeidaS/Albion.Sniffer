@@ -1,24 +1,21 @@
-using System;
-using System.Numerics;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de mudança de estado de mob
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class MobChangeStateEvent : GameEvent
+    public class MobChangeStateEvent : BaseEvent
     {
-        public MobChangeStateEvent(int id, Vector2 position, bool isDead)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.MobChangeState;
+
+        public MobChangeStateEvent(Dictionary<byte, object> parameters): base(parameters)
         {
-            EventType = "MobChangeState";
-            Id = id;
-            Position = position;
-            IsDead = isDead;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+
+            Charge = Convert.ToInt32(parameters[offsets[1]]);
         }
 
-        public int Id { get; set; }
-        public Vector2 Position { get; set; }
-        public bool IsDead { get; set; }
+        public int Id { get; }
+
+        public int Charge { get; }
     }
-} 
+}

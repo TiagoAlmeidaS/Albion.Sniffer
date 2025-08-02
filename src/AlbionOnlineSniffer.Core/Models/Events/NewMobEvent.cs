@@ -1,27 +1,35 @@
-using System.Numerics;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using System.Numerics;
+using Albion.Network;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
+using AlbionOnlineSniffer.Core.Utility;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento específico para quando um novo mob é detectado
-    /// </summary>
-    public class NewMobEvent : GameEvent
+    class NewMobEvent : BaseEvent
     {
-        public int MobId { get; set; }
-        public int TypeId { get; set; }
-        public Vector2 Position { get; set; }
-        public Health Health { get; set; }
-        public int Charge { get; set; }
-        
-        public NewMobEvent(Mob mob)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewMobEvent;
+
+        public NewMobEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "NewMobEvent";
-            MobId = mob.Id;
-            TypeId = mob.TypeId;
-            Position = mob.Position;
-            Health = mob.Health;
-            Charge = mob.Charge;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            TypeId = Convert.ToInt32(parameters[offsets[1]]) - 15;
+            Position = Additions.fromFArray((float[])parameters[offsets[2]]);
+
+            Health = parameters.ContainsKey(offsets[3]) ? 
+                new Health(Convert.ToInt32(parameters[offsets[3]]), Convert.ToInt32(parameters[offsets[4]])) 
+                : new Health(Convert.ToInt32(parameters[offsets[4]]));
+
+            Charge = (byte)(parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : 0);
         }
+
+        public int Id { get; }
+
+        public int TypeId { get; }
+        public Vector2 Position { get; }
+
+        public Health Health { get; }
+
+        public byte Charge { get; }
     }
-} 
+}

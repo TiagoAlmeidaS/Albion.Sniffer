@@ -1,21 +1,20 @@
-using System.Numerics;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento específico para quando um wisp gate é aberto
-    /// </summary>
-    public class WispGateOpenedEvent : GameEvent
+    public class WispGateOpenedEvent : BaseEvent
     {
-        public int WispId { get; set; }
-        public Vector2 Position { get; set; }
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.WispGateOpened;
         
-        public WispGateOpenedEvent(GatedWisp wisp)
+        public WispGateOpenedEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "WispGateOpened";
-            WispId = wisp.Id;
-            Position = wisp.Position;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            isCollected = parameters.ContainsKey(offsets[1]) && parameters[offsets[1]].ToString() == "2";
         }
+
+        public int Id { get; }
+        
+        public bool isCollected { get; }
     }
-} 
+}

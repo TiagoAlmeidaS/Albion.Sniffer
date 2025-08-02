@@ -1,22 +1,67 @@
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using Albion.Network;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de nova lista de harvestables
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class NewHarvestablesListEvent : GameEvent
+    public class NewHarvestablesListEvent : BaseEvent
     {
-        public NewHarvestablesListEvent(List<Harvestable> harvestables)
+        private readonly List<NewHarvestableEvent> harvestableObjects;
+
+        public NewHarvestablesListEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "NewHarvestablesList";
-            Harvestables = harvestables;
+            harvestableObjects = new List<NewHarvestableEvent>();
+
+            if (parameters[0] is byte[])
+            {
+                var ids = (byte[])parameters[0];
+                var types = (byte[])parameters[1];
+                var tiers = (byte[])parameters[2];
+                var positions = (float[])parameters[3];
+                var sizes = (byte[])parameters[4];
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    var harvestParameters = new Dictionary<byte, object>
+                    {
+                        { 0, ids[i] },
+                        { 5, types[i] },
+                        { 7, tiers[i] },
+                        { 8, new float[] { positions[i * 2], positions[i * 2 + 1] } },
+                        { 10, sizes[i] }
+                    };
+
+                    harvestableObjects.Add(new NewHarvestableEvent(harvestParameters));
+                }
+            }
+            else if (parameters[0] is short[])
+            {
+                var ids = (short[])parameters[0];
+                var types = (byte[])parameters[1];
+                var tiers = (byte[])parameters[2];
+                var positions = (float[])parameters[3];
+                var sizes = (byte[])parameters[4];
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    var harvestParameters = new Dictionary<byte, object>
+                    {
+                        { 0, ids[i] },
+                        { 5, types[i] },
+                        { 7, tiers[i] },
+                        { 8, new float[] { positions[i * 2], positions[i * 2 + 1] } },
+                        { 10, sizes[i] }
+                    };
+
+                    harvestableObjects.Add(new NewHarvestableEvent(harvestParameters));
+                }
+            }
         }
 
-        public List<Harvestable> Harvestables { get; set; }
+        public IReadOnlyCollection<NewHarvestableEvent> HarvestableObjects
+        {
+            get
+            {
+                return harvestableObjects;
+            }
+        }
     }
-} 
+}

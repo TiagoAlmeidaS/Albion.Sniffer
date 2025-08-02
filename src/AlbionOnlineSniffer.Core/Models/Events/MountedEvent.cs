@@ -1,21 +1,21 @@
-using System;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de montaria
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class MountedEvent : GameEvent
+    public class MountedEvent : BaseEvent
     {
-        public MountedEvent(int id, bool isMounted)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.Mounted;
+
+        public MountedEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "Mounted";
-            Id = id;
-            IsMounted = isMounted;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+
+            IsMounted = parameters.ContainsKey(offsets[1]);
         }
 
-        public int Id { get; set; }
-        public bool IsMounted { get; set; }
+        public int Id { get; }
+
+        public bool IsMounted { get; }
     }
-} 
+}

@@ -1,25 +1,45 @@
-using System;
-using System.Collections.Generic;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de mudança de equipamento do personagem
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class CharacterEquipmentChangedEvent : GameEvent
+    public class CharacterEquipmentChanged : BaseEvent
     {
-        public CharacterEquipmentChangedEvent(int id, List<Equipment> equipments, List<string> spells)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.CharacterEquipmentChanged;
+        
+        public CharacterEquipmentChanged(Dictionary<byte, object> parameters): base(parameters)
         {
-            EventType = "CharacterEquipmentChanged";
-            Id = id;
-            Equipments = equipments;
-            Spells = spells;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Equipments = ConvertArray(parameters[offsets[1]]);
+            Spells = ConvertArray(parameters[offsets[2]]);
         }
 
-        public int Id { get; set; }
-        public List<Equipment> Equipments { get; set; }
-        public List<string> Spells { get; set; }
+        public int Id { get; }
+
+        public int[] Equipments { get; }
+
+        public int[] Spells { get; }
+
+        private int[] ConvertArray(object value)
+        {
+            int[] numArray1;
+            switch (value)
+            {
+                case byte[] numArray2:
+                    numArray1 = new int[numArray2.Length];
+                    for (int index = 0; index < numArray2.Length; ++index)
+                        numArray1[index] = (int)numArray2[index];
+                    break;
+                case short[] numArray3:
+                    numArray1 = new int[numArray3.Length];
+                    for (int index = 0; index < numArray3.Length; ++index)
+                        numArray1[index] = (int)numArray3[index];
+                    break;
+                default:
+                    numArray1 = (int[])value;
+                    break;
+            }
+            return numArray1;
+        }
     }
-} 
+}

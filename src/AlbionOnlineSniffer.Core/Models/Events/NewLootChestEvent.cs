@@ -1,25 +1,25 @@
-using System.Numerics;
-using AlbionOnlineSniffer.Core.Models.GameObjects;
+﻿using System.Numerics;
+using Albion.Network;
+using AlbionOnlineSniffer.Core.Utility;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento específico para quando um novo baú de loot é detectado
-    /// </summary>
-    public class NewLootChestEvent : GameEvent
+    public class NewLootChestEvent : BaseEvent
     {
-        public int ChestId { get; set; }
-        public string Name { get; set; }
-        public Vector2 Position { get; set; }
-        public int Charge { get; set; }
-        
-        public NewLootChestEvent(LootChest chest)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewLootChest;
+
+        public NewLootChestEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "NewLootChest";
-            ChestId = chest.Id;
-            Name = chest.Name;
-            Position = chest.Position;
-            Charge = chest.Charge;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Position = Additions.fromFArray((float[])parameters[offsets[1]]);
+            Name = (string)parameters[offsets[2]];
+            EnchLvl = 0;
         }
+
+        public int Id { get; }
+        public Vector2 Position { get; }
+        public string Name { get; }
+        public int EnchLvl { get; }
     }
-} 
+}

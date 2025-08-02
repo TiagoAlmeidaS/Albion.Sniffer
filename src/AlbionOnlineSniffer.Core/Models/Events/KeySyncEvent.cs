@@ -1,19 +1,17 @@
-using System;
+﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    /// <summary>
-    /// Evento de sincronização de chave XOR
-    /// Baseado no albion-radar-deatheye-2pc
-    /// </summary>
-    public class KeySyncEvent : GameEvent
+    public class KeySyncEvent : BaseEvent
     {
-        public KeySyncEvent(byte[] code)
+        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.KeySync;
+
+        public KeySyncEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            EventType = "KeySync";
-            Code = code;
+            Code = parameters.ContainsKey(offsets[0]) ? parameters[offsets[0]] as byte[] : null;
         }
 
-        public byte[] Code { get; set; }
+        public byte[] Code { get; }
     }
-} 
+}

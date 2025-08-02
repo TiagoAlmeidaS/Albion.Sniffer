@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
@@ -18,6 +19,8 @@ namespace AlbionOnlineSniffer.Core.Services
         {
             _logger = logger;
         }
+        
+        public static PacketIndexes? GlobalPacketIndexes { get; private set; }
 
         /// <summary>
         /// Carrega os índices de pacotes do arquivo JSON
@@ -41,6 +44,8 @@ namespace AlbionOnlineSniffer.Core.Services
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                GlobalPacketIndexes =  indexes;
 
                 if (indexes == null)
                 {
