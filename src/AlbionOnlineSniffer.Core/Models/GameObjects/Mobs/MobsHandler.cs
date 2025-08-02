@@ -15,7 +15,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Mobs
 
         public MobsHandler(List<MobInfo> mobInfos)
         {
-            this.mobInfos = mobInfos;
+            this.mobInfos = mobInfos ?? new List<MobInfo>();
         }
 
         public void AddMob(int id, int typeId, Vector2 position, Players.Health health, byte enchLvl)

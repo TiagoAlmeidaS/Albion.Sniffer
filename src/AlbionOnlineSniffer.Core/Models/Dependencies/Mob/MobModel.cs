@@ -1,7 +1,6 @@
 ﻿using System.Xml.Serialization;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
-using X975.Radar.Dependencies;
-using X975.Radar.Dependencies.Harvestable;
+using AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable;
 
 namespace AlbionOnlineSniffer.Core.Models.Dependencies.Mob
 {

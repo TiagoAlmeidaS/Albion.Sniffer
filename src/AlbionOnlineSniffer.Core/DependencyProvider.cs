@@ -9,6 +9,7 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.GatedWisps;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core
 {
@@ -32,16 +33,43 @@ namespace AlbionOnlineSniffer.Core
             services.AddSingleton<PositionDecryptor>();
             services.AddSingleton<ClusterService>();
             services.AddSingleton<ItemDataService>();
+            services.AddSingleton<DataLoaderService>();
             services.AddSingleton<AlbionNetworkHandlerManager>();
             
-            // Game Object Handlers (substituem os Managers removidos)
-            services.AddSingleton<PlayersHandler>();
-            services.AddSingleton<MobsHandler>();
+            // Game Object Handlers com dados carregados
+            services.AddSingleton<LocalPlayerHandler>(provider =>
+            {
+                var dataLoader = provider.GetRequiredService<DataLoaderService>();
+                var clusters = dataLoader.LoadClusters();
+                return new LocalPlayerHandler(clusters);
+            });
+
+            services.AddSingleton<PlayersHandler>(provider =>
+            {
+                var dataLoader = provider.GetRequiredService<DataLoaderService>();
+                var items = dataLoader.LoadItems();
+                return new PlayersHandler(items);
+            });
+
+            services.AddSingleton<MobsHandler>(provider =>
+            {
+                var dataLoader = provider.GetRequiredService<DataLoaderService>();
+                var mobs = dataLoader.LoadMobs();
+                return new MobsHandler(mobs);
+            });
+
+            services.AddSingleton<HarvestablesHandler>(provider =>
+            {
+                var dataLoader = provider.GetRequiredService<DataLoaderService>();
+                var harvestables = dataLoader.LoadHarvestables();
+                var localPlayerHandler = provider.GetRequiredService<LocalPlayerHandler>();
+                return new HarvestablesHandler(harvestables, localPlayerHandler);
+            });
+
+            // Handlers simples
             services.AddSingleton<DungeonsHandler>();
             services.AddSingleton<FishNodesHandler>();
             services.AddSingleton<GatedWispsHandler>();
-            services.AddSingleton<HarvestablesHandler>();
-            services.AddSingleton<LocalPlayerHandler>();
             services.AddSingleton<LootChestsHandler>();
             
             // Configuration

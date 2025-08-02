@@ -15,7 +15,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer
 
         public LocalPlayerHandler(Dictionary<string, Cluster> clusterList)
         {
-            this.clusterList = clusterList;
+            this.clusterList = clusterList ?? new Dictionary<string, Cluster>();
         }
 
         public bool ChangeCluster(string id, DynamicClusterData dynamicClusterData = null)

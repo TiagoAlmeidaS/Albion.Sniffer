@@ -14,7 +14,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables
         private readonly Localplayer.LocalPlayerHandler localPlayerHandler;
         public HarvestablesHandler(Dictionary<int, string> harvestableTypes, Localplayer.LocalPlayerHandler localPlayerHandler)
         {
-            this.harvestableTypes = harvestableTypes;
+            this.harvestableTypes = harvestableTypes ?? new Dictionary<int, string>();
             this.localPlayerHandler = localPlayerHandler;
         }
 

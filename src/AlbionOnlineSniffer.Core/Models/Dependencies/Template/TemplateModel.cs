@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Xml.Serialization;
-using X975.Radar.Dependencies;
 
 namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
 {

@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
+using AlbionOnlineSniffer.Core.Models.Dependencies;
 
-namespace X975.Radar.Dependencies.Harvestable
+namespace AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable
 {
     [XmlRoot(ElementName = "Charge")]
     public class HarvestableChargeMetaData

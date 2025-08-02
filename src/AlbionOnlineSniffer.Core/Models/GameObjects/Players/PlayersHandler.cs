@@ -11,7 +11,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
     {
         public ConcurrentDictionary<int, Player> playersList = new ConcurrentDictionary<int, Player>();
 
-        private readonly List<PlayerItems> itemsList = new List<PlayerItems>();
+        private readonly List<PlayerItems> itemsList;
 
         public byte[] XorCode { get; set; }
 
@@ -43,7 +43,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
 
         public PlayersHandler(List<PlayerItems> itemsList)
         {
-            this.itemsList = itemsList;
+            this.itemsList = itemsList ?? new List<PlayerItems>();
         }
 
         public void AddPlayer(int id, string name, string guild, string alliance, Vector2 position, Health health, Faction faction, int[] equipments, int[] spells)
