@@ -111,7 +111,7 @@ namespace AlbionOnlineSniffer.App
                         logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", 
                             eventType, timestamp);
 
-                        var eventTypeFormatted = eventType.Replace("event", "");
+                        var eventTypeFormatted = eventType.Replace("Event", "");
                         
                         var topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
                         var message = new
