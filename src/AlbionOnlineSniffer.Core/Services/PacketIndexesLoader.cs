@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Logging;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
