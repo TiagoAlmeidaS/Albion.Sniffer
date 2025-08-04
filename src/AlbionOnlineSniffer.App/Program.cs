@@ -38,6 +38,31 @@ namespace AlbionOnlineSniffer.App
             {
                 logger.LogInformation("Iniciando AlbionOnlineSniffer...");
 
+                // 🎨 VALIDAR LOGO DO APLICATIVO
+                logger.LogInformation("🎨 Verificando logo do aplicativo...");
+                
+                if (LogoLoader.IsLogoAvailable())
+                {
+                    logger.LogInformation("✅ Logo encontrada no executável!");
+                    
+                    var logoBytes = LogoLoader.LoadLogoAsBytes();
+                    if (logoBytes != null)
+                    {
+                        logger.LogInformation("📊 Tamanho da logo: {Size} bytes", logoBytes.Length);
+                    }
+                    
+                    var embeddedResources = LogoLoader.GetEmbeddedResources();
+                    logger.LogInformation("📦 Recursos embutidos: {Count} recursos", embeddedResources.Length);
+                    foreach (var resource in embeddedResources)
+                    {
+                        logger.LogInformation("   - {Resource}", resource);
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("⚠️ Logo não encontrada no executável!");
+                }
+
                 // Configuração
                 var configuration = new ConfigurationBuilder()
                     .SetBasePath(AppContext.BaseDirectory)

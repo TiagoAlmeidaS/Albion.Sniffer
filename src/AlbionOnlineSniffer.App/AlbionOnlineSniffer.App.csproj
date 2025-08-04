@@ -7,7 +7,6 @@
     <Nullable>enable</Nullable>
     
     <!-- Configurações do Executável -->
-    <!-- <ApplicationIcon>Assets\logo_sniffer.png</ApplicationIcon> -->
     <AssemblyTitle>Albion Online Sniffer</AssemblyTitle>
     <AssemblyDescription>Sniffer para captura de eventos do Albion Online</AssemblyDescription>
     <AssemblyCompany>Albion Sniffer Project</AssemblyCompany>
@@ -50,6 +49,7 @@
 
   <!-- Assets e Recursos -->
   <ItemGroup>
+    <EmbeddedResource Include="Assets\logo_sniffer.png" />
     <Content Include="Assets\logo_sniffer.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
