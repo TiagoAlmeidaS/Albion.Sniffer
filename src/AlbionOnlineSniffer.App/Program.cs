@@ -111,9 +111,9 @@ namespace AlbionOnlineSniffer.App
                     var packetOffsetsLoader = new Core.Services.PacketOffsetsLoader(loggerFactory.CreateLogger<Core.Services.PacketOffsetsLoader>());
                     var packetIndexesLoader = new Core.Services.PacketIndexesLoader(loggerFactory.CreateLogger<Core.Services.PacketIndexesLoader>());
                     
-                    // Carregar offsets e indexes
-                    var offsetsPath = Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json");
-                    var indexesPath = Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json");
+                                         // Carregar offsets e indexes
+                     var offsetsPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "AlbionOnlineSniffer.Core", "Data", "jsons", "offsets.json");
+                     var indexesPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "AlbionOnlineSniffer.Core", "Data", "jsons", "indexes.json");
                     
                     logger.LogInformation("📂 Carregando offsets de: {Path}", offsetsPath);
                     var packetOffsets = packetOffsetsLoader.LoadOffsets(offsetsPath);
