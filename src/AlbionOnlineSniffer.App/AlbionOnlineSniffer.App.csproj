@@ -1,5 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- Configurações do Executável -->
+    <!-- <ApplicationIcon>Assets\logo_sniffer.png</ApplicationIcon> -->
+    <AssemblyTitle>Albion Online Sniffer</AssemblyTitle>
+    <AssemblyDescription>Sniffer para captura de eventos do Albion Online</AssemblyDescription>
+    <AssemblyCompany>Albion Sniffer Project</AssemblyCompany>
+    <AssemblyProduct>Albion Online Sniffer</AssemblyProduct>
+    <AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    
+    <!-- Configurações de Publicação -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>true</PublishTrimmed>
+    
+    <!-- Configurações de Debug -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\AlbionOnlineSniffer.Core\AlbionOnlineSniffer.Core.csproj" />
     <ProjectReference Include="..\AlbionOnlineSniffer.Capture\AlbionOnlineSniffer.Capture.csproj" />
@@ -20,12 +48,12 @@
     </None>
   </ItemGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+  <!-- Assets e Recursos -->
+  <ItemGroup>
+    <Content Include="Assets\logo_sniffer.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="..\..\ao-bin-dumps\**\*.*">
