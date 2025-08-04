@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\AlbionOnlineSniffer.Core\AlbionOnlineSniffer.Core.csproj" />
     <ProjectReference Include="..\AlbionOnlineSniffer.Capture\AlbionOnlineSniffer.Capture.csproj" />
     <ProjectReference Include="..\AlbionOnlineSniffer.Queue\AlbionOnlineSniffer.Queue.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Albion.Sniffer.Core" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />

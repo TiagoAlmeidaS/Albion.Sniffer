@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>Albion.Sniffer.Core</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>TiagoAlmeidaS</Authors>
+    <Company>Albion.Sniffer</Company>
+    <Description>Core library for Albion Online packet parsing, event processing and game data management. Provides essential services, parsers, and event dispatching for Albion Online network analysis.</Description>
+    <PackageTags>albion-online;packet-parsing;game-events;photon;network-analysis</PackageTags>
+    <RepositoryUrl>https://github.com/TiagoAlmeidaS/Albion.Sniffer</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    
+    <!-- Repository and Documentation -->
+    <PackageProjectUrl>https://github.com/TiagoAlmeidaS/Albion.Sniffer</PackageProjectUrl>
+    <PackageReleaseNotes>
+      Initial release of Albion.Sniffer.Core package.
+      
+      Features:
+      - Protocol16Deserializer for Photon packet parsing
+      - EventDispatcher for game event management
+      - Comprehensive event handlers for Albion Online game events
+      - Data services for items, clusters, and game objects
+      - Position and data decryption utilities
+      - Complete set of game event models and interfaces
+    </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Albion.Network" Version="5.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
+    <PackageReference Include="PacketDotNet" Version="1.4.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <EmbeddedResource Include="Data\jsons\*.json" />
+  </ItemGroup>
+
+</Project>

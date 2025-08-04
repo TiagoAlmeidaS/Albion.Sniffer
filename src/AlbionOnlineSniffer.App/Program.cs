@@ -17,7 +17,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using AlbionOnlineSniffer.Queue;
-using AlbionOnlineSniffer.Core;
+using Albion.Sniffer.Core;
 using AlbionOnlineSniffer.Capture;
 
 namespace AlbionOnlineSniffer.App
