@@ -49,8 +49,8 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable
     {
         // shit code
         
-        public static Dictionary<int, HarvestableMetaData> Harvestable;
-        public static Dictionary<string, HarvestableMetaData> HarvestableByName;
+        public static Dictionary<int, HarvestableMetaData> Harvestable = new Dictionary<int, HarvestableMetaData>();
+        public static Dictionary<string, HarvestableMetaData> HarvestableByName = new Dictionary<string, HarvestableMetaData>();
         
         public static Dictionary<int, string> Load(string filename)
         {

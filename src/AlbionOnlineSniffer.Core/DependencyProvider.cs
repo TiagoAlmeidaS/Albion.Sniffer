@@ -51,19 +51,19 @@ namespace AlbionOnlineSniffer.Core
                 return new PlayersHandler(items);
             });
 
-            services.AddSingleton<MobsHandler>(provider =>
-            {
-                var dataLoader = provider.GetRequiredService<DataLoaderService>();
-                var mobs = dataLoader.LoadMobs();
-                return new MobsHandler(mobs);
-            });
-
             services.AddSingleton<HarvestablesHandler>(provider =>
             {
                 var dataLoader = provider.GetRequiredService<DataLoaderService>();
                 var harvestables = dataLoader.LoadHarvestables();
                 var localPlayerHandler = provider.GetRequiredService<LocalPlayerHandler>();
                 return new HarvestablesHandler(harvestables, localPlayerHandler);
+            });
+
+            services.AddSingleton<MobsHandler>(provider =>
+            {
+                var dataLoader = provider.GetRequiredService<DataLoaderService>();
+                var mobs = dataLoader.LoadMobs();
+                return new MobsHandler(mobs);
             });
 
             // Handlers simples

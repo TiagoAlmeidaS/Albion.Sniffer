@@ -111,12 +111,59 @@ namespace AlbionOnlineSniffer.App
                     var packetOffsetsLoader = new Core.Services.PacketOffsetsLoader(loggerFactory.CreateLogger<Core.Services.PacketOffsetsLoader>());
                     var packetIndexesLoader = new Core.Services.PacketIndexesLoader(loggerFactory.CreateLogger<Core.Services.PacketIndexesLoader>());
                     
-                                         // Carregar offsets e indexes
-                     var offsetsPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "AlbionOnlineSniffer.Core", "Data", "jsons", "offsets.json");
-                     var indexesPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "AlbionOnlineSniffer.Core", "Data", "jsons", "indexes.json");
+                                        // Carregar offsets e indexes
+                    var possibleOffsetsPaths = new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
+                        Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
+                        Path.Combine(AppContext.BaseDirectory, "offsets.json"),
+                        Path.Combine(Directory.GetCurrentDirectory(), "offsets.json")
+                    };
+                    
+                    var possibleIndexesPaths = new[]
+                    {
+                        Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
+                        Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
+                        Path.Combine(AppContext.BaseDirectory, "indexes.json"),
+                        Path.Combine(Directory.GetCurrentDirectory(), "indexes.json")
+                    };
+                    
+                    // Tentar encontrar o arquivo offsets.json
+                    string offsetsPath = null;
+                    foreach (var path in possibleOffsetsPaths)
+                    {
+                        if (File.Exists(path))
+                        {
+                            offsetsPath = path;
+                            break;
+                        }
+                    }
+                    
+                    if (offsetsPath == null)
+                    {
+                        var paths = string.Join(", ", possibleOffsetsPaths);
+                        throw new FileNotFoundException($"Arquivo offsets.json não encontrado. Tentou os seguintes caminhos: {paths}");
+                    }
                     
                     logger.LogInformation("📂 Carregando offsets de: {Path}", offsetsPath);
                     var packetOffsets = packetOffsetsLoader.LoadOffsets(offsetsPath);
+                    
+                    // Tentar encontrar o arquivo indexes.json
+                    string indexesPath = null;
+                    foreach (var path in possibleIndexesPaths)
+                    {
+                        if (File.Exists(path))
+                        {
+                            indexesPath = path;
+                            break;
+                        }
+                    }
+                    
+                    if (indexesPath == null)
+                    {
+                        var paths = string.Join(", ", possibleIndexesPaths);
+                        throw new FileNotFoundException($"Arquivo indexes.json não encontrado. Tentou os seguintes caminhos: {paths}");
+                    }
                     
                     logger.LogInformation("📂 Carregando indexes de: {Path}", indexesPath);
                     var packetIndexes = packetIndexesLoader.LoadIndexes(indexesPath);

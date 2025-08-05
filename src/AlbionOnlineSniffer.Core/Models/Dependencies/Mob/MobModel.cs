@@ -112,9 +112,12 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Mob
             if (e.Loot?.Harvestable?.Type != null)
             {
                 var data = HarvestableData.HarvestableByName;
-                return data.TryGetValue(e.Loot.Harvestable.Type, out var value)
-                    ? value.Resource
-                    : null;
+                if (data != null)
+                {
+                    return data.TryGetValue(e.Loot.Harvestable.Type, out var value)
+                        ? value.Resource
+                        : null;
+                }
             }
 
             return null;
