@@ -3,8 +3,6 @@ name: Build and Publish NuGet Package
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'src/AlbionOnlineSniffer.Core/**'
   release:
     types: [ published ]
 
