@@ -3,6 +3,8 @@ name: Build and Publish NuGet Package
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'src/AlbionOnlineSniffer.Core/**'
   release:
     types: [ published ]
 
@@ -35,7 +37,6 @@ jobs:
           <packageSources>
             <clear />
             <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
-            <add key="github" value="https://nuget.pkg.github.com/TiagoAlmeidaS/index.json" />
           </packageSources>
         </configuration>
         EOF
@@ -49,9 +50,6 @@ jobs:
     - name: Test
       run: dotnet test AlbionOnlineSniffer.sln --no-build --configuration Release --verbosity normal
 
-    - name: Build Core Package
-      run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
-
     - name: Pack
       run: dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
 
@@ -60,37 +58,6 @@ jobs:
       with:
         name: nuget-packages
         path: ${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg
-
-  publish-github:
-    name: Publish to GitHub Packages
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Download Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: nuget-packages
-        path: ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
-
-    - name: Add GitHub Packages Source
-      run: |
-        dotnet nuget remove source github || true
-        dotnet nuget add source https://nuget.pkg.github.com/TiagoAlmeidaS/index.json --name github --username TiagoAlmeidaS --password ${{ secrets.PAT_TOKEN }} --store-password-in-clear-text
-
-    - name: Publish to GitHub Packages
-      run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg" --source github --api-key ${{ secrets.PAT_TOKEN }} --skip-duplicate
-      env:
-        NUGET_CREDENTIALPROVIDER_SESSIONTOKENCACHE_ENABLED: true
 
   publish-nuget:
     name: Publish to NuGet.org
