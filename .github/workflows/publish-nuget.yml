@@ -35,7 +35,14 @@ jobs:
           <packageSources>
             <clear />
             <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+            <add key="github" value="https://nuget.pkg.github.com/TiagoAlmeidaS/index.json" />
           </packageSources>
+          <packageSourceCredentials>
+            <github>
+              <add key="Username" value="TiagoAlmeidaS" />
+              <add key="ClearTextPassword" value="%PAT_TOKEN%" />
+            </github>
+          </packageSourceCredentials>
         </configuration>
         EOF
 
@@ -78,7 +85,7 @@ jobs:
         path: ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
 
     - name: Publish to NuGet.org
-      run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+      run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg" --source 'https://nuget.pkg.github.com/TiagoAlmeidaS/index.json' --api-key ${{ secrets.PAT_TOKEN }} --skip-duplicate
 
   auto-version:
     name: Auto Version Update
