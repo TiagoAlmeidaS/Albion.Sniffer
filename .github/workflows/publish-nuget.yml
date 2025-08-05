@@ -85,7 +85,7 @@ jobs:
     - name: Add GitHub Packages Source
       run: |
         dotnet nuget remove source github || true
-        dotnet nuget add source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --name github --username ${{ github.repository_owner }} --password ${{ secrets.PAT_TOKEN }} --store-password-in-clear-text
+        dotnet nuget add source https://nuget.pkg.github.com/TiagoAlmeidaS/index.json --name github --username TiagoAlmeidaS --password ${{ secrets.PAT_TOKEN }} --store-password-in-clear-text
 
     - name: Publish to GitHub Packages
       run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg" --source github --api-key ${{ secrets.PAT_TOKEN }} --skip-duplicate
