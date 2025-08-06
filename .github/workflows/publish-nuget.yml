@@ -12,6 +12,22 @@ env:
   PACKAGE_OUTPUT_DIRECTORY: ${{ github.workspace }}/output
 
 jobs:
+  set-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.setver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set version
+        id: setver
+        run: |
+          # Tenta pegar a tag mais recente (ex: v2.1), remove o 'v' se existir
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0")
+          PREFIX=${TAG#v}
+          VERSION="${PREFIX}.${GITHUB_RUN_NUMBER}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
   build-and-test:
     name: Build and Tests
     runs-on: ubuntu-latest
@@ -56,7 +72,7 @@ jobs:
       run: dotnet test AlbionOnlineSniffer.sln --no-build --configuration Release --verbosity normal
 
     - name: Pack
-      run: dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
+      run: dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build -p:PackageVersion=${{ needs.set-version.outputs.version }} --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
@@ -86,53 +102,3 @@ jobs:
 
     - name: Publish to NuGet.org
       run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg" --source 'https://nuget.pkg.github.com/TiagoAlmeidaS/index.json' --api-key ${{ secrets.PAT_TOKEN }} --skip-duplicate
-
-  auto-version:
-    name: Auto Version Update
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Get current version
-      id: current-version
-      run: |
-        VERSION=$(grep '<Version>' ${{ env.PROJECT_PATH }} | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/')
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Current version: $VERSION"
-
-    - name: Increment patch version
-      id: new-version
-      run: |
-        CURRENT_VERSION=${{ steps.current-version.outputs.version }}
-        IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
-        MAJOR=${VERSION_PARTS[0]}
-        MINOR=${VERSION_PARTS[1]}
-        PATCH=${VERSION_PARTS[2]}
-        NEW_PATCH=$((PATCH + 1))
-        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-        echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "New version: $NEW_VERSION"
-
-    - name: Update version in project file
-      run: |
-        sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.new-version.outputs.new-version }}<\/Version>/" ${{ env.PROJECT_PATH }}
-        
-    - name: Commit version update
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add ${{ env.PROJECT_PATH }}
-        git commit -m "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]" || exit 0
-        git push
