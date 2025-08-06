@@ -27,9 +27,11 @@ jobs:
           PREFIX=${TAG#v}
           VERSION="${PREFIX}.${GITHUB_RUN_NUMBER}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
 
   build-and-test:
     name: Build and Tests
+    needs: set-version
     runs-on: ubuntu-latest
     
     steps:
@@ -72,7 +74,9 @@ jobs:
       run: dotnet test AlbionOnlineSniffer.sln --no-build --configuration Release --verbosity normal
 
     - name: Pack
-      run: dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build -p:PackageVersion=${{ needs.set-version.outputs.version }} --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
+      run: |
+        echo "Using version: ${{ needs.set-version.outputs.version }}"
+        dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build -p:PackageVersion=${{ needs.set-version.outputs.version }} --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
@@ -82,7 +86,7 @@ jobs:
 
   publish-nuget:
     name: Publish to NuGet.org
-    needs: build-and-test
+    needs: [build-and-test, set-version]
     runs-on: ubuntu-latest
     
     steps:
