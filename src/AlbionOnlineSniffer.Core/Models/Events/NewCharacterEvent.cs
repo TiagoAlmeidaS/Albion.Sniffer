@@ -7,7 +7,7 @@ using AlbionOnlineSniffer.Core.Services;
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     [Obfuscation(Feature = "mutation", Exclude = false)]
-    public class NewCharacterEvent : BaseEvent
+    public class NewCharacterEvent : BaseEvent, IHasPosition
     {
         byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewCharacter;
 
@@ -38,7 +38,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public string Alliance { get; }
         public AlbionOnlineSniffer.Core.Utility.Faction Faction { get; }
 
-        public Vector2 Position { get; }
+        public Vector2 Position { get; internal set; }
         public byte[] EncryptedPosition { get; }
         public float Speed { get; }
 

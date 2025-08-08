@@ -5,7 +5,7 @@ using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewHarvestableEvent : BaseEvent
+    public class NewHarvestableEvent : BaseEvent, IHasPosition
     {
         byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewHarvestableObject;
 

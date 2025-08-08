@@ -46,6 +46,9 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 pos = value.Position;
             }
             
+            // Preencher Position no próprio evento para publicação reutilizável (IHasPosition)
+            value.Position = pos;
+
             playerHandler.AddPlayer(value.Id, value.Name, value.Guild, value.Alliance, pos, value.Health, value.Faction, value.Equipments, value.Spells);
 
             // Emitir evento para o EventDispatcher

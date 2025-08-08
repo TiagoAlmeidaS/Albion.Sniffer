@@ -135,29 +135,52 @@ namespace AlbionOnlineSniffer.App
                         {
                             var eventType = gameEvent.GetType().Name;
                             var timestamp = DateTime.UtcNow;
-                            
-                            logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", 
-                                eventType, timestamp);
+
+                            logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", eventType, timestamp);
 
                             var eventTypeFormatted = eventType.Replace("Event", "");
-                            
+
+                            // Tentar extrair a posição já processada do evento (quando houver)
+                            object? location = null;
+                            try
+                            {
+                                // Preferir interface IHasPosition para reutilização entre módulos
+                                if (gameEvent is Core.Models.Events.IHasPosition hasPosition)
+                                {
+                                    var pos = hasPosition.Position;
+                                    location = new { X = pos.X, Y = pos.Y };
+                                }
+                                else
+                                {
+                                    var posProp = gameEvent.GetType().GetProperty("Position");
+                                    if (posProp != null && posProp.PropertyType == typeof(System.Numerics.Vector2))
+                                    {
+                                        var pos = (System.Numerics.Vector2)posProp.GetValue(gameEvent);
+                                        location = new { X = pos.X, Y = pos.Y };
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // Ignorar extração de posição caso o evento não tenha ou ocorra falha
+                            }
+
                             var topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
                             var message = new
                             {
                                 EventType = eventType,
                                 Timestamp = timestamp,
+                                Position = location, // incluir localização quando disponível
                                 Data = gameEvent
                             };
-                            
+
                             logger.LogInformation("📤 PUBLICANDO: {EventType} -> {Topic}", eventType, topic);
                             await publisher.PublishAsync(topic, message);
-                            logger.LogInformation("✅ Evento publicado na fila: {EventType} -> {Topic}", 
-                                eventType, topic);
+                            logger.LogInformation("✅ Evento publicado na fila: {EventType} -> {Topic}", eventType, topic);
                         }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "❌ Erro ao publicar evento na fila: {EventType} - {Message}", 
-                                gameEvent.GetType().Name, ex.Message);
+                            logger.LogError(ex, "❌ Erro ao publicar evento na fila: {EventType} - {Message}", gameEvent.GetType().Name, ex.Message);
                         }
                     });
 

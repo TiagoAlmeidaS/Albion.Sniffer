@@ -5,7 +5,7 @@ using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewGatedWispEvent : BaseEvent
+    public class NewGatedWispEvent : BaseEvent, IHasPosition
     {
         byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewWispGate;
 

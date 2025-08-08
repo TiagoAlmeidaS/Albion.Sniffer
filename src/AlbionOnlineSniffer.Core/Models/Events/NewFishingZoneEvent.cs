@@ -5,7 +5,7 @@ using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewFishingZoneEvent : BaseEvent
+    public class NewFishingZoneEvent : BaseEvent, IHasPosition
     {
         byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewFishingZoneObject;
 

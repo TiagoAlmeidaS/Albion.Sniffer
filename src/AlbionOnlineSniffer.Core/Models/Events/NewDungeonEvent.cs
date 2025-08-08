@@ -5,7 +5,7 @@ using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewDungeonEvent : BaseEvent
+    public class NewDungeonEvent : BaseEvent, IHasPosition
     {
         byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewDungeonExit;
 
