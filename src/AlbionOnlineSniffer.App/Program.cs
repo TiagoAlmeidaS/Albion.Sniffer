@@ -106,82 +106,7 @@ namespace AlbionOnlineSniffer.App
                     // Add logging
                     services.AddLogging(builder => builder.AddConsole());
                     
-                    // 🔧 CARREGAR OFFSETS E INDEXES PRIMEIRO
-                    logger.LogInformation("📂 Carregando offsets e indexes...");
-                    var packetOffsetsLoader = new Core.Services.PacketOffsetsLoader(loggerFactory.CreateLogger<Core.Services.PacketOffsetsLoader>());
-                    var packetIndexesLoader = new Core.Services.PacketIndexesLoader(loggerFactory.CreateLogger<Core.Services.PacketIndexesLoader>());
-                    
-                                        // Carregar offsets e indexes
-                    var possibleOffsetsPaths = new[]
-                    {
-                        Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
-                        Path.Combine(AppContext.BaseDirectory, "offsets.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "offsets.json")
-                    };
-                    
-                    var possibleIndexesPaths = new[]
-                    {
-                        Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
-                        Path.Combine(AppContext.BaseDirectory, "indexes.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "indexes.json")
-                    };
-                    
-                    // Tentar encontrar o arquivo offsets.json
-                    string offsetsPath = null;
-                    foreach (var path in possibleOffsetsPaths)
-                    {
-                        if (File.Exists(path))
-                        {
-                            offsetsPath = path;
-                            break;
-                        }
-                    }
-                    
-                    if (offsetsPath == null)
-                    {
-                        var paths = string.Join(", ", possibleOffsetsPaths);
-                        throw new FileNotFoundException($"Arquivo offsets.json não encontrado. Tentou os seguintes caminhos: {paths}");
-                    }
-                    
-                    logger.LogInformation("📂 Carregando offsets de: {Path}", offsetsPath);
-                    var packetOffsets = packetOffsetsLoader.LoadOffsets(offsetsPath);
-                    
-                    // Tentar encontrar o arquivo indexes.json
-                    string indexesPath = null;
-                    foreach (var path in possibleIndexesPaths)
-                    {
-                        if (File.Exists(path))
-                        {
-                            indexesPath = path;
-                            break;
-                        }
-                    }
-                    
-                    if (indexesPath == null)
-                    {
-                        var paths = string.Join(", ", possibleIndexesPaths);
-                        throw new FileNotFoundException($"Arquivo indexes.json não encontrado. Tentou os seguintes caminhos: {paths}");
-                    }
-                    
-                    logger.LogInformation("📂 Carregando indexes de: {Path}", indexesPath);
-                    var packetIndexes = packetIndexesLoader.LoadIndexes(indexesPath);
-                    
-                    logger.LogInformation("✅ Offsets e Indexes carregados com sucesso");
-                    
-                    // 🔧 VERIFICAR SE OS OFFSETS FORAM CARREGADOS CORRETAMENTE
-                    logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS:");
-                    logger.LogInformation("  - Leave: [{Offsets}]", string.Join(", ", packetOffsets.Leave));
-                    logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
-                    logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
-                    logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
-                    
-                    // 🔧 REGISTRAR OS OFFSETS CARREGADOS NO CONTAINER DI
-                    services.AddSingleton(packetOffsets);
-                    services.AddSingleton(packetIndexes);
-                    
-                    // Register Core services (agora com os offsets já carregados)
+                    // Register Core services (o Core carrega offsets e indexes via DependencyProvider)
                     logger.LogInformation("🔧 Registrando serviços do Core...");
                     Core.DependencyProvider.RegisterServices(services);
                     
@@ -192,6 +117,15 @@ namespace AlbionOnlineSniffer.App
                     // Get services from DI container
                     logger.LogInformation("🔧 Obtendo serviços do container...");
                     var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
+                    var packetOffsets = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketOffsets>();
+                    var packetIndexes = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketIndexes>();
+
+                    // 🔧 VERIFICAR SE OS OFFSETS FORAM CARREGADOS CORRETAMENTE (via Core)
+                    logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS (via Core):");
+                    logger.LogInformation("  - Leave: [{Offsets}]", string.Join(", ", packetOffsets.Leave));
+                    logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
+                    logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
+                    logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
                     
                     // 🔧 INTEGRAÇÃO COM MENSAGERIA - Conectar EventDispatcher ao Publisher
                     logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher...");
