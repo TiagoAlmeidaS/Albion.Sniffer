@@ -23,8 +23,12 @@ namespace AlbionOnlineSniffer.Core
     {
         public static void RegisterDataLoader(IServiceCollection services)
         {
-                        // Carregamento e injeção de PacketOffsets e PacketIndexes (a partir do Core)
-            services.AddSingleton<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketOffsets>(provider =>
+            // Services
+            services.AddSingleton<PacketOffsetsLoader>();
+            services.AddSingleton<PacketIndexesLoader>();
+
+            // Carregamento e injeção de PacketOffsets e PacketIndexes (a partir do Core)
+            services.AddSingleton<PacketOffsets>(provider =>
             {
                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
                 var logger = loggerFactory.CreateLogger("Core.DependencyProvider.PacketOffsets");
@@ -61,7 +65,7 @@ namespace AlbionOnlineSniffer.Core
                 return packetOffsets;
             });
 
-            services.AddSingleton<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketIndexes>(provider =>
+            services.AddSingleton<PacketIndexes>(provider =>
             {
                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
                 var logger = loggerFactory.CreateLogger("Core.DependencyProvider.PacketIndexes");
@@ -110,8 +114,6 @@ namespace AlbionOnlineSniffer.Core
             services.AddSingleton<EventDispatcher>();
             services.AddSingleton<PhotonDefinitionLoader>();
             services.AddSingleton<Protocol16Deserializer>();
-            services.AddSingleton<PacketOffsetsLoader>();
-            services.AddSingleton<PacketIndexesLoader>();
             services.AddSingleton<PositionDecryptor>();
             services.AddSingleton<ClusterService>();
             services.AddSingleton<ItemDataService>();

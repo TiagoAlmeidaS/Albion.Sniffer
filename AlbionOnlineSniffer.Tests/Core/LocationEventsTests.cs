@@ -9,8 +9,10 @@ using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Handlers;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -228,8 +230,8 @@ namespace AlbionOnlineSniffer.Tests.Core
             };
 
             var ev = new NewMobEvent(p);
-            Assert.Equal(pos[1], ev.Position.X, 3);
-            Assert.Equal(pos[0], ev.Position.Y, 3);
+            Assert.True(Math.Abs(ev.Position.X - pos[1]) < 0.001f);
+            Assert.True(Math.Abs(ev.Position.Y - pos[0]) < 0.001f);
         }
 
         [Fact]
@@ -245,8 +247,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 { 17, 0 },
             };
             var ev = new NewLootChestEvent(p);
-            Assert.Equal(pos[1], ev.Position.X, 3);
-            Assert.Equal(pos[0], ev.Position.Y, 3);
+            Assert.True(Math.Abs(ev.Position.X - pos[1]) < 0.001f);
+            Assert.True(Math.Abs(ev.Position.Y - pos[0]) < 0.001f);
         }
 
         [Fact]
@@ -264,8 +266,8 @@ namespace AlbionOnlineSniffer.Tests.Core
                 { 11, 4 },
             };
             var ev = new NewHarvestableEvent(p);
-            Assert.Equal(pos[1], ev.Position.X, 3);
-            Assert.Equal(pos[0], ev.Position.Y, 3);
+            Assert.True(Math.Abs(ev.Position.X - pos[1]) < 0.001f);
+            Assert.True(Math.Abs(ev.Position.Y - pos[0]) < 0.001f);
         }
     }
 }
