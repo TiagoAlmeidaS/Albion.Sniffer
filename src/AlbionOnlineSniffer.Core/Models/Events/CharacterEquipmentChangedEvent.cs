@@ -1,14 +1,17 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class CharacterEquipmentChanged : BaseEvent
+    public class CharacterEquipmentChangedEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.CharacterEquipmentChanged;
-        
-        public CharacterEquipmentChanged(Dictionary<byte, object> parameters): base(parameters)
+        private readonly byte[] offsets;
+
+        public CharacterEquipmentChangedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.CharacterEquipmentChanged;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
             Equipments = ConvertArray(parameters[offsets[1]]);
             Spells = ConvertArray(parameters[offsets[2]]);

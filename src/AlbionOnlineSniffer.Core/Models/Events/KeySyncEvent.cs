@@ -1,5 +1,6 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,11 +9,13 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class KeySyncEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.KeySync;
+        private readonly byte[] offsets;
 
-        public KeySyncEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public KeySyncEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            Code = ExtractXorCode(parameters);
+            offsets = packetOffsets?.KeySync;
+            
+            Key = Convert.ToUInt64(parameters[offsets[0]]);
         }
 
         public byte[] Code { get; }

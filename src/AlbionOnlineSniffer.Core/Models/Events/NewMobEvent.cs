@@ -1,26 +1,36 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    class NewMobEvent : BaseEvent, IHasPosition
+    public class NewMobEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewMobEvent;
+        private readonly byte[] offsets;
 
-        public NewMobEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public NewMobEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.NewMobEvent;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
-            TypeId = Convert.ToInt32(parameters[offsets[1]]) - 15;
-            Position = Additions.fromFArray((float[])parameters[offsets[2]]);
+            TypeId = Convert.ToInt32(parameters[offsets[1]]);
 
-            Health = parameters.ContainsKey(offsets[3]) ? 
-                new Health(Convert.ToInt32(parameters[offsets[3]]), Convert.ToInt32(parameters[offsets[4]])) 
-                : new Health(Convert.ToInt32(parameters[offsets[4]]));
+            if (parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
 
-            Charge = (byte)(parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : 0);
+            Health = Convert.ToSingle(parameters[offsets[3]]);
+            MaxHealth = Convert.ToSingle(parameters[offsets[4]]);
+
+            // Pode não existir
+            if (parameters.ContainsKey(offsets[5]))
+            {
+                EnchantmentLevel = Convert.ToByte(parameters[offsets[5]]);
+            }
         }
 
         public int Id { get; }

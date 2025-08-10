@@ -1,15 +1,18 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class LeaveEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.Leave;
+        private readonly byte[] offsets;
 
-        public LeaveEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public LeaveEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            Id = parameters.ContainsKey(offsets[0]) ? Convert.ToInt32(parameters[offsets[0]]) : 0;
+            offsets = packetOffsets?.Leave;
+            
+            Id = Convert.ToInt32(parameters[offsets[0]]);
         }
 
         public int Id { get; }

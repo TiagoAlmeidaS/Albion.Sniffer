@@ -1,34 +1,33 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Reflection;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Services;
+using System.Collections.Generic;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     [Obfuscation(Feature = "mutation", Exclude = false)]
     public class NewCharacterEvent : BaseEvent, IHasPosition
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewCharacter;
+        private readonly byte[] offsets;
 
-        public NewCharacterEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public NewCharacterEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-
-            Name = parameters[offsets[1]] as string;
-            Guild = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string : string.Empty;
-            Alliance = parameters.ContainsKey(offsets[3]) ? parameters[offsets[3]] as string : string.Empty;
-            Faction = (AlbionOnlineSniffer.Core.Utility.Faction)parameters[offsets[4]];
+            offsets = packetOffsets?.NewCharacter;
             
-            EncryptedPosition = parameters[offsets[5]] as byte[];
-            Speed = parameters.ContainsKey(offsets[6]) ? (float)parameters[offsets[6]] : 5.5f;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Name = (string)parameters[offsets[1]];
+            GuildName = (string)parameters[offsets[2]];
+            AllianceName = (string)parameters[offsets[3]];
 
-            Health = parameters.ContainsKey(offsets[7]) ?
-                new Health(Convert.ToInt32(parameters[offsets[7]]), Convert.ToInt32(parameters[offsets[8]]))
-                : new Health(Convert.ToInt32(parameters[offsets[8]]));
+            if (parameters.ContainsKey(offsets[4]) && parameters[offsets[4]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
 
-            Equipments = ConvertArray(parameters[offsets[9]]);
-            Spells = ConvertArray(parameters[offsets[10]]);
+            Items = parameters[offsets[5]] as float[];
         }
 
         public int Id { get; }

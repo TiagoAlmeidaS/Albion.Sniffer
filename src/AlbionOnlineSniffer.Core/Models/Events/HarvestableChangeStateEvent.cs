@@ -1,14 +1,17 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class HarvestableChangeStateEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.HarvestableChangeState;
+        private readonly byte[] offsets;
 
-        public HarvestableChangeStateEvent(Dictionary<byte, object> parameters): base(parameters)
+        public HarvestableChangeStateEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.HarvestableChangeState;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
 
             Count = parameters.ContainsKey(offsets[1]) ? Convert.ToInt32(parameters[offsets[1]]) : 0;

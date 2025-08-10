@@ -1,17 +1,25 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    class HealthUpdateEvent : BaseEvent
+    public class HealthUpdateEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.HealthUpdateEvent;
+        private readonly byte[] offsets;
 
-        public HealthUpdateEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public HealthUpdateEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.HealthUpdateEvent;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
-
-            Health = parameters.ContainsKey(offsets[1]) ? Convert.ToInt32(parameters[offsets[1]]) : 0;
+            Health = Convert.ToSingle(parameters[offsets[1]]);
+            MaxHealth = Convert.ToSingle(parameters[offsets[2]]);
+            // Pode ter energia/mana em alguns casos
+            if (parameters.ContainsKey(offsets[3]))
+            {
+                Energy = Convert.ToSingle(parameters[offsets[3]]);
+            }
         }
 
         public int Id { get; }
