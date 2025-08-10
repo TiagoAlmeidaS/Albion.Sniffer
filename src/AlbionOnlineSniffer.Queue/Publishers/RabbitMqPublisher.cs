@@ -21,11 +21,17 @@ namespace AlbionOnlineSniffer.Queue.Publishers
             _channel.ExchangeDeclare(exchange: _exchange, type: "topic", durable: true);
         }
 
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            // Necessário para serializar System.Numerics.Vector2 (campos públicos X, Y)
+            IncludeFields = true
+        };
+
         public Task PublishAsync(string topic, object message)
         {
             try
             {
-                var jsonMessage = JsonSerializer.Serialize(message);
+                var jsonMessage = JsonSerializer.Serialize(message, JsonOptions);
                 var body = Encoding.UTF8.GetBytes(jsonMessage);
                 
                 // Log detalhado para debug
