@@ -13,10 +13,25 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     {
         private readonly byte[] offsets;
 
+        // Construtor para compatibilidade com framework Albion.Network
+        public NewCharacterEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.NewCharacter;
+            
+            InitializeProperties(parameters);
+        }
+
+        // Construtor para injeção de dependência direta (se necessário no futuro)
         public NewCharacterEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
             offsets = packetOffsets?.NewCharacter;
             
+            InitializeProperties(parameters);
+        }
+
+        private void InitializeProperties(Dictionary<byte, object> parameters)
+        {
             Id = Convert.ToInt32(parameters[offsets[0]]);
             Name = (string)parameters[offsets[1]];
             GuildName = (string)parameters[offsets[2]];
@@ -30,22 +45,14 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             Items = parameters[offsets[5]] as float[];
         }
 
-        public int Id { get; }
+        public int Id { get; private set; }
+        public string Name { get; private set; }
+        public string GuildName { get; private set; }
+        public string AllianceName { get; private set; }
+        public byte[] PositionBytes { get; private set; }
+        public float[] Items { get; private set; }
 
-        public string Name { get; }
-        public string Guild { get; }
-        public string Alliance { get; }
-        public AlbionOnlineSniffer.Core.Utility.Faction Faction { get; }
-
-        public Vector2 Position { get; internal set; }
-        public byte[] EncryptedPosition { get; }
-        public float Speed { get; }
-
-        public Health Health { get; }
-
-        public int[] Equipments { get; }
-
-        public int[] Spells { get; }
+        public Vector2 Position { get; set; }
 
         private int[] ConvertArray(object value)
         {

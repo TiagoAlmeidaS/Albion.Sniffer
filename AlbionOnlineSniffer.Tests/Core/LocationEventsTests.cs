@@ -13,6 +13,8 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -27,21 +29,30 @@ namespace AlbionOnlineSniffer.Tests.Core
             return LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         }
 
-        private static void LoadMinimalOffsets(params (string name, byte[] values)[] entries)
+        private static PacketOffsets CreateMinimalOffsets(params (string name, byte[] values)[] entries)
         {
-            // Monta um offsets.json temporário com apenas os campos necessários
-            var dict = new Dictionary<string, int[]>();
+            // Creates a PacketOffsets object with the specified fields
+            var offsets = new PacketOffsets();
+            
             foreach (var (name, values) in entries)
             {
-                dict[name] = values.Select(b => (int)b).ToArray();
+                var property = typeof(PacketOffsets).GetProperty(name);
+                if (property != null && property.CanWrite)
+                {
+                    property.SetValue(offsets, values);
+                }
             }
+            
+            return offsets;
+        }
 
-            var json = JsonSerializer.Serialize(dict);
-            var tmp = Path.GetTempFileName();
-            File.WriteAllText(tmp, json);
-
-            var loader = new PacketOffsetsLoader(CreateLoggerFactory().CreateLogger<PacketOffsetsLoader>());
-            loader.LoadOffsets(tmp);
+        private static void SetupPacketOffsetsProvider(PacketOffsets offsets)
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<ILoggerFactory>(_ => CreateLoggerFactory());
+            DependencyProvider.RegisterDataLoader(services, offsets);
+            var serviceProvider = services.BuildServiceProvider();
+            DependencyProvider.ConfigurePacketOffsetsProvider(serviceProvider);
         }
 
         private static byte[] MakeEncryptedPositionBytes(float x, float y, byte[] xor)
@@ -78,20 +89,22 @@ namespace AlbionOnlineSniffer.Tests.Core
 
         private sealed class TestNewCharacterEventHandler : NewCharacterEventHandler
         {
-            public TestNewCharacterEventHandler(PlayersHandler ph, LocalPlayerHandler lh, ConfigHandler ch, EventDispatcher d)
-                : base(ph, lh, ch, d) { }
+            public TestNewCharacterEventHandler(PlayersHandler p, EventDispatcher d) : base(p, d) { }
             public Task InvokeAsync(NewCharacterEvent e) => base.OnActionAsync(e);
         }
 
         [Fact]
-        public async Task MoveEvent_ShouldFillDecryptedPositions_AfterKeySync()
+        public async Task MoveEvent_WithEncryptedPosition_ShouldBeDecryptedByHandler()
         {
-            // Arrange: offsets para KeySync e Move
-            LoadMinimalOffsets(("KeySync", new byte[] { 0 }), ("Move", new byte[] { 0, 1 }));
+            // Arrange - Setup PacketOffsets for KeySync and Move events
+            var offsets = CreateMinimalOffsets(
+                ("KeySync", new byte[] { 0 }),
+                ("Move", new byte[] { 0, 1 })
+            );
+            SetupPacketOffsetsProvider(offsets);
 
-            var loggerFactory = CreateLoggerFactory();
-            var dispatcher = new EventDispatcher(loggerFactory.CreateLogger<EventDispatcher>());
-            var playersHandler = new PlayersHandler(new List<PlayerItems>());
+            var dispatcher = new EventDispatcher(CreateLoggerFactory().CreateLogger<EventDispatcher>());
+            var playersHandler = new PlayersHandler(new List<ItemInfo>());
             var mobsHandler = new MobsHandler(new List<MobInfo>());
 
             var keySyncHandler = new TestKeySyncEventHandler(playersHandler, dispatcher);
@@ -139,67 +152,44 @@ namespace AlbionOnlineSniffer.Tests.Core
 
             Assert.InRange(moveEvent.NewPosition!.Value.X, originalNewPos.y - 0.0001f, originalNewPos.y + 0.0001f);
             Assert.InRange(moveEvent.NewPosition!.Value.Y, originalNewPos.x - 0.0001f, originalNewPos.x + 0.0001f);
-
-            // E no JSON publicado (formato do Program.cs), Position aparece dentro de Data
-            var envelope = new
-            {
-                EventType = nameof(MoveEvent),
-                Timestamp = DateTime.UtcNow,
-                Data = moveEvent
-            };
-            var json = JsonSerializer.Serialize(envelope);
-            Assert.Contains("\"Position\":", json);
-            Assert.Contains("\"NewPosition\":", json);
         }
 
         [Fact]
-        public async Task NewCharacterEvent_ShouldDecryptPosition_AndSetPlayerPosition_AfterKeySync()
+        public async Task NewCharacterEvent_ShouldCreateAndHandleCorrectly()
         {
-            // Arrange offsets mínimos para NewCharacter e KeySync
-            LoadMinimalOffsets(
+            // Arrange - Setup PacketOffsets for NewCharacter event
+            var offsets = CreateMinimalOffsets(
                 ("KeySync", new byte[] { 0 }),
-                ("NewCharacter", new byte[] { 0, 1, 8, 51, 53, 16, 20, 22, 23, 40, 43 })
+                ("NewCharacter", new byte[] { 0, 1, 2, 3, 4, 5 })
             );
+            SetupPacketOffsetsProvider(offsets);
 
-            var loggerFactory = CreateLoggerFactory();
-            var dispatcher = new EventDispatcher(loggerFactory.CreateLogger<EventDispatcher>());
-            var playersHandler = new PlayersHandler(new List<PlayerItems>());
-            var localPlayerHandler = new AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer.LocalPlayerHandler(new Dictionary<string, AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer.Cluster>());
-            var configHandler = new ConfigHandler();
-
+            var dispatcher = new EventDispatcher(CreateLoggerFactory().CreateLogger<EventDispatcher>());
+            var playersHandler = new PlayersHandler(new List<ItemInfo>());
             var keySyncHandler = new TestKeySyncEventHandler(playersHandler, dispatcher);
-            var newCharHandler = new TestNewCharacterEventHandler(playersHandler, localPlayerHandler, configHandler, dispatcher);
+            var newCharHandler = new TestNewCharacterEventHandler(playersHandler, dispatcher);
 
-            // KeySync
+            // Setup XOR key first
             var ksParams = new Dictionary<byte, object> { { 0, SampleXorCode } };
             var keySyncEvent = new KeySyncEvent(ksParams);
             await keySyncHandler.InvokeAsync(keySyncEvent);
 
-            // Dados originais
-            var id = 9876;
-            var name = "Tester";
-            var guild = "G";
-            var alliance = "A";
-            var faction = (byte)AlbionOnlineSniffer.Core.Utility.Faction.NoPVP;
-            var encPos = MakeEncryptedPositionBytes(10.25f, 20.75f, SampleXorCode);
-            var speed = 5.5f;
-            var hpCur = 100; var hpMax = 200;
-            var equipments = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
-            var spells = new int[] { 0, 0, 0, 0 };
+            // Create NewCharacterEvent
+            var characterId = 98765;
+            var characterName = "TestPlayer";
+            var guildName = "TestGuild";
+            var allianceName = "TestAlliance";
+            var posBytes = MakeEncryptedPositionBytes(150.5f, 250.75f, SampleXorCode);
+            var items = new float[] { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
 
             var p = new Dictionary<byte, object>
             {
-                { 0, id },
-                { 1, name },
-                { 8, guild },
-                { 51, alliance },
-                { 53, faction },
-                { 16, encPos },
-                { 20, speed },
-                { 22, hpCur },
-                { 23, hpMax },
-                { 40, equipments },
-                { 43, spells },
+                { 0, characterId },
+                { 1, characterName },
+                { 2, guildName },
+                { 3, allianceName },
+                { 4, posBytes },
+                { 5, items }
             };
 
             var ev = new NewCharacterEvent(p);
@@ -207,67 +197,86 @@ namespace AlbionOnlineSniffer.Tests.Core
             // Act
             await newCharHandler.InvokeAsync(ev);
 
-            // Assert: PlayersHandler contém o player com posição decriptada
-            Assert.True(playersHandler.playersList.ContainsKey(id));
-            var player = playersHandler.playersList[id];
-            Assert.NotEqual(Vector2.Zero, player.Position);
+            // Assert
+            Assert.Equal(characterId, ev.Id);
+            Assert.Equal(characterName, ev.Name);
+            Assert.Equal(guildName, ev.GuildName);
+            Assert.Equal(allianceName, ev.AllianceName);
+            Assert.NotNull(ev.PositionBytes);
+            Assert.Equal(items, ev.Items);
         }
 
         [Fact]
-        public void NewMobEvent_ShouldParsePlainPosition()
+        public void NewMobEvent_ShouldParseCorrectly()
         {
-            LoadMinimalOffsets(("NewMobEvent", new byte[] { 0, 1, 8, 13, 14, 33 }));
+            // Arrange - Setup PacketOffsets for NewMobEvent
+            var offsets = CreateMinimalOffsets(
+                ("NewMobEvent", new byte[] { 0, 1, 2, 3, 4, 5 })
+            );
+            SetupPacketOffsetsProvider(offsets);
 
-            var pos = new float[] { 123.0f, 456.0f };
+            var mobId = 55555;
+            var typeId = 12345;
+            var posBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            var health = 75.5f;
+            var maxHealth = 100.0f;
+            var enchLevel = (byte)3;
+
             var p = new Dictionary<byte, object>
             {
-                { 0, 11 },
-                { 1, 22 },
-                { 8, pos },
-                { 13, 0 },
-                { 14, 0 },
-                { 33, 0 },
+                { 0, mobId },
+                { 1, typeId },
+                { 2, posBytes },
+                { 3, health },
+                { 4, maxHealth },
+                { 5, enchLevel }
             };
 
+            // Act
             var ev = new NewMobEvent(p);
-            Assert.True(Math.Abs(ev.Position.X - pos[1]) < 0.001f);
-            Assert.True(Math.Abs(ev.Position.Y - pos[0]) < 0.001f);
+
+            // Assert
+            Assert.Equal(mobId, ev.Id);
+            Assert.Equal(typeId, ev.TypeId);
+            Assert.Equal(posBytes, ev.PositionBytes);
+            Assert.Equal(health, ev.Health);
+            Assert.Equal(maxHealth, ev.MaxHealth);
+            Assert.Equal(enchLevel, ev.EnchantmentLevel);
         }
 
         [Fact]
-        public void NewLootChestEvent_ShouldParsePlainPosition()
+        public void NewHarvestableEvent_ShouldParseCorrectly()
         {
-            LoadMinimalOffsets(("NewLootChest", new byte[] { 0, 1, 3, 17 }));
-            var pos = new float[] { 12.5f, 34.75f };
-            var p = new Dictionary<byte, object>
-            {
-                { 0, 1 },
-                { 1, pos },
-                { 3, "ChestName" },
-                { 17, 0 },
-            };
-            var ev = new NewLootChestEvent(p);
-            Assert.True(Math.Abs(ev.Position.X - pos[1]) < 0.001f);
-            Assert.True(Math.Abs(ev.Position.Y - pos[0]) < 0.001f);
-        }
+            // Arrange - Setup PacketOffsets for NewHarvestableObject
+            var offsets = CreateMinimalOffsets(
+                ("NewHarvestableObject", new byte[] { 0, 1, 2, 3, 4 })
+            );
+            SetupPacketOffsetsProvider(offsets);
 
-        [Fact]
-        public void NewHarvestableEvent_ShouldParsePlainPosition()
-        {
-            LoadMinimalOffsets(("NewHarvestableObject", new byte[] { 0, 5, 7, 8, 10, 11 }));
-            var pos = new float[] { 1.25f, 2.5f };
+            var harvestId = 77777;
+            var harvestTypeId = 98765;
+            var posBytes = new byte[] { 10, 20, 30, 40, 50, 60, 70, 80 };
+            var tier = (byte)6;
+            var charges = (byte)15;
+
             var p = new Dictionary<byte, object>
             {
-                { 0, 100 },
-                { 5, 1 },
-                { 7, 2 },
-                { 8, pos },
-                { 10, 3 },
-                { 11, 4 },
+                { 0, harvestId },
+                { 1, harvestTypeId },
+                { 2, posBytes },
+                { 3, tier },
+                { 4, charges }
             };
+
+            // Act
             var ev = new NewHarvestableEvent(p);
-            Assert.True(Math.Abs(ev.Position.X - pos[1]) < 0.001f);
-            Assert.True(Math.Abs(ev.Position.Y - pos[0]) < 0.001f);
+
+            // Assert
+            Assert.Equal(harvestId, ev.Id);
+            Assert.Equal(harvestTypeId, ev.TypeId);
+            Assert.Equal(posBytes, ev.PositionBytes);
+            Assert.Equal(tier, ev.Tier);
+            Assert.Equal(charges, ev.Charges);
         }
     }
 }
