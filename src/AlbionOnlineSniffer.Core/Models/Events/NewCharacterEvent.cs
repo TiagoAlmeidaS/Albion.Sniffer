@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Reflection;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
@@ -9,7 +9,7 @@ using AlbionOnlineSniffer.Core.Models.ResponseObj;
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     [Obfuscation(Feature = "mutation", Exclude = false)]
-    public class NewCharacterEvent : BaseEvent, IHasPosition
+    public class NewCharacterEvent : BaseEvent
     {
         private readonly byte[] offsets;
 

@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Services;
 
@@ -6,7 +6,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class NewHarvestablesListEvent : BaseEvent
     {
-        private readonly List<NewHarvestableEvent> harvestableObjects;
+        private List<NewHarvestableEvent> harvestableObjects;
 
         // Construtor para compatibilidade com framework Albion.Network
         public NewHarvestablesListEvent(Dictionary<byte, object> parameters) : base(parameters)
@@ -37,11 +37,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                 {
                     var harvestParameters = new Dictionary<byte, object>
                     {
-                        { 0, ids[i] },
-                        { 5, types[i] },
-                        { 7, tiers[i] },
-                        { 8, new float[] { positions[i * 2], positions[i * 2 + 1] } },
-                        { 10, sizes[i] }
+                        { 0, (int)ids[i] },
+                        { 1, (int)types[i] },
+                        { 2, new byte[] { BitConverter.GetBytes(positions[i * 2])[0], BitConverter.GetBytes(positions[i * 2])[1], BitConverter.GetBytes(positions[i * 2])[2], BitConverter.GetBytes(positions[i * 2])[3], BitConverter.GetBytes(positions[i * 2 + 1])[0], BitConverter.GetBytes(positions[i * 2 + 1])[1], BitConverter.GetBytes(positions[i * 2 + 1])[2], BitConverter.GetBytes(positions[i * 2 + 1])[3] } },
+                        { 3, (byte)tiers[i] },
+                        { 4, (byte)sizes[i] }
                     };
 
                     harvestableObjects.Add(new NewHarvestableEvent(harvestParameters, packetOffsets));
@@ -59,11 +59,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                 {
                     var harvestParameters = new Dictionary<byte, object>
                     {
-                        { 0, ids[i] },
-                        { 5, types[i] },
-                        { 7, tiers[i] },
-                        { 8, new float[] { positions[i * 2], positions[i * 2 + 1] } },
-                        { 10, sizes[i] }
+                        { 0, (int)ids[i] },
+                        { 1, (int)types[i] },
+                        { 2, new byte[] { BitConverter.GetBytes(positions[i * 2])[0], BitConverter.GetBytes(positions[i * 2])[1], BitConverter.GetBytes(positions[i * 2])[2], BitConverter.GetBytes(positions[i * 2])[3], BitConverter.GetBytes(positions[i * 2 + 1])[0], BitConverter.GetBytes(positions[i * 2 + 1])[1], BitConverter.GetBytes(positions[i * 2 + 1])[2], BitConverter.GetBytes(positions[i * 2 + 1])[3] } },
+                        { 3, (byte)tiers[i] },
+                        { 4, (byte)sizes[i] }
                     };
 
                     harvestableObjects.Add(new NewHarvestableEvent(harvestParameters, packetOffsets));

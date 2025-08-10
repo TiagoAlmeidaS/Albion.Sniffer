@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
@@ -23,6 +23,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         }
 
         public int Id { get; }
+        public byte[] PositionBytes { get; private set; }
         public Vector2 Position { get; }
         public string Name { get; }
         public int EnchLvl { get; }

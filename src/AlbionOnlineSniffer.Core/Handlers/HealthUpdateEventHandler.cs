@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
@@ -21,8 +21,8 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         protected override async Task OnActionAsync(HealthUpdateEvent value)
         {
-            playerHandler.UpdateHealth(value.Id, value.Health);
-            mobHandler.UpdateHealth(value.Id, value.Health);
+            playerHandler.UpdateHealth(value.Id, (int)value.Health);
+            mobHandler.UpdateHealth(value.Id, (int)value.Health);
             
             // Emitir evento para o EventDispatcher
             await eventDispatcher.DispatchEvent(value);

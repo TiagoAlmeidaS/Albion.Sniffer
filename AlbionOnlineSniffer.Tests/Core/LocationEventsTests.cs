@@ -89,7 +89,7 @@ namespace AlbionOnlineSniffer.Tests.Core
 
         private sealed class TestNewCharacterEventHandler : NewCharacterEventHandler
         {
-            public TestNewCharacterEventHandler(PlayersHandler p, EventDispatcher d) : base(p, d) { }
+            public TestNewCharacterEventHandler(PlayersHandler p, EventDispatcher d) : base(p, new LocalPlayerHandler(new Dictionary<string, Cluster>()), new ConfigHandler(), d) { }
             public Task InvokeAsync(NewCharacterEvent e) => base.OnActionAsync(e);
         }
 

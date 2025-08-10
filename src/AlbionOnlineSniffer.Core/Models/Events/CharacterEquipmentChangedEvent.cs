@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
@@ -12,6 +12,16 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         {
             offsets = packetOffsets?.CharacterEquipmentChanged;
             
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Equipments = ConvertArray(parameters[offsets[1]]);
+            Spells = ConvertArray(parameters[offsets[2]]);
+        }
+
+        // Construtor para compatibilidade com framework Albion.Network
+        public CharacterEquipmentChangedEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.CharacterEquipmentChanged;
             Id = Convert.ToInt32(parameters[offsets[0]]);
             Equipments = ConvertArray(parameters[offsets[1]]);
             Spells = ConvertArray(parameters[offsets[2]]);
@@ -37,6 +47,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                     numArray1 = new int[numArray3.Length];
                     for (int index = 0; index < numArray3.Length; ++index)
                         numArray1[index] = (int)numArray3[index];
+                    break;
+                case float[] numArray4:
+                    numArray1 = new int[numArray4.Length];
+                    for (int index = 0; index < numArray4.Length; ++index)
+                        numArray1[index] = (int)numArray4[index];
                     break;
                 default:
                     numArray1 = (int[])value;

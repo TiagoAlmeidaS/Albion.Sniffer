@@ -14,6 +14,8 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System.Linq;
+using AlbionOnlineSniffer.Core.Interfaces;
+using Albion.Network;
 
 namespace AlbionOnlineSniffer.Core
 {
@@ -40,91 +42,28 @@ namespace AlbionOnlineSniffer.Core
                 // Se um PacketOffsets customizado foi fornecido, usa ele
                 if (customPacketOffsets != null)
                 {
-                    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-                    var logger = loggerFactory.CreateLogger("Core.DependencyProvider.PacketOffsets");
-                    logger.LogInformation("✅ Usando PacketOffsets customizado fornecido");
                     return customPacketOffsets;
                 }
 
-                var loggerFactory2 = provider.GetRequiredService<ILoggerFactory>();
-                var logger2 = loggerFactory2.CreateLogger("Core.DependencyProvider.PacketOffsets");
-                var offsetsLoader = provider.GetRequiredService<PacketOffsetsLoader>();
-
-                var possibleOffsetsPaths = new[]
-                {
-                        Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
-                        Path.Combine(AppContext.BaseDirectory, "offsets.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "offsets.json")
-                };
-
-                string? offsetsPath = null;
-                foreach (var path in possibleOffsetsPaths)
-                {
-                    if (File.Exists(path))
-                    {
-                        offsetsPath = path;
-                        break;
-                    }
-                }
-
-                if (offsetsPath == null)
-                {
-                    var paths = string.Join(", ", possibleOffsetsPaths);
-                    logger2.LogError("Arquivo offsets.json não encontrado. Tentou os seguintes caminhos: {Paths}", paths);
-                    throw new FileNotFoundException($"Arquivo offsets.json não encontrado. Tentou os seguintes caminhos: {paths}");
-                }
-
-                logger2.LogInformation("📂 Carregando offsets de: {Path}", offsetsPath);
-                var packetOffsets = offsetsLoader.LoadOffsets(offsetsPath);
-                logger2.LogInformation("✅ Offsets carregados e registrados no container");
-                return packetOffsets;
+                var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")?.ToLowerInvariant();
+                var basePath = AppContext.BaseDirectory;
+                var jsonPath = Path.Combine(basePath, "Resources", env == "development" ? "offsets-debug.json" : "offsets.json");
+                var loader = provider.GetRequiredService<PacketOffsetsLoader>();
+                return loader.LoadOffsets(jsonPath);
             });
 
             services.AddSingleton<PacketIndexes>(provider =>
             {
-                // Se um PacketIndexes customizado foi fornecido, usa ele
                 if (customPacketIndexes != null)
                 {
-                    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-                    var logger = loggerFactory.CreateLogger("Core.DependencyProvider.PacketIndexes");
-                    logger.LogInformation("✅ Usando PacketIndexes customizado fornecido");
                     return customPacketIndexes;
                 }
 
-                var loggerFactory2 = provider.GetRequiredService<ILoggerFactory>();
-                var logger2 = loggerFactory2.CreateLogger("Core.DependencyProvider.PacketIndexes");
-                var indexesLoader = provider.GetRequiredService<PacketIndexesLoader>();
-
-                var possibleIndexesPaths = new[]
-                {
-                        Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
-                        Path.Combine(AppContext.BaseDirectory, "indexes.json"),
-                        Path.Combine(Directory.GetCurrentDirectory(), "indexes.json")
-                };
-
-                string? indexesPath = null;
-                foreach (var path in possibleIndexesPaths)
-                {
-                    if (File.Exists(path))
-                    {
-                        indexesPath = path;
-                        break;
-                    }
-                }
-
-                if (indexesPath == null)
-                {
-                    var paths = string.Join(", ", possibleIndexesPaths);
-                    logger2.LogError("Arquivo indexes.json não encontrado. Tentou os seguintes caminhos: {Paths}", paths);
-                    throw new FileNotFoundException($"Arquivo indexes.json não encontrado. Tentou os seguintes caminhos: {paths}");
-                }
-
-                logger2.LogInformation("📂 Carregando indexes de: {Path}", indexesPath);
-                var packetIndexes = indexesLoader.LoadIndexes(indexesPath);
-                logger2.LogInformation("✅ Indexes carregados e registrados no container");
-                return packetIndexes;
+                var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")?.ToLowerInvariant();
+                var basePath = AppContext.BaseDirectory;
+                var jsonPath = Path.Combine(basePath, "Resources", env == "development" ? "indexes-debug.json" : "indexes.json");
+                var loader = provider.GetRequiredService<PacketIndexesLoader>();
+                return loader.LoadIndexes(jsonPath);
             });
         }
 
@@ -143,8 +82,11 @@ namespace AlbionOnlineSniffer.Core
                 services.Remove(descriptor);
             }
 
-            // Registra o novo PacketOffsets
-            services.AddSingleton<PacketOffsets>(packetOffsets);
+            // Só registra se não for null
+            if (packetOffsets != null)
+            {
+                services.AddSingleton<PacketOffsets>(packetOffsets);
+            }
         }
 
         /// <summary>
@@ -163,7 +105,10 @@ namespace AlbionOnlineSniffer.Core
             }
 
             // Registra o novo PacketIndexes
-            services.AddSingleton<PacketIndexes>(packetIndexes);
+            if (packetIndexes != null)
+            {
+                services.AddSingleton<PacketIndexes>(packetIndexes);
+            }
         }
 
         
@@ -173,6 +118,9 @@ namespace AlbionOnlineSniffer.Core
         /// <param name="services">ServiceCollection para registrar os serviços</param>
         public static void RegisterServices(IServiceCollection services)
         {
+            // Logging
+            services.AddLogging();
+
             // Services
             services.AddSingleton<EventDispatcher>();
             services.AddSingleton<PhotonDefinitionLoader>();
@@ -183,10 +131,17 @@ namespace AlbionOnlineSniffer.Core
             services.AddSingleton<DataLoaderService>();
             services.AddSingleton<AlbionNetworkHandlerManager>();
 
-            RegisterDataLoader(services);
-
             // Event Factory para criação de eventos com injeção de dependência
             services.AddSingleton<IEventFactory, EventFactory>();
+
+            // Registrar um IPhotonReceiver mínimo para testes
+            services.AddSingleton<IPhotonReceiver>(sp =>
+            {
+                // Usa o manager para montar um receiver básico
+                var manager = sp.GetRequiredService<AlbionNetworkHandlerManager>();
+                var builder = manager.ConfigureReceiverBuilder();
+                return builder.Build();
+            });
 
             // Game Object Handlers com dados carregados
             services.AddSingleton<LocalPlayerHandler>(provider =>

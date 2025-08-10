@@ -1,7 +1,8 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
 using AlbionOnlineSniffer.Core.Services;
+using System.Numerics;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -18,7 +19,13 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         protected override async Task OnActionAsync(NewHarvestableEvent value)
         {
-            harvestableHandler.AddHarvestable(value.Id, value.Type, value.Tier, value.Position, value.Count, value.Charge);
+            Vector2 position = Vector2.Zero;
+            if (value.PositionBytes != null && value.PositionBytes.Length >= 8)
+            {
+                position = new Vector2(BitConverter.ToSingle(value.PositionBytes, 4), BitConverter.ToSingle(value.PositionBytes, 0));
+            }
+
+            harvestableHandler.AddHarvestable(value.Id, value.TypeId, value.Tier, position, 0, value.Charges);
             
             // Emitir evento para o EventDispatcher
             await eventDispatcher.DispatchEvent(value);

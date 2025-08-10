@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Numerics;
 using System.Reflection;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Utility;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
 {
@@ -14,6 +15,29 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
         private readonly List<PlayerItems> itemsList;
 
         public byte[] XorCode { get; set; }
+
+        public PlayersHandler(List<PlayerItems> itemsList)
+        {
+            this.itemsList = itemsList ?? new List<PlayerItems>();
+        }
+
+        // Construtor de conveniência para testes que usam ItemInfo
+        public PlayersHandler(List<ItemInfo> itemInfos)
+        {
+            if (itemInfos == null)
+            {
+                this.itemsList = new List<PlayerItems>();
+            }
+            else
+            {
+                this.itemsList = itemInfos.Select(ii => new PlayerItems
+                {
+                    Id = ii.Id,
+                    Name = ii.Name ?? "NULL",
+                    Itempower = 0
+                }).ToList();
+            }
+        }
 
         public float[] Decrypt(byte[] coordinates, int offset = 0)
         {
@@ -39,11 +63,6 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
                 var saltIndex = i % (saltBytes8.Length - saltPos) + saltPos;
                 bytes4[i] ^= saltBytes8[saltIndex];
             }
-        }
-
-        public PlayersHandler(List<PlayerItems> itemsList)
-        {
-            this.itemsList = itemsList ?? new List<PlayerItems>();
         }
 
         public void AddPlayer(int id, string name, string guild, string alliance, Vector2 position, Health health, Faction faction, int[] equipments, int[] spells)

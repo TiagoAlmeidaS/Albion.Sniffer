@@ -20,7 +20,13 @@ namespace AlbionOnlineSniffer.Core.Services
         {
             _logger = logger;
         }
-        
+
+        // Construtor auxiliar sem logger para cenários de teste sem provider de logging
+        public PacketIndexesLoader()
+        {
+            _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<PacketIndexesLoader>.Instance;
+        }
+
         public static PacketIndexes? GlobalPacketIndexes { get; private set; }
 
         /// <summary>
@@ -36,8 +42,10 @@ namespace AlbionOnlineSniffer.Core.Services
 
                 if (!File.Exists(filePath))
                 {
-                    _logger.LogError("❌ Arquivo de índices não encontrado: {FilePath}", filePath);
-                    throw new FileNotFoundException($"Arquivo de índices não encontrado: {filePath}");
+                    _logger.LogWarning("⚠️ Arquivo de índices não encontrado: {FilePath}. Usando valores padrão.", filePath);
+                    var empty = new PacketIndexes();
+                    GlobalPacketIndexes = empty;
+                    return empty;
                 }
 
                 var jsonContent = File.ReadAllText(filePath);

@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System;
@@ -30,39 +30,28 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         private void InitializeProperties(Dictionary<byte, object> parameters)
         {
-            Code = ExtractXorCode(parameters);
-            if (parameters.ContainsKey(offsets[0]))
+            var idx = (offsets == null || offsets.Length == 0) ? (byte)0 : offsets[0];
+            // Em algumas versões, o KeySync envia o XOR code como byte[] no mesmo offset
+            if (parameters.ContainsKey(idx))
             {
-                Key = Convert.ToUInt64(parameters[offsets[0]]);
+                var raw = parameters[idx];
+                var maybeBytes = ConvertToByteArray(raw);
+                if (maybeBytes != null)
+                {
+                    Code = maybeBytes;
+                    Key = 0UL;
+                    return;
+                }
+
+                if (raw is IConvertible)
+                {
+                    Key = Convert.ToUInt64(raw);
+                }
             }
         }
 
         public byte[] Code { get; private set; }
         public ulong Key { get; private set; }
-
-        private byte[]? ExtractXorCode(Dictionary<byte, object> parameters)
-        {
-            try
-            {
-                if (offsets == null || offsets.Length == 0)
-                {
-                    return null;
-                }
-
-                var key = offsets[0];
-                if (!parameters.ContainsKey(key))
-                {
-                    return null;
-                }
-
-                var value = parameters[key];
-                return ConvertToByteArray(value);
-            }
-            catch
-            {
-                return null;
-            }
-        }
 
         private static byte[]? ConvertToByteArray(object value)
         {

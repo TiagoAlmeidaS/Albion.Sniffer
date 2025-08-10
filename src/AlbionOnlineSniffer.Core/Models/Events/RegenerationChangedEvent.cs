@@ -1,6 +1,7 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {

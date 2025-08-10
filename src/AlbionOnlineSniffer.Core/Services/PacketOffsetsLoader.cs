@@ -21,6 +21,12 @@ namespace AlbionOnlineSniffer.Core.Services
             _logger = logger;
         }
 
+        // Construtor auxiliar sem logger para cenários de teste sem provider de logging
+        public PacketOffsetsLoader()
+        {
+            _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<PacketOffsetsLoader>.Instance;
+        }
+ 
         /// <summary>
         /// Propriedade estática para acesso global aos offsets
         /// Baseado no padrão do albion-radar-deatheye-2pc

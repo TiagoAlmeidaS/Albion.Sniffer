@@ -64,6 +64,10 @@ namespace AlbionOnlineSniffer.Core.Services
                 
                 throw new InvalidOperationException($"Não foi possível encontrar um construtor adequado para o tipo {eventType.Name}");
             }
+            catch (TargetInvocationException ex)
+            {
+                throw new InvalidOperationException($"Erro ao criar instância do evento {eventType.Name}: {ex.InnerException?.Message}", ex);
+            }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Erro ao criar instância do evento {eventType.Name}: {ex.Message}", ex);
