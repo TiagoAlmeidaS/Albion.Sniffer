@@ -1,4 +1,6 @@
 ﻿using Albion.Network;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -6,7 +8,20 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     {
         private readonly List<NewHarvestableEvent> harvestableObjects;
 
+        // Construtor para compatibilidade com framework Albion.Network
         public NewHarvestablesListEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            InitializeHarvestableObjects(parameters, packetOffsets);
+        }
+
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public NewHarvestablesListEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            InitializeHarvestableObjects(parameters, packetOffsets);
+        }
+
+        private void InitializeHarvestableObjects(Dictionary<byte, object> parameters, PacketOffsets packetOffsets)
         {
             harvestableObjects = new List<NewHarvestableEvent>();
 
@@ -29,7 +44,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                         { 10, sizes[i] }
                     };
 
-                    harvestableObjects.Add(new NewHarvestableEvent(harvestParameters));
+                    harvestableObjects.Add(new NewHarvestableEvent(harvestParameters, packetOffsets));
                 }
             }
             else if (parameters[0] is short[])
@@ -51,7 +66,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                         { 10, sizes[i] }
                     };
 
-                    harvestableObjects.Add(new NewHarvestableEvent(harvestParameters));
+                    harvestableObjects.Add(new NewHarvestableEvent(harvestParameters, packetOffsets));
                 }
             }
         }

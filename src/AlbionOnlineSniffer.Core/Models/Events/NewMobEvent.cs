@@ -3,33 +3,56 @@ using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    class NewMobEvent : BaseEvent, IHasPosition
+    public class NewMobEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewMobEvent;
+        private readonly byte[] offsets;
 
+        // Construtor para compatibilidade com framework Albion.Network
         public NewMobEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-            TypeId = Convert.ToInt32(parameters[offsets[1]]) - 15;
-            Position = Additions.fromFArray((float[])parameters[offsets[2]]);
-
-            Health = parameters.ContainsKey(offsets[3]) ? 
-                new Health(Convert.ToInt32(parameters[offsets[3]]), Convert.ToInt32(parameters[offsets[4]])) 
-                : new Health(Convert.ToInt32(parameters[offsets[4]]));
-
-            Charge = (byte)(parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : 0);
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.NewMobEvent;
+            
+            InitializeProperties(parameters);
         }
 
-        public int Id { get; }
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public NewMobEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            offsets = packetOffsets?.NewMobEvent;
+            
+            InitializeProperties(parameters);
+        }
 
-        public int TypeId { get; }
-        public Vector2 Position { get; }
+        private void InitializeProperties(Dictionary<byte, object> parameters)
+        {
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            TypeId = Convert.ToInt32(parameters[offsets[1]]);
 
-        public Health Health { get; }
+            if (parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
 
-        public byte Charge { get; }
+            Health = Convert.ToSingle(parameters[offsets[3]]);
+            MaxHealth = Convert.ToSingle(parameters[offsets[4]]);
+
+            // Pode não existir
+            if (parameters.ContainsKey(offsets[5]))
+            {
+                EnchantmentLevel = Convert.ToByte(parameters[offsets[5]]);
+            }
+        }
+
+        public int Id { get; private set; }
+        public int TypeId { get; private set; }
+        public byte[] PositionBytes { get; private set; }
+        public float Health { get; private set; }
+        public float MaxHealth { get; private set; }
+        public byte EnchantmentLevel { get; private set; }
     }
 }

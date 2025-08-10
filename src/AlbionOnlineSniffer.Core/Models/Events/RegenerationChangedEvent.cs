@@ -1,15 +1,17 @@
 ﻿using Albion.Network;
-using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    class RegenerationChangedEvent : BaseEvent
+    public class RegenerationChangedEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.RegenerationHealthChangedEvent;
+        private readonly byte[] offsets;
 
-        public RegenerationChangedEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public RegenerationChangedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.RegenerationHealthChangedEvent;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
 
             if (parameters.ContainsKey(offsets[1]))

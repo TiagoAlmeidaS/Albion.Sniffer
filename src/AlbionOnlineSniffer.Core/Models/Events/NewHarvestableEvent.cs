@@ -2,24 +2,51 @@
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewHarvestableEvent : BaseEvent, IHasPosition
+    public class NewHarvestableEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewHarvestableObject;
+        private readonly byte[] offsets;
 
-        public NewHarvestableEvent(Dictionary<byte, object> parameters): base(parameters)
+        // Construtor para compatibilidade com framework Albion.Network
+        public NewHarvestableEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.NewHarvestableObject;
+            
+            InitializeProperties(parameters);
+        }
+
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public NewHarvestableEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            offsets = packetOffsets?.NewHarvestableObject;
+            
+            InitializeProperties(parameters);
+        }
+
+        private void InitializeProperties(Dictionary<byte, object> parameters)
         {
             Id = Convert.ToInt32(parameters[offsets[0]]);
+            TypeId = Convert.ToInt32(parameters[offsets[1]]);
 
-            Type = Convert.ToInt32(parameters[offsets[1]]);
-            Tier = Convert.ToInt32(parameters[offsets[2]]);
+            if (parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
 
-            Position = Additions.fromFArray((float[])parameters[offsets[3]]);
+            // Tier e Charges podem estar em diferentes offsets dependendo do tipo
+            if (parameters.ContainsKey(offsets[3]))
+            {
+                Tier = Convert.ToByte(parameters[offsets[3]]);
+            }
 
-            Count = parameters.ContainsKey(offsets[4]) ? Convert.ToInt32(parameters[offsets[4]]) : 0;
-            Charge = parameters.ContainsKey(offsets[5]) ? Convert.ToInt32(parameters[offsets[5]]) : 0;
+            if (parameters.ContainsKey(offsets[4]))
+            {
+                Charges = Convert.ToByte(parameters[offsets[4]]);
+            }
         }
 
         public int Id { get; }

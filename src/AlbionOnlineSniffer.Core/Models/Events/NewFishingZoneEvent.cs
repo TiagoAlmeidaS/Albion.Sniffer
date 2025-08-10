@@ -2,21 +2,24 @@
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewFishingZoneEvent : BaseEvent, IHasPosition
+    public class NewFishingZoneEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewFishingZoneObject;
+        private readonly byte[] offsets;
 
-        public NewFishingZoneEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public NewFishingZoneEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.NewFishingZoneObject;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
 
-            Position = Additions.fromFArray((float[])parameters[offsets[1]]);
-
-            Size = parameters.ContainsKey(offsets[2]) ? Convert.ToInt32(parameters[offsets[2]]) : 0;
-            RespawnCount = parameters.ContainsKey(offsets[3]) ? Convert.ToInt32(parameters[offsets[3]]) : 0;
+            if (parameters.ContainsKey(offsets[1]) && parameters[offsets[1]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
         }
 
         public int Id { get; }

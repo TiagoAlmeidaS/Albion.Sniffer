@@ -2,18 +2,24 @@
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
-    public class NewGatedWispEvent : BaseEvent, IHasPosition
+    public class NewGatedWispEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewWispGate;
+        private readonly byte[] offsets;
 
-        public NewGatedWispEvent(Dictionary<byte, object> parameters) : base(parameters)
+        public NewGatedWispEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            offsets = packetOffsets?.NewWispGate;
+            
             Id = Convert.ToInt32(parameters[offsets[0]]);
-            Position = Additions.fromFArray((float[])parameters[offsets[1]]);
-            isCollected = parameters.ContainsKey(offsets[2]) && parameters[offsets[2]].ToString() == "2";
+
+            if (parameters.ContainsKey(offsets[1]) && parameters[offsets[1]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
         }
 
         public int Id { get; }

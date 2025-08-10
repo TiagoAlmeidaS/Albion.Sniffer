@@ -1,15 +1,33 @@
 ﻿using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System.Numerics;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class MoveEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.Move;
+        private readonly byte[] offsets;
 
+        // Construtor para compatibilidade com framework Albion.Network
         public MoveEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.Move;
+            
+            InitializeProperties(parameters);
+        }
+
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public MoveEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            offsets = packetOffsets?.Move;
+            
+            InitializeProperties(parameters);
+        }
+
+        private void InitializeProperties(Dictionary<byte, object> parameters)
         {
             Id = Convert.ToInt32(parameters[offsets[0]]);
 

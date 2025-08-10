@@ -1,5 +1,6 @@
 ﻿using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,14 +9,36 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class KeySyncEvent : BaseEvent
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.KeySync;
+        private readonly byte[] offsets;
 
+        // Construtor para compatibilidade com framework Albion.Network
         public KeySyncEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            Code = ExtractXorCode(parameters);
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.KeySync;
+            
+            InitializeProperties(parameters);
         }
 
-        public byte[] Code { get; }
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public KeySyncEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            offsets = packetOffsets?.KeySync;
+            
+            InitializeProperties(parameters);
+        }
+
+        private void InitializeProperties(Dictionary<byte, object> parameters)
+        {
+            Code = ExtractXorCode(parameters);
+            if (parameters.ContainsKey(offsets[0]))
+            {
+                Key = Convert.ToUInt64(parameters[offsets[0]]);
+            }
+        }
+
+        public byte[] Code { get; private set; }
+        public ulong Key { get; private set; }
 
         private byte[]? ExtractXorCode(Dictionary<byte, object> parameters)
         {

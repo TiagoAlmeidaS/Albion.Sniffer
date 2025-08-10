@@ -1,15 +1,32 @@
 ﻿using System.Numerics;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     public class ChangeClusterEvent : BaseOperation
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.ChangeCluster ?? new byte[] { 0 } ;
+        private readonly byte[] offsets;
 
+        // Construtor para compatibilidade com framework Albion.Network
         public ChangeClusterEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.ChangeCluster ?? new byte[] { 0 };
+            
+            LocationId = parameters[offsets[0]] as string;
+            Type = parameters.ContainsKey(offsets[1]) ? parameters[offsets[1]] as string : "NULL";
+            DynamicClusterData = parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[]
+                ? ReadClusterData(parameters[offsets[2]] as byte[])
+                : null;
+        }
+
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public ChangeClusterEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            offsets = packetOffsets?.ChangeCluster ?? new byte[] { 0 };
+            
             LocationId = parameters[offsets[0]] as string;
             Type = parameters.ContainsKey(offsets[1]) ? parameters[offsets[1]] as string : "NULL";
             DynamicClusterData = parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[]

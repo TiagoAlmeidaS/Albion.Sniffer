@@ -3,50 +3,56 @@ using System.Reflection;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Services;
+using System.Collections.Generic;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
     [Obfuscation(Feature = "mutation", Exclude = false)]
     public class NewCharacterEvent : BaseEvent, IHasPosition
     {
-        byte[] offsets = PacketOffsetsLoader.GlobalPacketOffsets?.NewCharacter;
+        private readonly byte[] offsets;
 
+        // Construtor para compatibilidade com framework Albion.Network
         public NewCharacterEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-
-            Name = parameters[offsets[1]] as string;
-            Guild = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string : string.Empty;
-            Alliance = parameters.ContainsKey(offsets[3]) ? parameters[offsets[3]] as string : string.Empty;
-            Faction = (AlbionOnlineSniffer.Core.Utility.Faction)parameters[offsets[4]];
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.NewCharacter;
             
-            EncryptedPosition = parameters[offsets[5]] as byte[];
-            Speed = parameters.ContainsKey(offsets[6]) ? (float)parameters[offsets[6]] : 5.5f;
-
-            Health = parameters.ContainsKey(offsets[7]) ?
-                new Health(Convert.ToInt32(parameters[offsets[7]]), Convert.ToInt32(parameters[offsets[8]]))
-                : new Health(Convert.ToInt32(parameters[offsets[8]]));
-
-            Equipments = ConvertArray(parameters[offsets[9]]);
-            Spells = ConvertArray(parameters[offsets[10]]);
+            InitializeProperties(parameters);
         }
 
-        public int Id { get; }
+        // Construtor para injeção de dependência direta (se necessário no futuro)
+        public NewCharacterEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
+        {
+            offsets = packetOffsets?.NewCharacter;
+            
+            InitializeProperties(parameters);
+        }
 
-        public string Name { get; }
-        public string Guild { get; }
-        public string Alliance { get; }
-        public AlbionOnlineSniffer.Core.Utility.Faction Faction { get; }
+        private void InitializeProperties(Dictionary<byte, object> parameters)
+        {
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Name = (string)parameters[offsets[1]];
+            GuildName = (string)parameters[offsets[2]];
+            AllianceName = (string)parameters[offsets[3]];
 
-        public Vector2 Position { get; internal set; }
-        public byte[] EncryptedPosition { get; }
-        public float Speed { get; }
+            if (parameters.ContainsKey(offsets[4]) && parameters[offsets[4]] is byte[] positionBytes)
+            {
+                PositionBytes = positionBytes;
+            }
 
-        public Health Health { get; }
+            Items = parameters[offsets[5]] as float[];
+        }
 
-        public int[] Equipments { get; }
+        public int Id { get; private set; }
+        public string Name { get; private set; }
+        public string GuildName { get; private set; }
+        public string AllianceName { get; private set; }
+        public byte[] PositionBytes { get; private set; }
+        public float[] Items { get; private set; }
 
-        public int[] Spells { get; }
+        public Vector2 Position { get; set; }
 
         private int[] ConvertArray(object value)
         {
