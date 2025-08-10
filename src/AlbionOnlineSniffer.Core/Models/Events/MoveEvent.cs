@@ -1,6 +1,7 @@
 ﻿using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
+using System.Numerics;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -45,5 +46,9 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public byte[] NewPositionBytes { get; }
         public float Speed { get; }
         public DateTime Time { get; }
+
+        // Enriquecimento: posições calculadas (decriptadas quando possível)
+        public Vector2? Position { get; set; }
+        public Vector2? NewPosition { get; set; }
     }
 }
