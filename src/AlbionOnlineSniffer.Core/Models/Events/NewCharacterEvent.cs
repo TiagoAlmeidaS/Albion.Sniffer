@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Reflection;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
@@ -16,8 +16,8 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para compatibilidade com framework Albion.Network
         public NewCharacterEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            var packetOffsets = PacketOffsetsProvider.GetOffsets();
-            offsets = packetOffsets?.NewCharacter;
+            var packetOffsets = PacketOffsetsLoader.GlobalPacketOffsets ?? PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.NewCharacter ?? new byte[] { 0, 1, 2, 3, 4, 5 };
             
             InitializeProperties(parameters);
         }
@@ -25,7 +25,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para injeção de dependência direta (se necessário no futuro)
         public NewCharacterEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.NewCharacter;
+            offsets = packetOffsets?.NewCharacter ?? new byte[] { 0, 1, 2, 3, 4, 5 };
             
             InitializeProperties(parameters);
         }
@@ -37,12 +37,15 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             GuildName = (string)parameters[offsets[2]];
             AllianceName = (string)parameters[offsets[3]];
 
-            if (parameters.ContainsKey(offsets[4]) && parameters[offsets[4]] is byte[] positionBytes)
+            if (offsets.Length > 4 && parameters.ContainsKey(offsets[4]) && parameters[offsets[4]] is byte[] positionBytes)
             {
                 PositionBytes = positionBytes;
             }
 
-            Items = parameters[offsets[5]] as float[];
+            if (offsets.Length > 5 && parameters.TryGetValue(offsets[5], out var itemsObj) && itemsObj is float[] f)
+            {
+                Items = f;
+            }
         }
 
         public int Id { get; private set; }

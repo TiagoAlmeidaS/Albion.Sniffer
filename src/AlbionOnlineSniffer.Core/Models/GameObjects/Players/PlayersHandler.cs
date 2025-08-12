@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Numerics;
 using System.Reflection;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
@@ -19,7 +19,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
         public float[] Decrypt(byte[] coordinates, int offset = 0)
         {
             var code = XorCode;
-            if (code == null)
+            if (code == null || code.Length == 0)
             {
                 return new[] { BitConverter.ToSingle(coordinates, offset), BitConverter.ToSingle(coordinates, offset + 4) };
             }
@@ -35,9 +35,15 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
 
         private static void Decrypt(byte[] bytes4, byte[] saltBytes8, int saltPos)
         {
+            if (saltBytes8 == null || saltBytes8.Length <= saltPos)
+            {
+                return;
+            }
             for (var i = 0; i < bytes4.Length; i++)
             {
-                var saltIndex = i % (saltBytes8.Length - saltPos) + saltPos;
+                var modulo = saltBytes8.Length - saltPos;
+                if (modulo <= 0) break;
+                var saltIndex = i % modulo + saltPos;
                 bytes4[i] ^= saltBytes8[saltIndex];
             }
         }
