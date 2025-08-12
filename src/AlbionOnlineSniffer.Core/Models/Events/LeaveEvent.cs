@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
@@ -12,13 +12,13 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public LeaveEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
             var packetOffsets = PacketOffsetsProvider.GetOffsets();
-            offsets = packetOffsets?.Leave;
+            offsets = packetOffsets?.Leave ?? new byte[] { 0 };
             Id = Convert.ToInt32(parameters[offsets[0]]);
         }
 
         public LeaveEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.Leave;
+            offsets = packetOffsets?.Leave ?? new byte[] { 0 };
             
             Id = Convert.ToInt32(parameters[offsets[0]]);
         }

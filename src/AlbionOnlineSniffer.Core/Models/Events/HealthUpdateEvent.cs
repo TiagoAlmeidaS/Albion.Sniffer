@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 
@@ -11,12 +11,12 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Compat: construtor antigo
         public HealthUpdateEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            var packetOffsets = PacketOffsetsProvider.GetOffsets();
-            offsets = packetOffsets?.HealthUpdateEvent;
+            var packetOffsets = PacketOffsetsLoader.GlobalPacketOffsets ?? PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.HealthUpdateEvent ?? new byte[] { 0, 1, 2, 3 };
             Id = Convert.ToInt32(parameters[offsets[0]]);
             Health = Convert.ToSingle(parameters[offsets[1]]);
             MaxHealth = Convert.ToSingle(parameters[offsets[2]]);
-            if (parameters.ContainsKey(offsets[3]))
+            if (offsets.Length > 3 && parameters.ContainsKey(offsets[3]))
             {
                 Energy = Convert.ToSingle(parameters[offsets[3]]);
             }
@@ -24,13 +24,13 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public HealthUpdateEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.HealthUpdateEvent;
+            offsets = packetOffsets?.HealthUpdateEvent ?? new byte[] { 0, 1, 2, 3 };
             
             Id = Convert.ToInt32(parameters[offsets[0]]);
             Health = Convert.ToSingle(parameters[offsets[1]]);
             MaxHealth = Convert.ToSingle(parameters[offsets[2]]);
             // Pode ter energia/mana em alguns casos
-            if (parameters.ContainsKey(offsets[3]))
+            if (offsets.Length > 3 && parameters.ContainsKey(offsets[3]))
             {
                 Energy = Convert.ToSingle(parameters[offsets[3]]);
             }

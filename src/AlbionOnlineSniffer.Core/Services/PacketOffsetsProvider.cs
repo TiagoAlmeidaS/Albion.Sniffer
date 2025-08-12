@@ -20,16 +20,8 @@ namespace AlbionOnlineSniffer.Core.Services
         public static void Configure(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-            
-            // Inicializa o cache de offsets
-            try
-            {
-                _cachedOffsets = _serviceProvider.GetRequiredService<PacketOffsets>();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Erro ao obter PacketOffsets do service provider. Certifique-se de que foi registrado corretamente.", ex);
-            }
+            // Reset cache to ensure subsequent GetOffsets resolves from the provided container
+            _cachedOffsets = null;
         }
         
         /// <summary>
@@ -44,8 +36,14 @@ namespace AlbionOnlineSniffer.Core.Services
                 {
                     throw new InvalidOperationException("PacketOffsetsProvider não foi configurado. Chame Configure() primeiro.");
                 }
-                
-                _cachedOffsets = _serviceProvider.GetRequiredService<PacketOffsets>();
+                try
+                {
+                    _cachedOffsets = _serviceProvider.GetRequiredService<PacketOffsets>();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Erro ao obter PacketOffsets do service provider. Certifique-se de que foi registrado corretamente.", ex);
+                }
             }
             
             return _cachedOffsets;

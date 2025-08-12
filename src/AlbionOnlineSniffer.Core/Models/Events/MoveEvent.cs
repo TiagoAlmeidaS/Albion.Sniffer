@@ -1,4 +1,4 @@
-﻿using Albion.Network;
+using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
@@ -13,8 +13,12 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para compatibilidade com framework Albion.Network
         public MoveEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
-            var packetOffsets = PacketOffsetsProvider.GetOffsets();
-            offsets = packetOffsets?.Move;
+            PacketOffsets? packetOffsets = null;
+            try { packetOffsets = PacketOffsetsProvider.GetOffsets(); } catch { }
+            packetOffsets ??= PacketOffsetsLoader.GlobalPacketOffsets;
+            if (packetOffsets == null)
+                throw new InvalidOperationException("PacketOffsetsProvider não foi configurado. Chame Configure() primeiro.");
+            offsets = packetOffsets.Move ?? new byte[] { 0, 1 };
             
             InitializeProperties(parameters);
         }
@@ -23,6 +27,8 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public MoveEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
             offsets = packetOffsets?.Move;
+            if (offsets == null)
+                throw new NullReferenceException("PacketOffsets.Move is null");
             
             InitializeProperties(parameters);
         }
@@ -32,7 +38,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             Id = Convert.ToInt32(parameters[offsets[0]]);
 
             byte[] parameter = (byte[])parameters[offsets[1]];
-            Flags flags = (Flags)parameter[offsets[0]];
+            Flags flags = (Flags)parameter[0];
 
             Time = DateTime.UtcNow;
 
