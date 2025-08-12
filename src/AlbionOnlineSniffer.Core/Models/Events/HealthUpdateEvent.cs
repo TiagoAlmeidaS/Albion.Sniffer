@@ -8,6 +8,20 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     {
         private readonly byte[] offsets;
 
+        // Compat: construtor antigo
+        public HealthUpdateEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.HealthUpdateEvent;
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Health = Convert.ToSingle(parameters[offsets[1]]);
+            MaxHealth = Convert.ToSingle(parameters[offsets[2]]);
+            if (parameters.ContainsKey(offsets[3]))
+            {
+                Energy = Convert.ToSingle(parameters[offsets[3]]);
+            }
+        }
+
         public HealthUpdateEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
             offsets = packetOffsets?.HealthUpdateEvent;
@@ -22,8 +36,9 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             }
         }
 
-        public int Id { get; }
-
-        public int Health { get; }
+        public int Id { get; private set; }
+        public float Health { get; private set; }
+        public float MaxHealth { get; private set; }
+        public float Energy { get; private set; }
     }
 }

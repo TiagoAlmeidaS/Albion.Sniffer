@@ -11,6 +11,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para compatibilidade com framework Albion.Network
         public NewHarvestablesListEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
+            harvestableObjects = new List<NewHarvestableEvent>();
             var packetOffsets = PacketOffsetsProvider.GetOffsets();
             InitializeHarvestableObjects(parameters, packetOffsets);
         }
@@ -18,12 +19,13 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para injeção de dependência direta (se necessário no futuro)
         public NewHarvestablesListEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
+            harvestableObjects = new List<NewHarvestableEvent>();
             InitializeHarvestableObjects(parameters, packetOffsets);
         }
 
         private void InitializeHarvestableObjects(Dictionary<byte, object> parameters, PacketOffsets packetOffsets)
         {
-            harvestableObjects = new List<NewHarvestableEvent>();
+            // lista já inicializada nos construtores
 
             if (parameters[0] is byte[])
             {
@@ -38,11 +40,20 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                     var harvestParameters = new Dictionary<byte, object>
                     {
                         { 0, ids[i] },
-                        { 5, types[i] },
-                        { 7, tiers[i] },
-                        { 8, new float[] { positions[i * 2], positions[i * 2 + 1] } },
-                        { 10, sizes[i] }
+                        { 1, types[i] },
+                        { 2, new byte[] { 0,0,0,0, 0,0,0,0 } },
+                        { 3, tiers[i] },
+                        { 4, sizes[i] }
                     };
+
+                    // Monta PositionBytes (x,y floats) em byte[]
+                    var xBytes = BitConverter.GetBytes(positions[i * 2]);
+                    var yBytes = BitConverter.GetBytes(positions[i * 2 + 1]);
+                    var posBytes = new byte[8];
+                    Array.Copy(xBytes, 0, posBytes, 0, 4);
+                    Array.Copy(yBytes, 0, posBytes, 4, 4);
+                    // como a lista é readonly, definimos antes de criar o objeto; não tocar após add
+                    harvestParameters[2] = posBytes;
 
                     harvestableObjects.Add(new NewHarvestableEvent(harvestParameters, packetOffsets));
                 }
@@ -60,11 +71,19 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                     var harvestParameters = new Dictionary<byte, object>
                     {
                         { 0, ids[i] },
-                        { 5, types[i] },
-                        { 7, tiers[i] },
-                        { 8, new float[] { positions[i * 2], positions[i * 2 + 1] } },
-                        { 10, sizes[i] }
+                        { 1, types[i] },
+                        { 2, new byte[] { 0,0,0,0, 0,0,0,0 } },
+                        { 3, tiers[i] },
+                        { 4, sizes[i] }
                     };
+
+                    // Monta PositionBytes
+                    var xBytes = BitConverter.GetBytes(positions[i * 2]);
+                    var yBytes = BitConverter.GetBytes(positions[i * 2 + 1]);
+                    var posBytes = new byte[8];
+                    Array.Copy(xBytes, 0, posBytes, 0, 4);
+                    Array.Copy(yBytes, 0, posBytes, 4, 4);
+                    harvestParameters[2] = posBytes;
 
                     harvestableObjects.Add(new NewHarvestableEvent(harvestParameters, packetOffsets));
                 }

@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Reflection;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Utility;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
 {
@@ -44,6 +45,14 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
         public PlayersHandler(List<PlayerItems> itemsList)
         {
             this.itemsList = itemsList ?? new List<PlayerItems>();
+        }
+
+        // Overload to support tests providing List<ItemInfo>
+        public PlayersHandler(List<ItemInfo> itemInfos)
+        {
+            this.itemsList = itemInfos != null
+                ? itemInfos.Select(i => new PlayerItems { Id = i.Id, Name = i.Name, Itempower = 0 }).ToList()
+                : new List<PlayerItems>();
         }
 
         public void AddPlayer(int id, string name, string guild, string alliance, Vector2 position, Health health, Faction faction, int[] equipments, int[] spells)

@@ -8,6 +8,7 @@ using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Utility;
 using System.Media;
 using System.IO;
+using System.Collections.Generic;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
@@ -32,24 +33,31 @@ namespace AlbionOnlineSniffer.Core.Handlers
             this.eventDispatcher = eventDispatcher;
         }
 
+        // Overload required by tests: accepts only PlayersHandler and EventDispatcher
+        public NewCharacterEventHandler(PlayersHandler playerHandler, EventDispatcher eventDispatcher)
+            : this(
+                playerHandler,
+                new LocalPlayerHandler(new Dictionary<string, Cluster>()),
+                new ConfigHandler(),
+                eventDispatcher)
+        {
+        }
+
         protected override async Task OnActionAsync(NewCharacterEvent value)
         {
             Vector2 pos = Vector2.Zero;
             
-            if (playerHandler.XorCode != null && value.EncryptedPosition != null)
+            if (playerHandler.XorCode != null && value.PositionBytes != null)
             {
-                var coords = playerHandler.Decrypt(value.EncryptedPosition);
+                var coords = playerHandler.Decrypt(value.PositionBytes);
                 pos = new Vector2(coords[1], coords[0]);
             }
-            else if (value.Position != Vector2.Zero)
-            {
-                pos = value.Position;
-            }
+            // Caso não tenha bytes, mantém Vector2.Zero
             
             // Preencher Position no próprio evento para publicação reutilizável (IHasPosition)
             value.Position = pos;
 
-            playerHandler.AddPlayer(value.Id, value.Name, value.Guild, value.Alliance, pos, value.Health, value.Faction, value.Equipments, value.Spells);
+            playerHandler.AddPlayer(value.Id, value.Name, value.GuildName, value.AllianceName, pos, new Health(0,0), Utility.Faction.NoPVP, new int[0], new int[0]);
 
             // Emitir evento para o EventDispatcher
             await eventDispatcher.DispatchEvent(value);

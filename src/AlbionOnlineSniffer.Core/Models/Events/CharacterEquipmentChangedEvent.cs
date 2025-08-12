@@ -8,6 +8,16 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     {
         private readonly byte[] offsets;
 
+        // Compat constructor for tests using provider-based offsets
+        public CharacterEquipmentChangedEvent(Dictionary<byte, object> parameters) : base(parameters)
+        {
+            var packetOffsets = PacketOffsetsProvider.GetOffsets();
+            offsets = packetOffsets?.CharacterEquipmentChanged ?? throw new NullReferenceException();
+            Id = Convert.ToInt32(parameters[offsets[0]]);
+            Equipments = ConvertArray(parameters[offsets[1]]);
+            Spells = ConvertArray(parameters[offsets[2]]);
+        }
+
         public CharacterEquipmentChangedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
             offsets = packetOffsets?.CharacterEquipmentChanged;

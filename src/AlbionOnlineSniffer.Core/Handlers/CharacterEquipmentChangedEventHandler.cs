@@ -5,7 +5,7 @@ using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.Core.Handlers
 {
-    class CharacterEquipmentChangedEventHandler : EventPacketHandler<CharacterEquipmentChanged>
+    class CharacterEquipmentChangedEventHandler : EventPacketHandler<CharacterEquipmentChangedEvent>
     {
         private readonly PlayersHandler playerHandler;
         private readonly EventDispatcher eventDispatcher;
@@ -16,7 +16,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             this.eventDispatcher = eventDispatcher;
         }
 
-        protected override async Task OnActionAsync(CharacterEquipmentChanged value)
+        protected override async Task OnActionAsync(CharacterEquipmentChangedEvent value)
         {
             playerHandler.UpdateItems(value.Id, value.Equipments, value.Spells);
             

@@ -59,11 +59,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                 NewPositionBytes = PositionBytes;
         }
 
-        public int Id { get; }
-        public byte[] PositionBytes { get; }
-        public byte[] NewPositionBytes { get; }
-        public float Speed { get; }
-        public DateTime Time { get; }
+        public int Id { get; private set; }
+        public byte[] PositionBytes { get; private set; }
+        public byte[] NewPositionBytes { get; private set; }
+        public float Speed { get; private set; }
+        public DateTime Time { get; private set; }
 
         // Enriquecimento: posições calculadas (decriptadas quando possível)
         public Vector2? Position { get; set; }

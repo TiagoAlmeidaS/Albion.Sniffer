@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;

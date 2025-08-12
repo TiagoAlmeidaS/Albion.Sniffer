@@ -1,8 +1,8 @@
-﻿using System.Numerics;
-using Albion.Network;
+﻿using Albion.Network;
 using AlbionOnlineSniffer.Core.Utility;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
+using System.Numerics;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -22,11 +22,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             }
         }
 
-        public int Id { get; }
-
-        public Vector2 Position { get; }
-
-        public int Size { get; }
-        public int RespawnCount { get; }
+        public int Id { get; private set; }
+        public byte[] PositionBytes { get; private set; }
     }
 }
