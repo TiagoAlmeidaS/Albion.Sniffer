@@ -48,7 +48,9 @@ namespace AlbionOnlineSniffer.Tests.Core
         public void Constructor_WithNullPacketOffsets_ShouldThrowException()
         {
             // Act & Assert
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             var exception = Assert.Throws<ArgumentNullException>(() => new EventFactory(null));
+            #pragma warning restore CS8625
             Assert.Equal("packetOffsets", exception.ParamName);
         }
 
@@ -162,7 +164,9 @@ namespace AlbionOnlineSniffer.Tests.Core
             var parameters = new Dictionary<byte, object>();
 
             // Act & Assert
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             var exception = Assert.Throws<ArgumentNullException>(() => _eventFactory.CreateEvent(null, parameters));
+            #pragma warning restore CS8625
             Assert.Equal("eventType", exception.ParamName);
         }
 
@@ -170,7 +174,9 @@ namespace AlbionOnlineSniffer.Tests.Core
         public void CreateEvent_WithNullParameters_ShouldThrowException()
         {
             // Act & Assert
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             var exception = Assert.Throws<ArgumentNullException>(() => _eventFactory.CreateEvent<MoveEvent>(null));
+            #pragma warning restore CS8625
             Assert.Equal("parameters", exception.ParamName);
         }
 

@@ -29,7 +29,7 @@ AlbionOnlineSniffer.Core.DependencyProvider.RegisterServices(builder.Services);
 builder.Services.AddSingleton<PacketCaptureService>(sp =>
 {
 	var logger = sp.GetRequiredService<ILogger<PacketCaptureService>>();
-	return new PacketCaptureService(5050, logger);
+	return new PacketCaptureService(5050);
 });
 
 var app = builder.Build();
@@ -81,10 +81,10 @@ using (var scope = app.Services.CreateScope())
 	// Verificar offsets carregados
 	var packetOffsets = services.GetRequiredService<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketOffsets>();
 	logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS (via Core):");
-	logger.LogInformation("  - Leave: [{Offsets}]", string.Join(", ", packetOffsets.Leave));
-	logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
-	logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
-	logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
+	logger.LogInformation("  - Leave: [{Offsets}]", packetOffsets.Leave != null ? string.Join(", ", packetOffsets.Leave) : "<nulo>");
+	logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", packetOffsets.HealthUpdateEvent != null ? string.Join(", ", packetOffsets.HealthUpdateEvent) : "<nulo>");
+	logger.LogInformation("  - NewCharacter: [{Offsets}]", packetOffsets.NewCharacter != null ? string.Join(", ", packetOffsets.NewCharacter) : "<nulo>");
+	logger.LogInformation("  - Move: [{Offsets}]", packetOffsets.Move != null ? string.Join(", ", packetOffsets.Move) : "<nulo>");
 
 	// Forward raw UDP payloads to UI and deserializer
 	capture.OnUdpPayloadCaptured += payload =>
@@ -96,15 +96,15 @@ using (var scope = app.Services.CreateScope())
 			if (payload != null && payload.Length > 0)
 			{
 				logger.LogDebug("📊 PAYLOAD HEX: {Hex}", Convert.ToHexString(payload));
+				
+				stream.AddRawPacket(payload);
+				hubContext.Clients.All.SendAsync("udpPayload", new
+				{
+					Length = payload.Length,
+					Hex = Convert.ToHexString(payload)
+				});
+				protocol16Deserializer.ReceivePacket(payload);
 			}
-
-			stream.AddRawPacket(payload);
-			hubContext.Clients.All.SendAsync("udpPayload", new
-			{
-				Length = payload?.Length ?? 0,
-				Hex = payload != null ? Convert.ToHexString(payload) : ""
-			});
-			protocol16Deserializer.ReceivePacket(payload);
 		}
 		catch (Exception ex)
 		{
@@ -137,8 +137,12 @@ using (var scope = app.Services.CreateScope())
 				var posProp = gameEvent.GetType().GetProperty("Position");
 				if (posProp != null && posProp.PropertyType == typeof(Vector2))
 				{
-					var pos = (Vector2)posProp.GetValue(gameEvent);
-					location = new { X = pos.X, Y = pos.Y };
+					var posValue = posProp.GetValue(gameEvent);
+					if (posValue != null)
+					{
+						var pos = (Vector2)posValue;
+						location = new { X = pos.X, Y = pos.Y };
+					}
 				}
 			}
 		}

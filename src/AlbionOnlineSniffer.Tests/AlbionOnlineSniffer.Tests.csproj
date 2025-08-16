@@ -31,9 +31,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\AlbionOnlineSniffer.Capture\AlbionOnlineSniffer.Capture.csproj" />
-    <ProjectReference Include="..\src\AlbionOnlineSniffer.Queue\AlbionOnlineSniffer.Queue.csproj" />
-    <ProjectReference Include="..\src\AlbionOnlineSniffer.Core\AlbionOnlineSniffer.Core.csproj" />
+    <ProjectReference Include="..\AlbionOnlineSniffer.Capture\AlbionOnlineSniffer.Capture.csproj" />
+    <ProjectReference Include="..\AlbionOnlineSniffer.Queue\AlbionOnlineSniffer.Queue.csproj" />
+    <ProjectReference Include="..\AlbionOnlineSniffer.Core\AlbionOnlineSniffer.Core.csproj" />
   </ItemGroup>
 
 </Project>

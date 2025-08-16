@@ -23,10 +23,14 @@ namespace AlbionOnlineSniffer.Tests.Capture
             // Simular chegada de pacote (chamando o evento manualmente)
             // Como o método Device_OnPacketArrival é privado, simulamos o disparo do evento diretamente
             // Em um cenário real, refatore para permitir injeção/testabilidade
-            service.GetType().GetEvent("OnUdpPayloadCaptured")?.RaiseMethod.Invoke(service, new object[] { testPayload });
+            var eventInfo = service.GetType().GetEvent("OnUdpPayloadCaptured");
+            if (eventInfo != null && eventInfo.RaiseMethod != null)
+            {
+                eventInfo.RaiseMethod.Invoke(service, new object[] { testPayload });
+            }
 
             // Assert
             Assert.True(eventRaised);
         }
     }
-} 
+}

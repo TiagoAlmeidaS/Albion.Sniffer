@@ -51,7 +51,9 @@ namespace AlbionOnlineSniffer.Tests.Core
             };
 
             // Act
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             DependencyProvider.RegisterDataLoader(services, null, customIndexes);
+            #pragma warning restore CS8625
             var serviceProvider = services.BuildServiceProvider();
             var resolvedIndexes = serviceProvider.GetRequiredService<PacketIndexes>();
 
@@ -177,7 +179,10 @@ namespace AlbionOnlineSniffer.Tests.Core
                 Move = 100
             };
             
+            // Usando null com pragma para suprimir o aviso
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             DependencyProvider.RegisterDataLoader(services, null, initialIndexes);
+            #pragma warning restore CS8625
 
             var newIndexes = new PacketIndexes
             {
@@ -288,7 +293,10 @@ namespace AlbionOnlineSniffer.Tests.Core
             services.AddSingleton<ILoggerFactory>(_ => LoggerFactory.Create(builder => { }));
 
             // Act & Assert - Should not throw an exception
+            // Usando #pragma para suprimir o aviso específico nesta linha
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             DependencyProvider.OverridePacketOffsets(services, null);
+            #pragma warning restore CS8625
             var serviceProvider = services.BuildServiceProvider();
             
             // The service should be registered even if it's null
@@ -304,7 +312,10 @@ namespace AlbionOnlineSniffer.Tests.Core
             services.AddSingleton<ILoggerFactory>(_ => LoggerFactory.Create(builder => { }));
 
             // Act & Assert - Should not throw an exception
+            // Usando #pragma para suprimir o aviso específico nesta linha
+            #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
             DependencyProvider.OverridePacketIndexes(services, null);
+            #pragma warning restore CS8625
             var serviceProvider = services.BuildServiceProvider();
             
             // The service should be registered even if it's null

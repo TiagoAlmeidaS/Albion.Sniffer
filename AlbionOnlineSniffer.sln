@@ -13,9 +13,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Queue",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.App", "src\AlbionOnlineSniffer.App\AlbionOnlineSniffer.App.csproj", "{EA47F3DF-FDDB-4E58-9FC3-6BC5DBBC7D18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Tests", "AlbionOnlineSniffer.Tests\AlbionOnlineSniffer.Tests.csproj", "{964A4D9C-25BA-4C0B-857A-C0B1E840206B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Tests", "src\AlbionOnlineSniffer.Tests\AlbionOnlineSniffer.Tests.csproj", "{964A4D9C-25BA-4C0B-857A-C0B1E840206B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Web", "src/AlbionOnlineSniffer.Web/AlbionOnlineSniffer.Web.csproj", "{3F4D89B2-38E3-4B2B-B0C6-9B4E6E5D8F1A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Web", "src\AlbionOnlineSniffer.Web\AlbionOnlineSniffer.Web.csproj", "{3F4D89B2-38E3-4B2B-B0C6-9B4E6E5D8F1A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
