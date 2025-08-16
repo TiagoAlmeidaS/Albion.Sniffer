@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information); // Garantir que logs de informação sejam exibidos
 
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
@@ -49,6 +50,7 @@ using (var scope = app.Services.CreateScope())
 {
 	var services = scope.ServiceProvider;
 	var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+	var logger = loggerFactory.CreateLogger("AlbionOnlineSniffer.Web");
 	var eventDispatcher = services.GetRequiredService<EventDispatcher>();
 	var definitionLoader = services.GetRequiredService<PhotonDefinitionLoader>();
 	var albionNetworkHandlerManager = services.GetRequiredService<AlbionNetworkHandlerManager>();
@@ -63,11 +65,39 @@ using (var scope = app.Services.CreateScope())
 	var hubContext = services.GetRequiredService<IHubContext<SnifferHub>>();
 	var stream = services.GetRequiredService<EventStreamService>();
 
+	// Log informações de inicialização
+	logger.LogInformation("🚀 Iniciando AlbionOnlineSniffer.Web...");
+	logger.LogInformation("📁 Diretório atual: {Directory}", System.IO.Directory.GetCurrentDirectory());
+	logger.LogInformation("🔧 Versão do .NET: {Version}", Environment.Version);
+	logger.LogInformation("💻 Arquitetura: {Architecture}", (Environment.Is64BitProcess ? "x64" : "x86"));
+
+	// Verificar assemblies carregados
+	logger.LogInformation("📦 Assemblies carregados:");
+	foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+	{
+		logger.LogInformation("   - {Name} ({Version})", assembly.GetName().Name, assembly.GetName().Version);
+	}
+
+	// Verificar offsets carregados
+	var packetOffsets = services.GetRequiredService<Core.Models.ResponseObj.PacketOffsets>();
+	logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS (via Core):");
+	logger.LogInformation("  - Leave: [{Offsets}]", string.Join(", ", packetOffsets.Leave));
+	logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
+	logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
+	logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
+
 	// Forward raw UDP payloads to UI and deserializer
 	capture.OnUdpPayloadCaptured += payload =>
 	{
 		try
 		{
+			// Log detalhado do pacote capturado
+			logger.LogInformation("📡 PACOTE UDP CAPTURADO: {Length} bytes", payload?.Length ?? 0);
+			if (payload != null && payload.Length > 0)
+			{
+				logger.LogDebug("📊 PAYLOAD HEX: {Hex}", Convert.ToHexString(payload));
+			}
+
 			stream.AddRawPacket(payload);
 			hubContext.Clients.All.SendAsync("udpPayload", new
 			{
@@ -76,7 +106,10 @@ using (var scope = app.Services.CreateScope())
 			});
 			protocol16Deserializer.ReceivePacket(payload);
 		}
-		catch { }
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "❌ Erro ao processar pacote: {Message}", ex.Message);
+		}
 	};
 
 	// Broadcast metrics periodically
@@ -84,6 +117,8 @@ using (var scope = app.Services.CreateScope())
 	{
 		stream.UpdateMetrics(metrics);
 		hubContext.Clients.All.SendAsync("metrics", metrics);
+		logger.LogDebug("📊 MÉTRICAS: {Packets} pacotes, {BytesPerSecond} B/s", 
+			metrics.ValidPacketsCaptured, metrics.BytesPerSecond);
 	};
 
 	// Broadcast parsed game events
@@ -109,10 +144,19 @@ using (var scope = app.Services.CreateScope())
 		}
 		catch { }
 
+		var eventType = gameEvent.GetType().Name;
+		var timestamp = DateTime.UtcNow;
+
+		logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", eventType, timestamp);
+		if (location != null)
+		{
+			logger.LogInformation("📍 POSIÇÃO: {Position}", location);
+		}
+
 		var message = new
 		{
-			EventType = gameEvent.GetType().Name,
-			Timestamp = DateTime.UtcNow,
+			EventType = eventType,
+			Timestamp = timestamp,
 			Position = location,
 			Data = gameEvent
 		};
@@ -124,26 +168,45 @@ using (var scope = app.Services.CreateScope())
 	// Optionally load bin-dumps definitions if directory exists (mirrors console app behavior)
 	try
 	{
-		var binDumpsPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "ao-bin-dumps");
-		if (System.IO.Directory.Exists(binDumpsPath))
+		var binDumpsEnabled = builder.Configuration.GetValue<bool>("BinDumps:Enabled", true);
+		var binDumpsPath = builder.Configuration.GetValue<string>("BinDumps:BasePath", "ao-bin-dumps");
+		var fullBinDumpsPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), binDumpsPath);
+
+		logger.LogInformation("Configuração de bin-dumps: Habilitado={Enabled}, Caminho={Path}", 
+			binDumpsEnabled, binDumpsPath);
+
+		if (binDumpsEnabled && System.IO.Directory.Exists(fullBinDumpsPath))
 		{
-			definitionLoader.Load(binDumpsPath);
+			logger.LogInformation("📂 Carregando definições dos bin-dumps...");
+			definitionLoader.Load(fullBinDumpsPath);
+			logger.LogInformation("✅ Definições dos bin-dumps carregadas com sucesso");
+		}
+		else if (binDumpsEnabled)
+		{
+			logger.LogWarning("⚠️ Diretório de bin-dumps não encontrado: {Path}", fullBinDumpsPath);
 		}
 	}
-	catch { }
+	catch (Exception ex)
+	{
+		logger.LogError(ex, "❌ Erro ao carregar definições dos bin-dumps: {Message}", ex.Message);
+	}
 }
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
 	try
 	{
+		var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 		var capture = app.Services.GetRequiredService<PacketCaptureService>();
+		logger.LogInformation("🚀 Iniciando captura de pacotes...");
 		capture.Start();
+		logger.LogInformation("✅ Captura iniciada com sucesso!");
+		logger.LogInformation("📡 Aguardando pacotes do Albion Online...");
 	}
 	catch (Exception ex)
 	{
 		var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-		logger.LogError(ex, "Falha ao iniciar captura automaticamente. Use /api/capture/start para tentar novamente.");
+		logger.LogError(ex, "❌ Falha ao iniciar captura automaticamente. Use /api/capture/start para tentar novamente.");
 	}
 });
 
@@ -151,10 +214,17 @@ app.Lifetime.ApplicationStopping.Register(() =>
 {
 	try
 	{
+		var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 		var capture = app.Services.GetRequiredService<PacketCaptureService>();
+		logger.LogInformation("🛑 Parando captura...");
 		capture.Stop();
+		logger.LogInformation("✅ Captura parada. Saindo...");
 	}
-	catch { }
+	catch (Exception ex)
+	{
+		var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+		logger.LogError(ex, "❌ Erro ao parar captura: {Message}", ex.Message);
+	}
 });
 
 app.Run();
