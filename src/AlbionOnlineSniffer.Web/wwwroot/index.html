@@ -68,19 +68,21 @@
 		function renderMetrics(m) {
 			$status.textContent = `Status: ${m.status || m.Status}`;
 			$metrics.innerHTML = `
-				<div class="row"><span class="badge">Pacotes</span><small>${m.ValidPacketsCaptured}/${m.TotalPacketsCaptured}</small></div>
-				<div class="row"><span class="badge">Bytes</span><small>${m.TotalBytesCapturated}</small></div>
-				<div class="row"><span class="badge">Rate</span><small>${m.PacketsPerSecond?.toFixed?.(2) || m.PacketsPerSecond} pkt/s, ${m.BytesPerSecond?.toFixed?.(2) || m.BytesPerSecond} B/s</small></div>
-				<div class="row"><span class="badge">Erros</span><small>${m.CaptureErrors}</small></div>
-				<div class="row"><span class="badge">Interface</span><small>${m.LastInterface || '—'}</small></div>
-				<div class="row"><span class="badge">Filtro</span><small>${m.LastFilter || '—'}</small></div>
+				<div class="row"><span class="badge">Pacotes</span><small>${m.validPacketsCaptured ?? m.ValidPacketsCaptured}/${m.totalPacketsCaptured ?? m.TotalPacketsCaptured}</small></div>
+				<div class="row"><span class="badge">Bytes</span><small>${m.totalBytesCapturated ?? m.TotalBytesCapturated}</small></div>
+				<div class="row"><span class="badge">Rate</span><small>${(m.packetsPerSecond ?? m.PacketsPerSecond)?.toFixed?.(2) ?? (m.packetsPerSecond ?? m.PacketsPerSecond)} pkt/s, ${(m.bytesPerSecond ?? m.BytesPerSecond)?.toFixed?.(2) ?? (m.bytesPerSecond ?? m.BytesPerSecond)} B/s</small></div>
+				<div class="row"><span class="badge">Erros</span><small>${m.captureErrors ?? m.CaptureErrors}</small></div>
+				<div class="row"><span class="badge">Interface</span><small>${(m.lastInterface ?? m.LastInterface) || '—'}</small></div>
+				<div class="row"><span class="badge">Filtro</span><small>${(m.lastFilter ?? m.LastFilter) || '—'}</small></div>
 			`;
 		}
 
 		hub.on('metrics', renderMetrics);
 		hub.on('udpPayload', p => {
 			const el = document.createElement('pre');
-			el.textContent = `${p.Length} bytes\n${p.Hex.substring(0, 256)}${p.Hex.length > 256 ? '…' : ''}`;
+			const length = p.length ?? p.Length;
+			const hex = p.hex ?? p.Hex ?? '';
+			el.textContent = `${length} bytes\n${hex.substring(0, 256)}${hex.length > 256 ? '…' : ''}`;
 			$payloads.prepend(el);
 		});
 		hub.on('gameEvent', e => {
@@ -108,7 +110,9 @@
 			}
 			for (const p of packets.reverse()) {
 				const el = document.createElement('pre');
-				el.textContent = `${p.Length} bytes\n${(p.Hex||'').substring(0, 256)}${(p.Hex||'').length > 256 ? '…' : ''}`;
+				const length = p.length ?? p.Length;
+				const hex = p.hex ?? p.Hex ?? '';
+				el.textContent = `${length} bytes\n${hex.substring(0, 256)}${hex.length > 256 ? '…' : ''}`;
 				$payloads.append(el);
 			}
 		}).catch(err => log('Erro conectando ao hub: ' + err));

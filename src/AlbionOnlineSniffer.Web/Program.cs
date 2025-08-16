@@ -81,10 +81,10 @@ using (var scope = app.Services.CreateScope())
 	// Verificar offsets carregados
 	var packetOffsets = services.GetRequiredService<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketOffsets>();
 	logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS (via Core):");
-	logger.LogInformation("  - Leave: [{Offsets}]", packetOffsets.Leave != null ? string.Join(", ", packetOffsets.Leave) : "<nulo>");
-	logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", packetOffsets.HealthUpdateEvent != null ? string.Join(", ", packetOffsets.HealthUpdateEvent) : "<nulo>");
-	logger.LogInformation("  - NewCharacter: [{Offsets}]", packetOffsets.NewCharacter != null ? string.Join(", ", packetOffsets.NewCharacter) : "<nulo>");
-	logger.LogInformation("  - Move: [{Offsets}]", packetOffsets.Move != null ? string.Join(", ", packetOffsets.Move) : "<nulo>");
+	logger.LogInformation("  - Leave: [{Offsets}]", (packetOffsets.Leave != null && packetOffsets.Leave.Length > 0) ? string.Join(", ", packetOffsets.Leave) : "<nulo>");
+	logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", (packetOffsets.HealthUpdateEvent != null && packetOffsets.HealthUpdateEvent.Length > 0) ? string.Join(", ", packetOffsets.HealthUpdateEvent) : "<nulo>");
+	logger.LogInformation("  - NewCharacter: [{Offsets}]", (packetOffsets.NewCharacter != null && packetOffsets.NewCharacter.Length > 0) ? string.Join(", ", packetOffsets.NewCharacter) : "<nulo>");
+	logger.LogInformation("  - Move: [{Offsets}]", (packetOffsets.Move != null && packetOffsets.Move.Length > 0) ? string.Join(", ", packetOffsets.Move) : "<nulo>");
 
 	// Forward raw UDP payloads to UI and deserializer
 	capture.OnUdpPayloadCaptured += payload =>
