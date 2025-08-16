@@ -1,0 +1,19 @@
+# build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY nuget.config ./
+COPY AlbionOnlineSniffer.sln ./
+COPY src/AlbionOnlineSniffer.Core/ src/AlbionOnlineSniffer.Core/
+COPY src/AlbionOnlineSniffer.Capture/ src/AlbionOnlineSniffer.Capture/
+COPY src/AlbionOnlineSniffer.Queue/ src/AlbionOnlineSniffer.Queue/
+COPY src/AlbionOnlineSniffer.Web/ src/AlbionOnlineSniffer.Web/
+RUN dotnet restore AlbionOnlineSniffer.sln
+RUN dotnet publish src/AlbionOnlineSniffer.Web/AlbionOnlineSniffer.Web.csproj -c Release -o /app/publish
+
+# runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENTRYPOINT ["dotnet", "AlbionOnlineSniffer.Web.dll"]

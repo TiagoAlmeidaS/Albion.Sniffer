@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Albion Sniffer - Web</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 16px; background: #0b0f14; color: #e6edf3; }
+		h1 { margin: 0 0 12px; font-size: 20px; }
+		.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+		.card { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 12px; }
+		.card h2 { margin: 0 0 8px; font-size: 16px; }
+		.list { max-height: 420px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+		.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #1f2937; font-size: 12px; }
+		.row { display: flex; gap: 8px; align-items: center; }
+		small { color: #9ca3af; }
+		.controls { display: flex; gap: 8px; margin-bottom: 12px; }
+		button { background: #2563eb; color: white; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+		button.secondary { background: #374151; }
+		pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+	</style>
+</head>
+<body>
+	<h1>AlbionOnlineSniffer - Web</h1>
+	<div class="controls">
+		<button id="startBtn">Iniciar Captura</button>
+		<button id="stopBtn" class="secondary">Parar Captura</button>
+		<span id="status" class="badge">Status: —</span>
+	</div>
+	<div class="grid">
+		<div class="card">
+			<h2>Métricas</h2>
+			<div id="metrics"></div>
+		</div>
+		<div class="card">
+			<h2>Payloads UDP (recentes)</h2>
+			<div id="payloads" class="list"></div>
+		</div>
+		<div class="card">
+			<h2>Eventos (parseados)</h2>
+			<div id="events" class="list"></div>
+		</div>
+		<div class="card">
+			<h2>Log</h2>
+			<div id="log" class="list"></div>
+		</div>
+	</div>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" integrity="sha512-Ny8mQNy1d1nVqvmLxjlJjzq8W5oNtFqksXC9Y+f4rJ+0grKrV3M+nq54cY7i0F2nM2j1G6V9i6f6rS1HNAsAKQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script>
+		const hub = new signalR.HubConnectionBuilder()
+			.withUrl('/hubs/sniffer')
+			.withAutomaticReconnect()
+			.build();
+
+		const $metrics = document.getElementById('metrics');
+		const $payloads = document.getElementById('payloads');
+		const $events = document.getElementById('events');
+		const $log = document.getElementById('log');
+		const $status = document.getElementById('status');
+
+		function log(msg) {
+			const el = document.createElement('div');
+			el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+			$log.prepend(el);
+		}
+
+		function renderMetrics(m) {
+			$status.textContent = `Status: ${m.status || m.Status}`;
+			$metrics.innerHTML = `
+				<div class="row"><span class="badge">Pacotes</span><small>${m.ValidPacketsCaptured}/${m.TotalPacketsCaptured}</small></div>
+				<div class="row"><span class="badge">Bytes</span><small>${m.TotalBytesCapturated}</small></div>
+				<div class="row"><span class="badge">Rate</span><small>${m.PacketsPerSecond?.toFixed?.(2) || m.PacketsPerSecond} pkt/s, ${m.BytesPerSecond?.toFixed?.(2) || m.BytesPerSecond} B/s</small></div>
+				<div class="row"><span class="badge">Erros</span><small>${m.CaptureErrors}</small></div>
+				<div class="row"><span class="badge">Interface</span><small>${m.LastInterface || '—'}</small></div>
+				<div class="row"><span class="badge">Filtro</span><small>${m.LastFilter || '—'}</small></div>
+			`;
+		}
+
+		hub.on('metrics', renderMetrics);
+		hub.on('udpPayload', p => {
+			const el = document.createElement('pre');
+			el.textContent = `${p.Length} bytes\n${p.Hex.substring(0, 256)}${p.Hex.length > 256 ? '…' : ''}`;
+			$payloads.prepend(el);
+		});
+		hub.on('gameEvent', e => {
+			const el = document.createElement('pre');
+			el.textContent = JSON.stringify(e, null, 2);
+			$events.prepend(el);
+		});
+
+		hub.onreconnecting(() => log('Reconectando ao hub...'));
+		hub.onreconnected(() => log('Reconectado.'));
+		hub.onclose(() => log('Conexão encerrada.'));
+
+		hub.start().then(async () => {
+			log('Conectado ao hub. Carregando dados recentes...');
+			const [m, events, packets] = await Promise.all([
+				fetch('/api/metrics').then(r => r.json()).catch(() => null),
+				fetch('/api/events/recent').then(r => r.json()).catch(() => []),
+				fetch('/api/packets/recent').then(r => r.json()).catch(() => []),
+			]);
+			if (m) renderMetrics(m);
+			for (const e of events.reverse()) {
+				const el = document.createElement('pre');
+				el.textContent = JSON.stringify(e, null, 2);
+				$events.append(el);
+			}
+			for (const p of packets.reverse()) {
+				const el = document.createElement('pre');
+				el.textContent = `${p.Length} bytes\n${(p.Hex||'').substring(0, 256)}${(p.Hex||'').length > 256 ? '…' : ''}`;
+				$payloads.append(el);
+			}
+		}).catch(err => log('Erro conectando ao hub: ' + err));
+
+		document.getElementById('startBtn').onclick = async () => {
+			await fetch('/api/capture/start', { method: 'POST' });
+			log('Captura iniciada.');
+		};
+		document.getElementById('stopBtn').onclick = async () => {
+			await fetch('/api/capture/stop', { method: 'POST' });
+			log('Captura parada.');
+		};
+	</script>
+</body>
+</html>

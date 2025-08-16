@@ -120,4 +120,23 @@ MIT. Veja o arquivo `LICENSE` para detalhes.
 **Autor:** Manus AI / Comunidade
 **Data:** 2025
 
+## Web Sniffer (local)
+
+- Requisitos: .NET 8 SDK ou Docker
+- Executar localmente (com SDK):
+
+```bash
+cd src/AlbionOnlineSniffer.Web
+dotnet run
+```
+
+- Executar via Docker:
+
+```bash
+docker build -f Dockerfile.web -t albion-sniffer-web .
+docker run --net=host -e ASPNETCORE_ENVIRONMENT=Development -p 8080:8080 albion-sniffer-web
+```
+
+Acesse `http://localhost:8080` e veja métricas, payloads UDP e eventos parseados em tempo real.
+
 
