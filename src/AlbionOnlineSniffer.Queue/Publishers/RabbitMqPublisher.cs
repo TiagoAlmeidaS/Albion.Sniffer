@@ -24,7 +24,7 @@ namespace AlbionOnlineSniffer.Queue.Publishers
             _eventLogger = eventLogger ?? new AlbionOnlineSniffer.Core.Services.AlbionEventLogger();
             var factory = new ConnectionFactory { Uri = new Uri(connectionString) };
             _connection = factory.CreateConnection();
-            _channel = factory.CreateModel();
+            _channel = _connection.CreateModel();
             _exchange = exchange;
 
             _channel.ExchangeDeclare(exchange, ExchangeType.Topic, durable: true);
