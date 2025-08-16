@@ -23,7 +23,7 @@ builder.Services.AddRouting();
 builder.Services.AddSingleton<EventStreamService>();
 
 // Core services
-Core.DependencyProvider.RegisterServices(builder.Services);
+AlbionOnlineSniffer.Core.DependencyProvider.RegisterServices(builder.Services);
 
 // Packet capture service with DI logger
 builder.Services.AddSingleton<PacketCaptureService>(sp =>
@@ -79,7 +79,7 @@ using (var scope = app.Services.CreateScope())
 	}
 
 	// Verificar offsets carregados
-	var packetOffsets = services.GetRequiredService<Core.Models.ResponseObj.PacketOffsets>();
+	var packetOffsets = services.GetRequiredService<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketOffsets>();
 	logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS (via Core):");
 	logger.LogInformation("  - Leave: [{Offsets}]", string.Join(", ", packetOffsets.Leave));
 	logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
