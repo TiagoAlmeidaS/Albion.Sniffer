@@ -1,8 +1,8 @@
+using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using RabbitMQ.Client;
 using AlbionOnlineSniffer.Queue.Interfaces;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Queue.Publishers
 {
@@ -11,21 +11,24 @@ namespace AlbionOnlineSniffer.Queue.Publishers
         private readonly IConnection _connection;
         private readonly IModel _channel;
         private readonly string _exchange;
+        private readonly IAlbionEventLogger _eventLogger;
 
-        public RabbitMqPublisher(string connectionString, string exchange)
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
-            var factory = new ConnectionFactory() { Uri = new Uri(connectionString) };
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
-            _exchange = exchange;
-            _channel.ExchangeDeclare(exchange: _exchange, type: "topic", durable: true);
-        }
-
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
-        {
-            // Necessário para serializar System.Numerics.Vector2 (campos públicos X, Y)
+            WriteIndented = false,
             IncludeFields = true
         };
+
+        public RabbitMqPublisher(string connectionString, string exchange, IAlbionEventLogger? eventLogger = null)
+        {
+            _eventLogger = eventLogger ?? new AlbionOnlineSniffer.Core.Services.AlbionEventLogger();
+            var factory = new ConnectionFactory { Uri = new Uri(connectionString) };
+            _connection = factory.CreateConnection();
+            _channel = factory.CreateModel();
+            _exchange = exchange;
+
+            _channel.ExchangeDeclare(exchange, ExchangeType.Topic, durable: true);
+        }
 
         public Task PublishAsync(string topic, object message)
         {
@@ -34,19 +37,17 @@ namespace AlbionOnlineSniffer.Queue.Publishers
                 var jsonMessage = JsonSerializer.Serialize(message, JsonOptions);
                 var body = Encoding.UTF8.GetBytes(jsonMessage);
                 
-                // Log detalhado para debug
-                Console.WriteLine($"[RabbitMQ] Publicando: {topic}");
-                Console.WriteLine($"[RabbitMQ] Mensagem: {jsonMessage}");
-                Console.WriteLine($"[RabbitMQ] Tamanho: {body.Length} bytes");
-                
                 _channel.BasicPublish(exchange: _exchange, routingKey: topic, basicProperties: null, body: body);
                 
-                Console.WriteLine($"[RabbitMQ] ✅ Mensagem publicada com sucesso: {topic}");
+                // Log do evento enviado para fila
+                _eventLogger.LogEventQueued(topic, "RabbitMQ", true);
+                
                 return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[RabbitMQ] ❌ Erro ao publicar: {ex.Message}");
+                // Log do erro ao enviar para fila
+                _eventLogger.LogEventQueued(topic, "RabbitMQ", false, ex.Message);
                 return Task.FromException(ex);
             }
         }

@@ -83,6 +83,11 @@ namespace AlbionOnlineSniffer.Capture.Models
         public DateTime? LastErrorTime { get; set; }
 
         /// <summary>
+        /// Número de dispositivos de rede encontrados
+        /// </summary>
+        public int NetworkDevicesFound { get; set; }
+
+        /// <summary>
         /// Calcula as taxas por segundo baseado no tempo decorrido
         /// </summary>
         public void CalculateRates()
@@ -109,10 +114,36 @@ namespace AlbionOnlineSniffer.Capture.Models
             CaptureErrors = 0;
             LastError = null;
             LastErrorTime = null;
+            NetworkDevicesFound = 0;
             StartTime = DateTime.UtcNow;
             Status = "Starting";
         }
         
+        /// <summary>
+        /// Cria uma cópia das métricas atuais
+        /// </summary>
+        public PacketCaptureMetrics Clone()
+        {
+            return new PacketCaptureMetrics
+            {
+                TotalPacketsCaptured = this.TotalPacketsCaptured,
+                ValidPacketsCaptured = this.ValidPacketsCaptured,
+                PacketsDropped = this.PacketsDropped,
+                TotalBytesCapturated = this.TotalBytesCapturated,
+                PacketsPerSecond = this.PacketsPerSecond,
+                BytesPerSecond = this.BytesPerSecond,
+                LastCaptureTime = this.LastCaptureTime,
+                StartTime = this.StartTime,
+                Status = this.Status,
+                LastInterface = this.LastInterface,
+                LastFilter = this.LastFilter,
+                CaptureErrors = this.CaptureErrors,
+                LastError = this.LastError,
+                LastErrorTime = this.LastErrorTime,
+                NetworkDevicesFound = this.NetworkDevicesFound
+            };
+        }
+
         /// <summary>
         /// Converte as métricas para uma representação string legível
         /// </summary>

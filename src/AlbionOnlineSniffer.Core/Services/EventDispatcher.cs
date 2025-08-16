@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Albion.Network;
+using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
@@ -10,12 +11,14 @@ namespace AlbionOnlineSniffer.Core.Services
     public class EventDispatcher
     {
         private readonly ILogger<EventDispatcher> _logger;
+        private readonly IAlbionEventLogger _eventLogger;
         private readonly Dictionary<string, List<Func<object, Task>>> _eventHandlers = new();
         private readonly List<Func<object, Task>> _globalHandlers = new();
 
-        public EventDispatcher(ILogger<EventDispatcher> logger)
+        public EventDispatcher(ILogger<EventDispatcher> logger, IAlbionEventLogger? eventLogger = null)
         {
             _logger = logger;
+            _eventLogger = eventLogger ?? new AlbionEventLogger() as IAlbionEventLogger;
         }
 
         /// <summary>
@@ -74,12 +77,17 @@ namespace AlbionOnlineSniffer.Core.Services
                     await Task.WhenAll(tasks);
                 }
 
+                // Log do evento processado para a interface web
+                _eventLogger.LogEventProcessed(eventType, gameEvent, true);
+
                 _logger.LogDebug("Evento disparado com sucesso: {EventType} para {HandlerCount} handlers", 
                     eventType, tasks.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao disparar evento: {EventType}", gameEvent.GetType().Name);
+                var eventType = gameEvent.GetType().Name;
+                _eventLogger.LogEventProcessed(eventType, gameEvent, false, ex.Message);
+                _logger.LogError(ex, "Erro ao disparar evento: {EventType}", eventType);
             }
         }
 
@@ -99,32 +107,24 @@ namespace AlbionOnlineSniffer.Core.Services
         /// <summary>
         /// Remove todos os handlers
         /// </summary>
-        public void ClearHandlers()
+        public void UnregisterAllHandlers()
         {
             _eventHandlers.Clear();
+            _globalHandlers.Clear();
             _logger.LogDebug("Todos os handlers foram removidos");
         }
 
         /// <summary>
-        /// Retorna o número de handlers registrados para um tipo específico de evento
+        /// Obtém o número de handlers registrados para um tipo específico
         /// </summary>
-        /// <param name="eventType">Tipo do evento ou "*" para todos</param>
+        /// <param name="eventType">Tipo do evento (use "*" para todos)</param>
         /// <returns>Número de handlers</returns>
         public int GetHandlerCount(string eventType)
         {
             if (eventType == "*")
-                return _globalHandlers.Count;
+                return _globalHandlers.Count + _eventHandlers.Values.Sum(h => h.Count);
 
             return _eventHandlers.ContainsKey(eventType) ? _eventHandlers[eventType].Count : 0;
-        }
-
-        /// <summary>
-        /// Obtém todos os tipos de eventos registrados
-        /// </summary>
-        /// <returns>Lista de tipos de eventos</returns>
-        public IEnumerable<string> GetRegisteredEventTypes()
-        {
-            return _eventHandlers.Keys;
         }
     }
 } 

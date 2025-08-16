@@ -6,35 +6,26 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         protected override Task OnHandleAsync(object packet)
         {
-            // just for debugging, i will not remove this
-            
+            // Processamento silencioso dos pacotes - logs serão exibidos na interface web
             if (packet is ResponsePacket response)
             {
                 if (response.Parameters.TryGetValue(253, out var code))
                 {
-                    Console.WriteLine("Response: " + code);
-                }
-                else
-                {
-                    ;
+                    // Processar response packet
                 }
             }
             else if (packet is RequestPacket request)
             {
                 if (request.Parameters.TryGetValue(253, out var code))
                 {
-                    Console.WriteLine("Request: " + code);
-                }
-                else
-                {
-                    ;
+                    // Processar request packet
                 }
             }
             else if (packet is EventPacket @event)
             {
                 if (@event.Parameters.TryGetValue(252, out var code))
                 {
-                    Console.WriteLine("Event: " + code);
+                    // Processar event packet
                 }
             }
             

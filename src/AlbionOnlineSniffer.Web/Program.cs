@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Information); // Garantir que logs de informação sejam exibidos
+builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information); // Garantir que logs de informação sejam exibidos
 
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
@@ -39,7 +39,7 @@ app.UseStaticFiles();
 
 app.MapHub<SnifferHub>("/hubs/sniffer");
 
-app.MapGet("/api/metrics", (PacketCaptureService capture) => Results.Json(capture.Monitor.Metrics));
+app.MapGet("/api/metrics", (PacketCaptureService capture) => Results.Json(capture.Monitor.GetMetrics()));
 app.MapGet("/api/events/recent", (EventStreamService stream) => Results.Json(stream.GetRecentEvents()));
 app.MapGet("/api/packets/recent", (EventStreamService stream) => Results.Json(stream.GetRecentPackets()));
 app.MapPost("/api/capture/start", (PacketCaptureService capture) => { capture.Start(); return Results.Ok(new { started = true }); });

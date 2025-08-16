@@ -1,42 +1,27 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Capture.Models;
-using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Capture.Services
 {
-    /// <summary>
-    /// Serviço de monitoramento para captura de pacotes
-    /// Fornece logging estruturado e métricas em tempo real
-    /// </summary>
     public class PacketCaptureMonitor : IDisposable
     {
-        private readonly ILogger<PacketCaptureMonitor> _logger;
         private readonly PacketCaptureMetrics _metrics;
-        private readonly Timer _metricsTimer;
         private readonly object _lockObject = new object();
-        private bool _disposed = false;
-
-        /// <summary>
-        /// Métricas atuais de captura
-        /// </summary>
-        public PacketCaptureMetrics Metrics => _metrics;
+        private Timer? _metricsTimer;
+        private bool _disposed;
 
         /// <summary>
         /// Evento disparado quando as métricas são atualizadas
         /// </summary>
         public event Action<PacketCaptureMetrics>? OnMetricsUpdated;
 
-        public PacketCaptureMonitor(ILogger<PacketCaptureMonitor> logger)
+        public PacketCaptureMonitor()
         {
-            _logger = logger;
             _metrics = new PacketCaptureMetrics();
-            
-            // Timer para atualizar métricas a cada 5 segundos
-            _metricsTimer = new Timer(UpdateMetrics, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
-            
-            _logger.LogInformation("PacketCaptureMonitor inicializado");
         }
 
         /// <summary>
@@ -46,14 +31,10 @@ namespace AlbionOnlineSniffer.Capture.Services
         {
             lock (_lockObject)
             {
-                _metrics.Reset();
                 _metrics.Status = "Running";
                 _metrics.LastInterface = interfaceName;
                 _metrics.LastFilter = filter;
             }
-
-            _logger.LogInformation("Captura iniciada - Interface: {Interface}, Filtro: {Filter}", 
-                interfaceName, filter);
         }
 
         /// <summary>
@@ -66,8 +47,6 @@ namespace AlbionOnlineSniffer.Capture.Services
                 _metrics.Status = "Stopped";
                 _metrics.CalculateRates();
             }
-
-            _logger.LogInformation("Captura parada - Estatísticas finais: {Metrics}", _metrics.ToString());
         }
 
         /// <summary>
@@ -90,26 +69,12 @@ namespace AlbionOnlineSniffer.Capture.Services
                     _metrics.PacketsDropped++;
                 }
             }
-
-            // Log detalhado apenas para pacotes válidos (evita spam)
-            if (isValid && payload != null)
-            {
-                _logger.LogDebug("Pacote capturado - Tamanho: {Size} bytes, Total: {Total}", 
-                    payload.Length, _metrics.ValidPacketsCaptured);
-                
-                // Log hexadecimal dos primeiros bytes para debug (apenas se necessário)
-                if (_logger.IsEnabled(LogLevel.Trace) && payload.Length > 0)
-                {
-                    var hexPreview = Convert.ToHexString(payload[..Math.Min(payload.Length, 32)]);
-                    _logger.LogTrace("Pacote hex preview: {HexData}...", hexPreview);
-                }
-            }
         }
 
         /// <summary>
         /// Registra um erro de captura
         /// </summary>
-        public void LogCaptureError(Exception exception, string context = "")
+        public void LogCaptureError(Exception exception, string context)
         {
             lock (_lockObject)
             {
@@ -117,74 +82,79 @@ namespace AlbionOnlineSniffer.Capture.Services
                 _metrics.LastError = exception.Message;
                 _metrics.LastErrorTime = DateTime.UtcNow;
             }
-
-            _logger.LogError(exception, "Erro na captura de pacotes - Contexto: {Context}, Total de erros: {ErrorCount}", 
-                context, _metrics.CaptureErrors);
         }
 
         /// <summary>
-        /// Registra informações sobre dispositivos de rede
+        /// Registra dispositivos de rede encontrados
         /// </summary>
         public void LogNetworkDevices(int deviceCount, string[] deviceNames)
         {
-            _logger.LogInformation("Dispositivos de rede encontrados: {DeviceCount}", deviceCount);
-            
-            for (int i = 0; i < deviceNames.Length; i++)
+            lock (_lockObject)
             {
-                _logger.LogDebug("Dispositivo {Index}: {DeviceName}", i, deviceNames[i]);
+                _metrics.NetworkDevicesFound = deviceCount;
             }
         }
 
         /// <summary>
-        /// Registra estatísticas periódicas
+        /// Registra filtro aplicado
         /// </summary>
-        public void LogPeriodicStats()
+        public void LogFilterApplied(string filter, string device)
         {
             lock (_lockObject)
             {
-                _metrics.CalculateRates();
+                _metrics.LastFilter = filter;
             }
-
-            _logger.LogInformation("Estatísticas de captura: {Metrics}", _metrics.ToString());
         }
 
         /// <summary>
-        /// Registra informações sobre filtros aplicados
+        /// Verifica taxa de captura baixa e emite alertas
         /// </summary>
-        public void LogFilterApplied(string filter, string deviceName)
-        {
-            _logger.LogInformation("Filtro aplicado - Dispositivo: {Device}, Filtro: {Filter}", 
-                deviceName, filter);
-        }
-
-        /// <summary>
-        /// Registra alerta quando a taxa de captura está baixa
-        /// </summary>
-        public void CheckAndLogLowCaptureRate()
+        public void CheckLowCaptureRate()
         {
             lock (_lockObject)
             {
-                _metrics.CalculateRates();
-                
-                // Alerta se não houve pacotes nos últimos 30 segundos
+                if (_metrics.Status != "Running") return;
+
                 var timeSinceLastCapture = DateTime.UtcNow - _metrics.LastCaptureTime;
-                if (timeSinceLastCapture.TotalSeconds > 30 && _metrics.Status == "Running")
+                if (timeSinceLastCapture.TotalSeconds > 30)
                 {
-                    _logger.LogWarning("Taxa de captura baixa - Nenhum pacote capturado nos últimos {Seconds} segundos", 
-                        timeSinceLastCapture.TotalSeconds);
+                    // Alerta silencioso - será exibido na interface web
                 }
-                
-                // Alerta se a taxa está muito baixa
-                if (_metrics.PacketsPerSecond < 0.1 && _metrics.TotalCaptureTime.TotalMinutes > 1)
+
+                if (_metrics.PacketsPerSecond < 0.1)
                 {
-                    _logger.LogWarning("Taxa de captura muito baixa: {Rate:F2} pacotes/segundo", 
-                        _metrics.PacketsPerSecond);
+                    // Alerta silencioso - será exibido na interface web
                 }
             }
         }
 
         /// <summary>
-        /// Registra resumo detalhado das métricas
+        /// Obtém métricas atuais
+        /// </summary>
+        public PacketCaptureMetrics GetMetrics()
+        {
+            lock (_lockObject)
+            {
+                _metrics.CalculateRates();
+                var metrics = _metrics.Clone();
+                OnMetricsUpdated?.Invoke(metrics);
+                return metrics;
+            }
+        }
+
+        /// <summary>
+        /// Força atualização das métricas
+        /// </summary>
+        public void ForceMetricsUpdate()
+        {
+            lock (_lockObject)
+            {
+                _metrics.CalculateRates();
+            }
+        }
+
+        /// <summary>
+        /// Log das métricas detalhadas
         /// </summary>
         public void LogDetailedMetrics()
         {
@@ -192,78 +162,57 @@ namespace AlbionOnlineSniffer.Capture.Services
             {
                 _metrics.CalculateRates();
             }
-
-            _logger.LogInformation("=== RESUMO DETALHADO DE CAPTURA ===");
-            _logger.LogInformation("Status: {Status}", _metrics.Status);
-            _logger.LogInformation("Interface: {Interface}", _metrics.LastInterface ?? "N/A");
-            _logger.LogInformation("Filtro: {Filter}", _metrics.LastFilter ?? "N/A");
-            _logger.LogInformation("Tempo ativo: {Uptime}", _metrics.TotalCaptureTime);
-            _logger.LogInformation("Pacotes totais: {Total}", _metrics.TotalPacketsCaptured);
-            _logger.LogInformation("Pacotes válidos: {Valid}", _metrics.ValidPacketsCaptured);
-            _logger.LogInformation("Pacotes descartados: {Dropped}", _metrics.PacketsDropped);
-            _logger.LogInformation("Bytes capturados: {Bytes:N0}", _metrics.TotalBytesCapturated);
-            _logger.LogInformation("Taxa de pacotes: {Rate:F2} pkt/s", _metrics.PacketsPerSecond);
-            _logger.LogInformation("Taxa de bytes: {Rate:F2} B/s", _metrics.BytesPerSecond);
-            _logger.LogInformation("Erros de captura: {Errors}", _metrics.CaptureErrors);
-            
-            if (_metrics.LastErrorTime.HasValue)
-            {
-                _logger.LogInformation("Último erro: {Error} em {Time}", 
-                    _metrics.LastError, _metrics.LastErrorTime.Value);
-            }
-            
-            _logger.LogInformation("=== FIM DO RESUMO ===");
         }
 
         /// <summary>
-        /// Atualiza métricas periodicamente
+        /// Inicia o timer de atualização de métricas
         /// </summary>
-        private void UpdateMetrics(object? state)
+        public void StartMetricsTimer()
         {
-            if (_disposed) return;
+            if (_metricsTimer != null) return;
 
-            try
+            _metricsTimer = new Timer(async _ =>
             {
-                CheckAndLogLowCaptureRate();
-                
-                // Dispara evento de atualização de métricas
-                OnMetricsUpdated?.Invoke(_metrics);
-                
-                // Log periódico apenas se houver atividade
-                if (_metrics.Status == "Running" && _metrics.ValidPacketsCaptured > 0)
+                try
                 {
-                    LogPeriodicStats();
+                    await UpdateMetricsAsync();
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao atualizar métricas de monitoramento");
-            }
+                catch (Exception ex)
+                {
+                    // Tratamento silencioso de erro
+                }
+            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
         }
 
         /// <summary>
-        /// Força uma atualização imediata das métricas
+        /// Para o timer de atualização de métricas
         /// </summary>
-        public void ForceMetricsUpdate()
+        public void StopMetricsTimer()
         {
-            UpdateMetrics(null);
+            _metricsTimer?.Dispose();
+            _metricsTimer = null;
+        }
+
+        /// <summary>
+        /// Atualiza métricas de forma assíncrona
+        /// </summary>
+        private async Task UpdateMetricsAsync()
+        {
+            await Task.Run(() =>
+            {
+                lock (_lockObject)
+                {
+                    _metrics.CalculateRates();
+                }
+            });
         }
 
         public void Dispose()
         {
             if (_disposed) return;
-            
+
+            StopMetricsTimer();
             _disposed = true;
-            _metricsTimer?.Dispose();
-            
-            // Log final das métricas
-            if (_metrics.Status == "Running")
-            {
-                LogCaptureStopped();
-                LogDetailedMetrics();
-            }
-            
-            _logger.LogInformation("PacketCaptureMonitor finalizado");
         }
     }
 }

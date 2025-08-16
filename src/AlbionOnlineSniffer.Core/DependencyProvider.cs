@@ -197,16 +197,27 @@ namespace AlbionOnlineSniffer.Core
 
         
         /// <summary>
-        /// Registra todos os serviços do módulo Core
+        /// Registra todos os serviços do Core
         /// </summary>
         /// <param name="services">ServiceCollection para registrar os serviços</param>
         public static void RegisterServices(IServiceCollection services)
         {
+            // AlbionEventLogger - Sistema de logs personalizado para web
+            services.AddSingleton<IAlbionEventLogger, AlbionEventLogger>();
+
+            // AlbionLogsApiService - Serviço para expor logs via API
+            services.AddSingleton<AlbionLogsApiService>();
+
             // Services
-            services.AddSingleton<EventDispatcher>(sp =>
+            services.AddSingleton<PacketOffsetsLoader>(sp =>
             {
                 var factory = sp.GetRequiredService<ILoggerFactory>();
-                return new EventDispatcher(factory.CreateLogger<EventDispatcher>());
+                return new PacketOffsetsLoader(factory.CreateLogger<PacketOffsetsLoader>());
+            });
+            services.AddSingleton<PacketIndexesLoader>(sp =>
+            {
+                var factory = sp.GetRequiredService<ILoggerFactory>();
+                return new PacketIndexesLoader(factory.CreateLogger<PacketIndexesLoader>());
             });
             services.AddSingleton<PhotonDefinitionLoader>(sp =>
             {
@@ -255,6 +266,14 @@ namespace AlbionOnlineSniffer.Core
 
             // Event Factory para criação de eventos com injeção de dependência
             services.AddSingleton<IEventFactory, EventFactory>();
+
+            // EventDispatcher com AlbionEventLogger
+            services.AddSingleton<EventDispatcher>(sp =>
+            {
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                var eventLogger = sp.GetRequiredService<IAlbionEventLogger>();
+                return new EventDispatcher(loggerFactory.CreateLogger<EventDispatcher>(), eventLogger);
+            });
 
             // Game Object Handlers com dados carregados
             services.AddSingleton<LocalPlayerHandler>(provider =>
