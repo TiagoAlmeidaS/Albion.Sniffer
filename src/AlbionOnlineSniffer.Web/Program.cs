@@ -7,6 +7,7 @@ using AlbionOnlineSniffer.Core;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Capture;
 using AlbionOnlineSniffer.Capture.Services;
+using AlbionOnlineSniffer.Capture.Interfaces;
 using AlbionOnlineSniffer.Web.Hubs;
 using AlbionOnlineSniffer.Web.Services;
 using System.Numerics;
@@ -25,12 +26,8 @@ builder.Services.AddSingleton<EventStreamService>();
 // Core services
 AlbionOnlineSniffer.Core.DependencyProvider.RegisterServices(builder.Services);
 
-// Packet capture service with DI logger
-builder.Services.AddSingleton<PacketCaptureService>(sp =>
-{
-	var logger = sp.GetRequiredService<ILogger<PacketCaptureService>>();
-	return new PacketCaptureService(5050);
-});
+// Capture services (igual ao App)
+builder.Services.AddCaptureServices();
 
 var app = builder.Build();
 
@@ -39,11 +36,16 @@ app.UseStaticFiles();
 
 app.MapHub<SnifferHub>("/hubs/sniffer");
 
-app.MapGet("/api/metrics", (PacketCaptureService capture) => Results.Json(capture.Monitor.GetMetrics()));
+app.MapGet("/api/metrics", (IPacketCaptureService capture) => 
+{
+    if (capture is PacketCaptureService packetCapture)
+        return Results.Json(packetCapture.Monitor.GetMetrics());
+    return Results.NotFound("Monitor não disponível");
+});
 app.MapGet("/api/events/recent", (EventStreamService stream) => Results.Json(stream.GetRecentEvents()));
 app.MapGet("/api/packets/recent", (EventStreamService stream) => Results.Json(stream.GetRecentPackets()));
-app.MapPost("/api/capture/start", (PacketCaptureService capture) => { capture.Start(); return Results.Ok(new { started = true }); });
-app.MapPost("/api/capture/stop", (PacketCaptureService capture) => { capture.Stop(); return Results.Ok(new { started = false }); });
+app.MapPost("/api/capture/start", (IPacketCaptureService capture) => { capture.Start(); return Results.Ok(new { started = true }); });
+app.MapPost("/api/capture/stop", (IPacketCaptureService capture) => { capture.Stop(); return Results.Ok(new { started = false }); });
 
 // Wire up sniffer pipeline on startup
 using (var scope = app.Services.CreateScope())
@@ -61,7 +63,7 @@ using (var scope = app.Services.CreateScope())
 		loggerFactory.CreateLogger<Protocol16Deserializer>()
 	);
 
-	var capture = services.GetRequiredService<PacketCaptureService>();
+	var capture = services.GetRequiredService<IPacketCaptureService>();
 	var hubContext = services.GetRequiredService<IHubContext<SnifferHub>>();
 	var stream = services.GetRequiredService<EventStreamService>();
 
@@ -113,13 +115,16 @@ using (var scope = app.Services.CreateScope())
 	};
 
 	// Broadcast metrics periodically
-	capture.Monitor.OnMetricsUpdated += metrics =>
+	if (capture is PacketCaptureService packetCapture)
 	{
-		stream.UpdateMetrics(metrics);
-		hubContext.Clients.All.SendAsync("metrics", metrics);
-		logger.LogDebug("📊 MÉTRICAS: {Packets} pacotes, {BytesPerSecond} B/s", 
-			metrics.ValidPacketsCaptured, metrics.BytesPerSecond);
-	};
+		packetCapture.Monitor.OnMetricsUpdated += metrics =>
+		{
+			stream.UpdateMetrics(metrics);
+			hubContext.Clients.All.SendAsync("metrics", metrics);
+			logger.LogDebug("📊 MÉTRICAS: {Packets} pacotes, {BytesPerSecond} B/s", 
+				metrics.ValidPacketsCaptured, metrics.BytesPerSecond);
+		};
+	}
 
 	// Broadcast parsed game events
 	eventDispatcher.RegisterGlobalHandler(async gameEvent =>
@@ -201,7 +206,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
 	try
 	{
 		var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-		var capture = app.Services.GetRequiredService<PacketCaptureService>();
+		var capture = app.Services.GetRequiredService<IPacketCaptureService>();
 		logger.LogInformation("🚀 Iniciando captura de pacotes...");
 		capture.Start();
 		logger.LogInformation("✅ Captura iniciada com sucesso!");
@@ -219,7 +224,7 @@ app.Lifetime.ApplicationStopping.Register(() =>
 	try
 	{
 		var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-		var capture = app.Services.GetRequiredService<PacketCaptureService>();
+		var capture = app.Services.GetRequiredService<IPacketCaptureService>();
 		logger.LogInformation("🛑 Parando captura...");
 		capture.Stop();
 		logger.LogInformation("✅ Captura parada. Saindo...");
