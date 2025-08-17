@@ -13,7 +13,7 @@ namespace AlbionOnlineSniffer.Capture
     using AlbionOnlineSniffer.Capture.Interfaces;
     public class PacketCaptureService : IPacketCaptureService
     {
-        private ICaptureDevice? _device;
+        private readonly List<ICaptureDevice> _devices = new List<ICaptureDevice>();
         private bool _isCapturing;
         private readonly string _filter;
         private readonly int _udpPort;
@@ -80,6 +80,7 @@ namespace AlbionOnlineSniffer.Capture
                     return;
                 }
 
+                // Inicia captura em TODAS as interfaces válidas (inclui loopback/lo0)
                 foreach (var device in validDevices)
                 {
                     try
@@ -88,10 +89,10 @@ namespace AlbionOnlineSniffer.Capture
                         device.Open(DeviceModes.Promiscuous, 1000);
                         device.Filter = _filter;
                         device.StartCapture();
-                        _device = device;
+                        _devices.Add(device);
                         _isCapturing = true;
                         _monitor.LogCaptureStarted(device.Description, _filter);
-                        break;
+                        _monitor.LogFilterApplied(_filter, device.Description);
                     }
                     catch (Exception ex)
                     {
@@ -99,6 +100,14 @@ namespace AlbionOnlineSniffer.Capture
                         device.Close();
                     }
                 }
+
+                // Registrar quantidade de dispositivos e nomes
+                try
+                {
+                    var deviceNames = validDevices.Select(d => string.IsNullOrWhiteSpace(d.Description) ? d.Name : d.Description).ToArray();
+                    _monitor.LogNetworkDevices(validDevices.Count, deviceNames);
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -148,15 +157,23 @@ namespace AlbionOnlineSniffer.Capture
 
         public void Stop()
         {
-            if (!_isCapturing || _device == null)
+            if (!_isCapturing)
             {
                 return;
             }
 
             try
             {
-                _device.StopCapture();
-                _device.Close();
+                foreach (var device in _devices)
+                {
+                    try
+                    {
+                        device.StopCapture();
+                        device.Close();
+                    }
+                    catch { }
+                }
+                _devices.Clear();
                 _isCapturing = false;
                 _monitor.LogCaptureStopped();
             }

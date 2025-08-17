@@ -84,8 +84,12 @@ namespace AlbionOnlineSniffer.App
                     Core.DependencyProvider.RegisterServices(services);
                     // Serviços de fila lendo configuração
                     Queue.DependencyProvider.AddQueueServices(services, configuration);
-                    // Serviços de captura
-                    Capture.DependencyProvider.AddCaptureServices(services);
+                    // Serviços de captura com porta configurável (default 5050)
+                    var udpPort = configuration.GetValue<int?>("Capture:UdpPort")
+                        ?? configuration.GetValue<int?>("PacketCaptureSettings:UdpPort")
+                        ?? 5050;
+                    services.AddSingleton<Capture.Interfaces.IPacketCaptureService>(sp =>
+                        new Capture.PacketCaptureService(udpPort, sp.GetService<Core.Interfaces.IAlbionEventLogger>()));
                     // Pipeline App
                     services.AddSingleton<App.Services.CapturePipeline>();
                     

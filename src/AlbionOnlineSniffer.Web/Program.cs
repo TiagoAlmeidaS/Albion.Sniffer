@@ -8,6 +8,7 @@ using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Capture;
 using AlbionOnlineSniffer.Capture.Services;
 using AlbionOnlineSniffer.Capture.Interfaces;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Web.Hubs;
 using AlbionOnlineSniffer.Web.Services;
 using AlbionOnlineSniffer.Web.Interfaces;
@@ -52,6 +53,14 @@ AlbionOnlineSniffer.Core.DependencyProvider.RegisterServices(builder.Services);
 // Capture services (igual ao App)
 builder.Services.AddCaptureServices();
 
+// Override opcional da porta via configuração (default 5050)
+var udpPort = builder.Configuration.GetValue<int?>(
+    "Capture:UdpPort")
+    ?? builder.Configuration.GetValue<int?>("PacketCaptureSettings:UdpPort")
+    ?? 5050;
+builder.Services.AddSingleton<IPacketCaptureService>(sp =>
+    new PacketCaptureService(udpPort, sp.GetService<IAlbionEventLogger>()));
+
 // Web pipeline via DI
 builder.Services.AddSingleton<SnifferWebPipeline>();
 
@@ -59,6 +68,9 @@ builder.Services.AddSingleton<SnifferWebPipeline>();
 AlbionOnlineSniffer.Queue.DependencyProvider.AddQueueServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
+
+// Configura o PacketOffsetsProvider para permitir acesso estático em eventos
+AlbionOnlineSniffer.Core.DependencyProvider.ConfigurePacketOffsetsProvider(app.Services);
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
