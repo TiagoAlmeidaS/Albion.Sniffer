@@ -65,8 +65,8 @@ namespace AlbionOnlineSniffer.Core.Services
             var eventsPath = Path.Combine(basePath, "events.json");
             if (!File.Exists(eventsPath))
             {
-                _logger.LogWarning("Arquivo events.json não encontrado em: {Path}", eventsPath);
-                return;
+                _logger.LogError("Arquivo events.json não encontrado em: {Path}", eventsPath);
+                throw new FileNotFoundException($"Arquivo events.json não encontrado em: {eventsPath}");
             }
 
             try
@@ -100,6 +100,7 @@ namespace AlbionOnlineSniffer.Core.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao carregar eventos: {Message}", ex.Message);
+                throw;
             }
         }
 
@@ -108,8 +109,8 @@ namespace AlbionOnlineSniffer.Core.Services
             var enumsPath = Path.Combine(basePath, "enums.json");
             if (!File.Exists(enumsPath))
             {
-                _logger.LogWarning("Arquivo enums.json não encontrado em: {Path}", enumsPath);
-                return;
+                _logger.LogError("Arquivo enums.json não encontrado em: {Path}", enumsPath);
+                throw new FileNotFoundException($"Arquivo enums.json não encontrado em: {enumsPath}");
             }
 
             try
@@ -141,6 +142,7 @@ namespace AlbionOnlineSniffer.Core.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao carregar enums: {Message}", ex.Message);
+                throw;
             }
         }
 

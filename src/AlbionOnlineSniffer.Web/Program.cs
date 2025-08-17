@@ -17,6 +17,7 @@ using AlbionOnlineSniffer.Web.Models;
 using WebLogEntry = AlbionOnlineSniffer.Web.Models.LogEntry;
 using System.Numerics;
 using AlbionOnlineSniffer.Queue;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -187,6 +188,21 @@ using (var scope = app.Services.CreateScope())
 	foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
 	{
 		logger.LogInformation("   - {Name} ({Version})", assembly.GetName().Name, assembly.GetName().Version);
+	}
+
+	// Bin-dumps obrigatórios
+	var binDumpsEnabled = builder.Configuration.GetValue<bool>("BinDumps:Enabled", true);
+	var binDumpsPath = builder.Configuration.GetValue<string>("BinDumps:BasePath", "ao-bin-dumps");
+	if (binDumpsEnabled)
+	{
+		var definitionLoader = services.GetRequiredService<PhotonDefinitionLoader>();
+		var fullBinDumpsPath = Path.Combine(Directory.GetCurrentDirectory(), binDumpsPath);
+		if (!Directory.Exists(fullBinDumpsPath))
+		{
+			throw new DirectoryNotFoundException($"Diretório de bin-dumps não encontrado: {fullBinDumpsPath}");
+		}
+		definitionLoader.Load(fullBinDumpsPath);
+		logger.LogInformation("Definições dos bin-dumps carregadas com sucesso (Web)");
 	}
 
 	var packetOffsets = services.GetRequiredService<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketOffsets>();

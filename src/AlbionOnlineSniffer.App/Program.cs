@@ -125,24 +125,14 @@ namespace AlbionOnlineSniffer.App
                     // Carregar definições dos bin-dumps se habilitado
                     if (binDumpsEnabled)
                     {
-                        try
+                        logger.LogInformation("📂 Carregando definições dos bin-dumps...");
+                        var fullBinDumpsPath = Path.Combine(Directory.GetCurrentDirectory(), binDumpsPath);
+                        if (!Directory.Exists(fullBinDumpsPath))
                         {
-                            logger.LogInformation("📂 Carregando definições dos bin-dumps...");
-                            var fullBinDumpsPath = Path.Combine(Directory.GetCurrentDirectory(), binDumpsPath);
-                            if (Directory.Exists(fullBinDumpsPath))
-                            {
-                                definitionLoader.Load(fullBinDumpsPath);
-                                logger.LogInformation("Definições dos bin-dumps carregadas com sucesso");
-                            }
-                            else
-                            {
-                                logger.LogWarning("Diretório de bin-dumps não encontrado: {Path}", fullBinDumpsPath);
-                            }
+                            throw new DirectoryNotFoundException($"Diretório de bin-dumps não encontrado: {fullBinDumpsPath}");
                         }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Erro ao carregar definições dos bin-dumps: {Message}", ex.Message);
-                        }
+                        definitionLoader.Load(fullBinDumpsPath);
+                        logger.LogInformation("Definições dos bin-dumps carregadas com sucesso");
                     }
 
                     // Configurar captura de pacotes
