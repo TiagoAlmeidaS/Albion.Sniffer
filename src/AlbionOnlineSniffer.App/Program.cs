@@ -70,12 +70,7 @@ namespace AlbionOnlineSniffer.App
 
                     // Publishers
                     logger.LogInformation("📤 Configurando publishers...");
-                    var rabbitMqConnectionString = configuration.GetConnectionString("RabbitMQ") ?? 
-                        configuration.GetValue<string>("RabbitMQ:ConnectionString") ?? 
-                        "amqp://localhost";
-                    var exchange = configuration.GetValue<string>("RabbitMQ:Exchange", "albion.sniffer");
-                    
-                    var publisher = Queue.DependencyProvider.CreateRabbitMqPublisher(rabbitMqConnectionString, exchange);
+                    // Publisher via DI (configurado no módulo de Queue)
 
                     // Configure dependency injection
                     logger.LogInformation("🔧 Configurando injeção de dependências...");
@@ -87,6 +82,12 @@ namespace AlbionOnlineSniffer.App
                     // Register Core services (o Core carrega offsets e indexes via DependencyProvider)
                     logger.LogInformation("🔧 Registrando serviços do Core...");
                     Core.DependencyProvider.RegisterServices(services);
+                    // Serviços de fila lendo configuração
+                    Queue.DependencyProvider.AddQueueServices(services, configuration);
+                    // Serviços de captura
+                    Capture.DependencyProvider.AddCaptureServices(services);
+                    // Pipeline App
+                    services.AddSingleton<App.Services.CapturePipeline>();
                     
                     // Build service provider
                     logger.LogInformation("🔧 Construindo service provider...");
@@ -105,83 +106,17 @@ namespace AlbionOnlineSniffer.App
                     logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
                     logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
                     
-                    // 🔧 INTEGRAÇÃO COM MENSAGERIA - Conectar EventDispatcher ao Publisher
-                    logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher...");
-                    eventDispatcher.RegisterGlobalHandler(async gameEvent =>
-                    {
-                        try
-                        {
-                            var eventType = gameEvent.GetType().Name;
-                            var timestamp = DateTime.UtcNow;
-
-                            logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", eventType, timestamp);
-
-                            var eventTypeFormatted = eventType.Replace("Event", "");
-
-                            // Tentar extrair a posição já processada do evento (quando houver)
-                            object? location = null;
-                            try
-                            {
-                                // Preferir interface IHasPosition para reutilização entre módulos
-                                if (gameEvent is Core.Models.Events.IHasPosition hasPosition)
-                                {
-                                    var pos = hasPosition.Position;
-                                    location = new { X = pos.X, Y = pos.Y };
-                                }
-                                else
-                                {
-                                    var posProp = gameEvent.GetType().GetProperty("Position");
-                                    if (posProp != null && posProp.PropertyType == typeof(System.Numerics.Vector2))
-                                    {
-                                        var pos = (System.Numerics.Vector2)posProp.GetValue(gameEvent);
-                                        location = new { X = pos.X, Y = pos.Y };
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                // Ignorar extração de posição caso o evento não tenha ou ocorra falha
-                            }
-
-                            var topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
-                            var message = new
-                            {
-                                EventType = eventType,
-                                Timestamp = timestamp,
-                                Position = location, // incluir localização quando disponível
-                                Data = gameEvent
-                            };
-
-                            logger.LogInformation("📤 PUBLICANDO: {EventType} -> {Topic}", eventType, topic);
-                            await publisher.PublishAsync(topic, message);
-                            logger.LogInformation("✅ Evento publicado na fila: {EventType} -> {Topic}", eventType, topic);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "❌ Erro ao publicar evento na fila: {EventType} - {Message}", gameEvent.GetType().Name, ex.Message);
-                        }
-                    });
-
-                    logger.LogInformation("✅ EventDispatcher conectado ao sistema de mensageria!");
+                    // 🔧 INTEGRAÇÃO COM MENSAGERIA - Bridge via DI
+                    logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
+                    serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
+                    logger.LogInformation("✅ Bridge Event->Queue registrada!");
                     logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados", 
                         eventDispatcher.GetHandlerCount("*"));
 
                     // Configurar serviços de parsing usando DI
                     logger.LogInformation("🔧 Configurando serviços de parsing...");
                     var definitionLoader = serviceProvider.GetRequiredService<Core.Services.PhotonDefinitionLoader>();
-                    
-                    // Configurar Albion.Network com handlers
-                    logger.LogInformation("🔧 Configurando Albion.Network...");
-                    var albionNetworkHandlerManager = serviceProvider.GetRequiredService<Core.Services.AlbionNetworkHandlerManager>();
-                    var receiverBuilder = albionNetworkHandlerManager.ConfigureReceiverBuilder();
-                    var photonReceiver = receiverBuilder.Build();
-                    
-                    // Criar Protocol16Deserializer com o receiver configurado
-                    logger.LogInformation("🔧 Criando Protocol16Deserializer...");
-                    var protocol16Deserializer = new Core.Services.Protocol16Deserializer(
-                        photonReceiver, 
-                        loggerFactory.CreateLogger<Core.Services.Protocol16Deserializer>()
-                    );
+                    var protocol16Deserializer = serviceProvider.GetRequiredService<Core.Services.Protocol16Deserializer>();
 
                     // Carregar definições dos bin-dumps se habilitado
                     if (binDumpsEnabled)
@@ -208,26 +143,12 @@ namespace AlbionOnlineSniffer.App
 
                     // Configurar captura de pacotes
                     logger.LogInformation("🔧 Configurando captura de pacotes...");
-                    var packetCaptureService = Capture.DependencyProvider.CreatePacketCaptureService(5050);
-
-                    // Conectar o capturador ao parser
-                    packetCaptureService.OnUdpPayloadCaptured += (packetData) =>
-                    {
-                        try
-                        {
-                            protocol16Deserializer.ReceivePacket(packetData);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Erro ao processar pacote: {Message}", ex.Message);
-                        }
-                    };
-
-                    logger.LogInformation("✅ Captura de pacotes configurada!");
+                    var capturePipeline = serviceProvider.GetRequiredService<App.Services.CapturePipeline>();
+                    logger.LogInformation("✅ Captura de pacotes configurada (pipeline)!");
 
                     // Iniciar captura
                     logger.LogInformation("🚀 Iniciando captura de pacotes...");
-                    packetCaptureService.Start();
+                    capturePipeline.Start();
 
                     logger.LogInformation("✅ AlbionOnlineSniffer iniciado com sucesso!");
                     logger.LogInformation("📡 Aguardando pacotes do Albion Online...");
@@ -237,7 +158,7 @@ namespace AlbionOnlineSniffer.App
                     Console.CancelKeyPress += (sender, e) =>
                     {
                         logger.LogInformation("🛑 Parando captura...");
-                        packetCaptureService.Stop();
+                        capturePipeline.Stop();
                         logger.LogInformation("✅ Captura parada. Saindo...");
                         Environment.Exit(0);
                     };

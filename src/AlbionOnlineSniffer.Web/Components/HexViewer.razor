@@ -1,10 +1,12 @@
 @using AlbionOnlineSniffer.Web.Models
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
 
 <div class="hex-viewer">
     <div class="hex-viewer-header">
         <h3>Hex Viewer</h3>
         <div class="hex-viewer-controls">
-            <input type="file" @onchange="OnFileSelected" accept=".bin,.dat,.raw" class="file-input" />
+            <InputFile OnChange="OnFileSelected" accept=".bin,.dat,.raw" class="file-input" />
             <button @onclick="ClearData" class="btn btn-secondary">Limpar</button>
             <button @onclick="CopyToClipboard" class="btn btn-primary">Copiar</button>
         </div>
@@ -99,7 +101,7 @@
     {
         <div class="hex-viewer-empty">
             <p>Nenhum dado para exibir. Selecione um arquivo ou arraste dados aqui.</p>
-            <div class="drop-zone" @ondrop="OnDrop" @ondragover="OnDragOver" @ondragleave="OnDragLeave">
+            <div class="drop-zone" @ondrop="OnDrop" @ondrop:preventDefault="true" @ondragover:preventDefault="true" @ondragleave="OnDragLeave">
                 <p>Arraste arquivos aqui ou clique para selecionar</p>
             </div>
         </div>
@@ -397,7 +399,7 @@
 
     private void OnDragOver(DragEventArgs e)
     {
-        e.AcceptDrop = true;
+        // No-op for now; preventDefault set in markup handles allowing drop
     }
 
     private void OnDragLeave(DragEventArgs e)

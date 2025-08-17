@@ -1,4 +1,5 @@
 using AlbionOnlineSniffer.Web.Interfaces;
+using AlbionOnlineSniffer.Web.Models;
 
 namespace AlbionOnlineSniffer.Web.Services
 {
@@ -43,11 +44,11 @@ namespace AlbionOnlineSniffer.Web.Services
                 CheckErrorRateHealth()
             };
 
-            var overallStatus = checks.All(c => c.Status == HealthStatus.Healthy) 
-                ? HealthStatus.Healthy 
-                : checks.Any(c => c.Status == HealthStatus.Unhealthy) 
-                    ? HealthStatus.Unhealthy 
-                    : HealthStatus.Degraded;
+            var overallStatus = checks.All(c => c.Status == HealthStatusEnum.Healthy) 
+                ? HealthStatusEnum.Healthy 
+                : checks.Any(c => c.Status == HealthStatusEnum.Unhealthy) 
+                    ? HealthStatusEnum.Unhealthy 
+                    : HealthStatusEnum.Degraded;
 
             return new HealthStatus
             {
@@ -90,7 +91,7 @@ namespace AlbionOnlineSniffer.Web.Services
             if (eventStats.ItemsDiscarded > eventStats.TotalItems * 0.1)
                 issues.Add("Muitos eventos sendo descartados");
 
-            var status = issues.Count == 0 ? HealthStatus.Healthy : HealthStatus.Degraded;
+            var status = issues.Count == 0 ? HealthStatusEnum.Healthy : HealthStatusEnum.Degraded;
 
             return new HealthCheck
             {
@@ -137,8 +138,8 @@ namespace AlbionOnlineSniffer.Web.Services
             if (memoryUsagePercent > 80)
                 issues.Add("Uso de memória alto (>80%)");
 
-            var status = issues.Count == 0 ? HealthStatus.Healthy : 
-                        issues.Any(i => i.Contains(">90%")) ? HealthStatus.Unhealthy : HealthStatus.Degraded;
+            var status = issues.Count == 0 ? HealthStatusEnum.Healthy : 
+                        issues.Any(i => i.Contains(">90%")) ? HealthStatusEnum.Unhealthy : HealthStatusEnum.Degraded;
 
             return new HealthCheck
             {
@@ -167,8 +168,8 @@ namespace AlbionOnlineSniffer.Web.Services
             var issues = new List<string>();
 
             // Verifica latências
-            var packetLatencyP99 = metrics.GetValueOrDefault("packet_processing_latency_p99", 0.0);
-            var eventLatencyP99 = metrics.GetValueOrDefault("event_processing_latency_p99", 0.0);
+            var packetLatencyP99 = Convert.ToDouble(metrics.GetValueOrDefault("packet_processing_latency_p99", 0.0));
+            var eventLatencyP99 = Convert.ToDouble(metrics.GetValueOrDefault("event_processing_latency_p99", 0.0));
 
             if (packetLatencyP99 > 250)
                 issues.Add($"Latência de processamento de pacotes alta (P99: {packetLatencyP99:F0}ms)");
@@ -177,8 +178,8 @@ namespace AlbionOnlineSniffer.Web.Services
                 issues.Add($"Latência de processamento de eventos alta (P99: {eventLatencyP99:F0}ms)");
 
             // Verifica taxas
-            var packetsPerSecond = metrics.GetValueOrDefault("packets_per_second", 0.0);
-            var eventsPerSecond = metrics.GetValueOrDefault("events_per_second", 0.0);
+            var packetsPerSecond = Convert.ToDouble(metrics.GetValueOrDefault("packets_per_second", 0.0));
+            var eventsPerSecond = Convert.ToDouble(metrics.GetValueOrDefault("events_per_second", 0.0));
 
             if (packetsPerSecond > 1000)
                 issues.Add($"Taxa de pacotes muito alta ({packetsPerSecond:F0}/s)");
@@ -186,8 +187,8 @@ namespace AlbionOnlineSniffer.Web.Services
             if (eventsPerSecond > 500)
                 issues.Add($"Taxa de eventos muito alta ({eventsPerSecond:F0}/s)");
 
-            var status = issues.Count == 0 ? HealthStatus.Healthy : 
-                        issues.Any(i => i.Contains("alta")) ? HealthStatus.Degraded : HealthStatus.Healthy;
+            var status = issues.Count == 0 ? HealthStatusEnum.Healthy : 
+                        issues.Any(i => i.Contains("alta")) ? HealthStatusEnum.Degraded : HealthStatusEnum.Healthy;
 
             return new HealthCheck
             {
@@ -218,9 +219,9 @@ namespace AlbionOnlineSniffer.Web.Services
             var metrics = _metricsService.GetMetrics();
             var issues = new List<string>();
 
-            var totalPackets = metrics.GetValueOrDefault("total_packets_received", 0L);
-            var totalEvents = metrics.GetValueOrDefault("total_events_processed", 0L);
-            var totalErrors = metrics.GetValueOrDefault("total_errors", 0L);
+            var totalPackets = Convert.ToInt64(metrics.GetValueOrDefault("total_packets_received", 0L));
+            var totalEvents = Convert.ToInt64(metrics.GetValueOrDefault("total_events_processed", 0L));
+            var totalErrors = Convert.ToInt64(metrics.GetValueOrDefault("total_errors", 0L));
 
             var totalOperations = totalPackets + totalEvents;
             var errorRate = totalOperations > 0 ? (double)totalErrors / totalOperations * 100 : 0;
@@ -231,8 +232,8 @@ namespace AlbionOnlineSniffer.Web.Services
             if (errorRate > 1)
                 issues.Add($"Taxa de erro alta ({errorRate:F2}%)");
 
-            var status = issues.Count == 0 ? HealthStatus.Healthy : 
-                        issues.Any(i => i.Contains("muito alta")) ? HealthStatus.Unhealthy : HealthStatus.Degraded;
+            var status = issues.Count == 0 ? HealthStatusEnum.Healthy : 
+                        issues.Any(i => i.Contains("muito alta")) ? HealthStatusEnum.Unhealthy : HealthStatusEnum.Degraded;
 
             return new HealthCheck
             {
@@ -255,9 +256,9 @@ namespace AlbionOnlineSniffer.Web.Services
         /// </summary>
         private string GenerateHealthSummary(List<HealthCheck> checks)
         {
-            var healthy = checks.Count(c => c.Status == HealthStatus.Healthy);
-            var degraded = checks.Count(c => c.Status == HealthStatus.Degraded);
-            var unhealthy = checks.Count(c => c.Status == HealthStatus.Unhealthy);
+            var healthy = checks.Count(c => c.Status == HealthStatusEnum.Healthy);
+            var degraded = checks.Count(c => c.Status == HealthStatusEnum.Degraded);
+            var unhealthy = checks.Count(c => c.Status == HealthStatusEnum.Unhealthy);
 
             if (unhealthy > 0)
                 return $"❌ {unhealthy} problemas críticos, {degraded} avisos";
@@ -273,7 +274,7 @@ namespace AlbionOnlineSniffer.Web.Services
     /// </summary>
     public class HealthStatus
     {
-        public HealthStatus Status { get; set; }
+        public HealthStatusEnum Status { get; set; }
         public DateTime Timestamp { get; set; }
         public List<HealthCheck> Checks { get; set; } = new();
         public string Summary { get; set; } = string.Empty;
@@ -285,7 +286,7 @@ namespace AlbionOnlineSniffer.Web.Services
     public class HealthCheck
     {
         public string Name { get; set; } = string.Empty;
-        public HealthStatus Status { get; set; }
+        public HealthStatusEnum Status { get; set; }
         public string Message { get; set; } = string.Empty;
         public Dictionary<string, object> Details { get; set; } = new();
     }
@@ -293,7 +294,7 @@ namespace AlbionOnlineSniffer.Web.Services
     /// <summary>
     /// Enum para status de saúde
     /// </summary>
-    public enum HealthStatus
+    public enum HealthStatusEnum
     {
         Healthy,
         Degraded,

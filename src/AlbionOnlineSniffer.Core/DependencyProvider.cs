@@ -228,9 +228,11 @@ namespace AlbionOnlineSniffer.Core
             {
                 var factory = sp.GetRequiredService<ILoggerFactory>();
                 var logger = factory.CreateLogger<Protocol16Deserializer>();
-                // Minimal stub receiver that no-ops
-                var stubReceiver = new StubPhotonReceiver();
-                return new Protocol16Deserializer(stubReceiver, logger);
+                // Construir o receiver real usando o AlbionNetworkHandlerManager
+                var albionNetworkHandlerManager = sp.GetRequiredService<AlbionNetworkHandlerManager>();
+                var receiverBuilder = albionNetworkHandlerManager.ConfigureReceiverBuilder();
+                var photonReceiver = receiverBuilder.Build();
+                return new Protocol16Deserializer(photonReceiver, logger);
             });
             services.AddSingleton<PositionDecryptor>(sp =>
             {

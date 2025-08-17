@@ -26,7 +26,7 @@ namespace AlbionOnlineSniffer.Tests.Core
 
         private static ILoggerFactory CreateLoggerFactory()
         {
-            return LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+            return LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning));
         }
 
         private static PacketOffsets CreateMinimalOffsets(params (string name, byte[] values)[] entries)
@@ -120,12 +120,14 @@ namespace AlbionOnlineSniffer.Tests.Core
             var originalPos = (x: 100.5f, y: 200.25f);
             var originalNewPos = (x: 101.5f, y: 201.25f);
             var speed = 5.5f;
-            var flags = (byte)(1 | 2); // Speed + NewPosition
+            // Flags: bit 1 = Speed, bit 2 = NewPosition
+            var flags = (byte)0b0000_0011;
 
             var positionBytes = MakeEncryptedPositionBytes(originalPos.x, originalPos.y, SampleXorCode);
             var newPositionBytes = MakeEncryptedPositionBytes(originalNewPos.x, originalNewPos.y, SampleXorCode);
 
-            // Monta o blob esperado pelo MoveEvent: flags em [0], pos em [9..16], speed em [18..21], newpos em [22..29]
+            // Monta o blob esperado pelo MoveEvent:
+            // flags em [0], pos em [9..16], speed em [18..21], newpos em [22..29]
             var blob = new byte[30];
             blob[0] = flags;
             Array.Copy(positionBytes, 0, blob, 9, 8);
@@ -134,10 +136,11 @@ namespace AlbionOnlineSniffer.Tests.Core
 
             var moveParams = new Dictionary<byte, object>
             {
+                // Índices de offsets configurados no teste: Move = {0,1}
                 { 0, id },
                 { 1, blob }
             };
-            var moveEvent = new MoveEvent(moveParams);
+            var moveEvent = new MoveEvent(moveParams, offsets);
 
             // Act
             await moveHandler.InvokeAsync(moveEvent);

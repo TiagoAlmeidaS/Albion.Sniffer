@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Albion.Network;
 using AlbionOnlineSniffer.Core.Interfaces;
 
 namespace AlbionOnlineSniffer.Core.Services

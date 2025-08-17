@@ -292,10 +292,9 @@ namespace AlbionOnlineSniffer.Tests.Core
             cacheField?.SetValue(null, null);
 
             // Act & Assert
-            var exception = Assert.Throws<InvalidOperationException>(() => 
-            {
-                var moveEvent = new MoveEvent(new Dictionary<byte, object> { { 0, 123 } });
-            });
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                PacketOffsetsProvider.GetOffsets()
+            );
 
             Assert.Contains("não foi configurado", exception.Message);
         }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using AlbionOnlineSniffer.Web.Interfaces;
+using AlbionOnlineSniffer.Web.Models;
 using AlbionOnlineSniffer.Web.Services;
 
 namespace AlbionOnlineSniffer.Web.Hubs

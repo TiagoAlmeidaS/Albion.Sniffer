@@ -239,6 +239,13 @@ namespace AlbionOnlineSniffer.Tests.Core
 
             // Act
             var directDI = new MountedEvent(parameters, _testPacketOffsets);
+            // Garante provider configurado para construtor padrão
+            var services = new ServiceCollection();
+            services.AddSingleton<ILoggerFactory>(_ => LoggerFactory.Create(builder => { }));
+            DependencyProvider.RegisterDataLoader(services, _testPacketOffsets);
+            DependencyProvider.RegisterServices(services);
+            var sp = services.BuildServiceProvider();
+            DependencyProvider.ConfigurePacketOffsetsProvider(sp);
             var providerDI = new MountedEvent(parameters);
 
             // Assert

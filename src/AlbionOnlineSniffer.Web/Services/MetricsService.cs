@@ -1,4 +1,5 @@
 using AlbionOnlineSniffer.Web.Interfaces;
+using AlbionOnlineSniffer.Web.Models;
 
 namespace AlbionOnlineSniffer.Web.Services
 {
