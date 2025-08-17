@@ -16,6 +16,7 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System.Linq;
 using Albion.Network;
+using Microsoft.Extensions.Hosting;
 
 namespace AlbionOnlineSniffer.Core
 {
@@ -68,13 +69,27 @@ namespace AlbionOnlineSniffer.Core
                 // Tente localizar um arquivo de offsets em locais conhecidos ou por padrão de nome
                 string? offsetsPath = null;
 
-                string[] probePaths = new[]
+                var probePaths = new System.Collections.Generic.List<string>
                 {
                     Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
                     Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"),
                     Path.Combine(AppContext.BaseDirectory, "offsets.json"),
                     Path.Combine(Directory.GetCurrentDirectory(), "offsets.json")
                 };
+
+                // Tenta resolver via ContentRoot (Web/App) para o caminho do projeto Core
+                var hostEnv = provider.GetService<IHostEnvironment>();
+                var contentRoot = hostEnv?.ContentRootPath;
+                if (!string.IsNullOrWhiteSpace(contentRoot))
+                {
+                    // Caminho relativo de sibling project (../AlbionOnlineSniffer.Core/...)
+                    var siblingCorePath = Path.GetFullPath(Path.Combine(contentRoot, "../AlbionOnlineSniffer.Core/Data/jsons/offsets.json"));
+                    probePaths.Add(siblingCorePath);
+
+                    // Caminho relativo via src (caso ContentRoot seja a raiz do repositório)
+                    var srcCorePath = Path.GetFullPath(Path.Combine(contentRoot, "src/AlbionOnlineSniffer.Core/Data/jsons/offsets.json"));
+                    probePaths.Add(srcCorePath);
+                }
 
                 offsetsPath = probePaths.FirstOrDefault(File.Exists);
 
@@ -121,13 +136,25 @@ namespace AlbionOnlineSniffer.Core
                 // Tente localizar um arquivo de indexes em locais conhecidos ou por padrão de nome
                 string? indexesPath = null;
 
-                string[] probePaths = new[]
+                var probePaths = new System.Collections.Generic.List<string>
                 {
                     Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
                     Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"),
                     Path.Combine(AppContext.BaseDirectory, "indexes.json"),
                     Path.Combine(Directory.GetCurrentDirectory(), "indexes.json")
                 };
+
+                // Tenta resolver via ContentRoot (Web/App) para o caminho do projeto Core
+                var hostEnv = provider.GetService<IHostEnvironment>();
+                var contentRoot = hostEnv?.ContentRootPath;
+                if (!string.IsNullOrWhiteSpace(contentRoot))
+                {
+                    var siblingCorePath = Path.GetFullPath(Path.Combine(contentRoot, "../AlbionOnlineSniffer.Core/Data/jsons/indexes.json"));
+                    probePaths.Add(siblingCorePath);
+
+                    var srcCorePath = Path.GetFullPath(Path.Combine(contentRoot, "src/AlbionOnlineSniffer.Core/Data/jsons/indexes.json"));
+                    probePaths.Add(srcCorePath);
+                }
 
                 indexesPath = probePaths.FirstOrDefault(File.Exists);
 
