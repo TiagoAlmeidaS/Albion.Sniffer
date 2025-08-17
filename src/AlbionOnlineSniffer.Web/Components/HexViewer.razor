@@ -1,0 +1,407 @@
+@using AlbionOnlineSniffer.Web.Models
+
+<div class="hex-viewer">
+    <div class="hex-viewer-header">
+        <h3>Hex Viewer</h3>
+        <div class="hex-viewer-controls">
+            <input type="file" @onchange="OnFileSelected" accept=".bin,.dat,.raw" class="file-input" />
+            <button @onclick="ClearData" class="btn btn-secondary">Limpar</button>
+            <button @onclick="CopyToClipboard" class="btn btn-primary">Copiar</button>
+        </div>
+    </div>
+
+    @if (Data != null && Data.Length > 0)
+    {
+        <div class="hex-viewer-info">
+            <span>Size: @Data.Length bytes</span>
+            <span>Rows: @TotalRows</span>
+            <span>Offset: 0x@(StartOffset.ToString("X8"))</span>
+        </div>
+
+        <div class="hex-viewer-content">
+            <div class="hex-viewer-offset">
+                @for (int i = 0; i < TotalRows; i++)
+                {
+                    var offset = StartOffset + (i * BytesPerRow);
+                    <div class="offset-row">@(offset.ToString("X8"))</div>
+                }
+            </div>
+
+            <div class="hex-viewer-hex">
+                @for (int row = 0; row < TotalRows; row++)
+                {
+                    <div class="hex-row">
+                        @for (int col = 0; col < BytesPerRow; col++)
+                        {
+                            var index = StartOffset + (row * BytesPerRow) + col;
+                            if (index < Data.Length)
+                            {
+                                var byteValue = Data[index];
+                                var cssClass = GetByteClass(byteValue);
+                                <span class="hex-byte @cssClass" @onclick="() => SelectByte(index)" title="Offset: 0x@(index.ToString("X8")) = @byteValue">
+                                    @(byteValue.ToString("X2"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="hex-byte empty">--</span>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="hex-viewer-ascii">
+                @for (int row = 0; row < TotalRows; row++)
+                {
+                    <div class="ascii-row">
+                        @for (int col = 0; col < BytesPerRow; col++)
+                        {
+                            var index = StartOffset + (row * BytesPerRow) + col;
+                            if (index < Data.Length)
+                            {
+                                var byteValue = Data[index];
+                                var asciiChar = GetAsciiChar(byteValue);
+                                var cssClass = GetByteClass(byteValue);
+                                <span class="ascii-char @cssClass" @onclick="() => SelectByte(index)" title="Offset: 0x@(index.ToString("X8")) = @byteValue (@asciiChar)">
+                                    @asciiChar
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="ascii-char empty"> </span>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (SelectedByteIndex >= 0)
+        {
+            <div class="hex-viewer-selection">
+                <strong>Selected:</strong> Offset 0x@(SelectedByteIndex.ToString("X8")) = @Data[SelectedByteIndex] (0x@(Data[SelectedByteIndex].ToString("X2"))) = @GetAsciiChar(Data[SelectedByteIndex])
+            </div>
+        }
+
+        <div class="hex-viewer-navigation">
+            @if (StartOffset > 0)
+            {
+                <button @onclick="PreviousPage" class="btn btn-secondary">← Anterior</button>
+            }
+            @if (StartOffset + (TotalRows * BytesPerRow) < Data.Length)
+            {
+                <button @onclick="NextPage" class="btn btn-secondary">Próximo →</button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="hex-viewer-empty">
+            <p>Nenhum dado para exibir. Selecione um arquivo ou arraste dados aqui.</p>
+            <div class="drop-zone" @ondrop="OnDrop" @ondragover="OnDragOver" @ondragleave="OnDragLeave">
+                <p>Arraste arquivos aqui ou clique para selecionar</p>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .hex-viewer {
+        font-family: 'Courier New', monospace;
+        background: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 16px;
+        max-height: 600px;
+        overflow: auto;
+    }
+
+    .hex-viewer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+    }
+
+    .hex-viewer-header h3 {
+        margin: 0;
+        color: #fff;
+    }
+
+    .hex-viewer-controls {
+        display: flex;
+        gap: 8px;
+    }
+
+    .file-input {
+        background: #333;
+        color: #fff;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+
+    .btn {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .btn-primary {
+        background: #007acc;
+        color: white;
+    }
+
+    .btn-secondary {
+        background: #555;
+        color: white;
+    }
+
+    .hex-viewer-info {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        color: #aaa;
+    }
+
+    .hex-viewer-content {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .hex-viewer-offset {
+        min-width: 80px;
+    }
+
+    .offset-row {
+        height: 20px;
+        line-height: 20px;
+        font-size: 12px;
+        color: #888;
+        text-align: right;
+        padding-right: 8px;
+    }
+
+    .hex-viewer-hex {
+        min-width: 400px;
+    }
+
+    .hex-row {
+        display: flex;
+        height: 20px;
+        line-height: 20px;
+    }
+
+    .hex-byte {
+        width: 24px;
+        text-align: center;
+        font-size: 12px;
+        cursor: pointer;
+        border-radius: 2px;
+        transition: background-color 0.2s;
+    }
+
+    .hex-byte:hover {
+        background: #333;
+    }
+
+    .hex-byte.selected {
+        background: #007acc;
+        color: white;
+    }
+
+    .hex-byte.empty {
+        color: #555;
+    }
+
+    .hex-viewer-ascii {
+        min-width: 200px;
+    }
+
+    .ascii-row {
+        display: flex;
+        height: 20px;
+        line-height: 20px;
+    }
+
+    .ascii-char {
+        width: 12px;
+        text-align: center;
+        font-size: 12px;
+        cursor: pointer;
+        border-radius: 2px;
+        transition: background-color 0.2s;
+    }
+
+    .ascii-char:hover {
+        background: #333;
+    }
+
+    .ascii-char.selected {
+        background: #007acc;
+        color: white;
+    }
+
+    .ascii-char.empty {
+        color: #555;
+    }
+
+    .hex-viewer-selection {
+        background: #333;
+        padding: 8px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 12px;
+    }
+
+    .hex-viewer-navigation {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .hex-viewer-empty {
+        text-align: center;
+        padding: 40px;
+        color: #888;
+    }
+
+    .drop-zone {
+        border: 2px dashed #555;
+        border-radius: 8px;
+        padding: 40px;
+        margin-top: 20px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+
+    .drop-zone:hover {
+        border-color: #007acc;
+    }
+
+    .drop-zone.dragover {
+        border-color: #007acc;
+        background: rgba(0, 122, 204, 0.1);
+    }
+
+    /* Classes para diferentes tipos de bytes */
+    .byte-null { color: #ff6b6b; }
+    .byte-printable { color: #51cf66; }
+    .byte-control { color: #ffd43b; }
+    .byte-extended { color: #74c0fc; }
+</style>
+
+@code {
+    [Parameter]
+    public byte[]? Data { get; set; }
+
+    [Parameter]
+    public EventCallback<byte[]> DataChanged { get; set; }
+
+    private const int BytesPerRow = 16;
+    private int StartOffset = 0;
+    private int SelectedByteIndex = -1;
+
+    private int TotalRows => Data != null ? (int)Math.Ceiling((double)Data.Length / BytesPerRow) : 0;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                
+                var newData = memoryStream.ToArray();
+                await DataChanged.InvokeAsync(newData);
+                StartOffset = 0;
+                SelectedByteIndex = -1;
+            }
+            catch (Exception ex)
+            {
+                // Em uma implementação real, você usaria um serviço de notificação
+                Console.WriteLine($"Erro ao ler arquivo: {ex.Message}");
+            }
+        }
+    }
+
+    private void ClearData()
+    {
+        Data = null;
+        StartOffset = 0;
+        SelectedByteIndex = -1;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (Data != null)
+        {
+            var hexString = Convert.ToHexString(Data);
+            // Em uma implementação real, você usaria JavaScript para copiar para a área de transferência
+            Console.WriteLine($"Hex data copied: {hexString}");
+        }
+    }
+
+    private void SelectByte(int index)
+    {
+        SelectedByteIndex = index;
+    }
+
+    private void PreviousPage()
+    {
+        if (StartOffset > 0)
+        {
+            StartOffset = Math.Max(0, StartOffset - (TotalRows * BytesPerRow));
+        }
+    }
+
+    private void NextPage()
+    {
+        if (Data != null && StartOffset + (TotalRows * BytesPerRow) < Data.Length)
+        {
+            StartOffset += TotalRows * BytesPerRow;
+        }
+    }
+
+    private string GetByteClass(byte byteValue)
+    {
+        if (byteValue == 0) return "byte-null";
+        if (byteValue >= 32 && byteValue <= 126) return "byte-printable";
+        if (byteValue < 32) return "byte-control";
+        return "byte-extended";
+    }
+
+    private string GetAsciiChar(byte byteValue)
+    {
+        if (byteValue >= 32 && byteValue <= 126)
+            return ((char)byteValue).ToString();
+        if (byteValue == 0) return ".";
+        return ".";
+    }
+
+    private void OnDrop(DragEventArgs e)
+    {
+        // Implementar lógica de drop de arquivos
+    }
+
+    private void OnDragOver(DragEventArgs e)
+    {
+        e.AcceptDrop = true;
+    }
+
+    private void OnDragLeave(DragEventArgs e)
+    {
+        // Implementar lógica de drag leave
+    }
+}
