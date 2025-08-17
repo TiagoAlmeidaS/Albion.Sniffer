@@ -18,6 +18,7 @@ using WebLogEntry = AlbionOnlineSniffer.Web.Models.LogEntry;
 using System.Numerics;
 using AlbionOnlineSniffer.Queue;
 using System.IO;
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -196,13 +197,9 @@ using (var scope = app.Services.CreateScope())
 	if (binDumpsEnabled)
 	{
 		var definitionLoader = services.GetRequiredService<PhotonDefinitionLoader>();
-		var fullBinDumpsPath = Path.Combine(Directory.GetCurrentDirectory(), binDumpsPath);
-		if (!Directory.Exists(fullBinDumpsPath))
-		{
-			throw new DirectoryNotFoundException($"Diretório de bin-dumps não encontrado: {fullBinDumpsPath}");
-		}
-		definitionLoader.Load(fullBinDumpsPath);
-		logger.LogInformation("Definições dos bin-dumps carregadas com sucesso (Web)");
+		var resolved = ResolveBinDumpsPath(binDumpsPath);
+		definitionLoader.Load(resolved);
+		logger.LogInformation("Definições dos bin-dumps carregadas com sucesso (Web) de: {Path}", resolved);
 	}
 
 	var packetOffsets = services.GetRequiredService<AlbionOnlineSniffer.Core.Models.ResponseObj.PacketOffsets>();
@@ -243,5 +240,52 @@ app.Lifetime.ApplicationStopping.Register(() =>
 		logger.LogError(ex, "❌ Erro ao parar captura: {Message}", ex.Message);
 	}
 });
+
+// Helpers (resolver bin-dumps)
+static string ResolveBinDumpsPath(string configuredPath)
+{
+    var envPath = Environment.GetEnvironmentVariable("ALBION_BIN_DUMPS_PATH");
+    if (!string.IsNullOrWhiteSpace(envPath) && HasDefinitions(envPath))
+        return Path.GetFullPath(envPath);
+
+    if (!string.IsNullOrWhiteSpace(configuredPath) && Path.IsPathRooted(configuredPath) && HasDefinitions(configuredPath))
+        return Path.GetFullPath(configuredPath);
+
+    var candidates = new List<string>();
+    var cwd = Directory.GetCurrentDirectory();
+    var baseDir = AppContext.BaseDirectory;
+    if (!string.IsNullOrWhiteSpace(configuredPath))
+    {
+        candidates.Add(Path.Combine(cwd, configuredPath));
+        candidates.Add(Path.Combine(baseDir, configuredPath));
+        var probe = cwd;
+        for (int i = 0; i < 6; i++)
+        {
+            candidates.Add(Path.Combine(probe, configuredPath));
+            probe = Path.GetFullPath(Path.Combine(probe, ".."));
+        }
+    }
+
+    foreach (var dir in candidates.Distinct())
+    {
+        if (HasDefinitions(dir))
+            return Path.GetFullPath(dir);
+    }
+
+    var checkedList = string.Join(Environment.NewLine + " - ", candidates.Distinct());
+    throw new DirectoryNotFoundException($"Não foi possível localizar 'events.json' e 'enums.json'. Caminhos testados (BasePath='{configuredPath}'):\n - {checkedList}");
+}
+
+static bool HasDefinitions(string? dir)
+{
+    if (string.IsNullOrWhiteSpace(dir)) return false;
+    try
+    {
+        var eventsPath = Path.Combine(dir, "events.json");
+        var enumsPath = Path.Combine(dir, "enums.json");
+        return File.Exists(eventsPath) && File.Exists(enumsPath);
+    }
+    catch { return false; }
+}
 
 app.Run();

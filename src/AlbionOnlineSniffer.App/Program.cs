@@ -126,13 +126,9 @@ namespace AlbionOnlineSniffer.App
                     if (binDumpsEnabled)
                     {
                         logger.LogInformation("📂 Carregando definições dos bin-dumps...");
-                        var fullBinDumpsPath = Path.Combine(Directory.GetCurrentDirectory(), binDumpsPath);
-                        if (!Directory.Exists(fullBinDumpsPath))
-                        {
-                            throw new DirectoryNotFoundException($"Diretório de bin-dumps não encontrado: {fullBinDumpsPath}");
-                        }
-                        definitionLoader.Load(fullBinDumpsPath);
-                        logger.LogInformation("Definições dos bin-dumps carregadas com sucesso");
+                        var resolvedBinDumps = ResolveBinDumpsPath(binDumpsPath);
+                        definitionLoader.Load(resolvedBinDumps);
+                        logger.LogInformation("Definições dos bin-dumps carregadas com sucesso de: {Path}", resolvedBinDumps);
                     }
 
                     // Configurar captura de pacotes
@@ -184,6 +180,65 @@ namespace AlbionOnlineSniffer.App
                 }
                 
                 Environment.Exit(1);
+            }
+        }
+
+        // Helpers incorporados na classe Program
+        private static string ResolveBinDumpsPath(string configuredPath)
+        {
+            var envPath = Environment.GetEnvironmentVariable("ALBION_BIN_DUMPS_PATH");
+            if (!string.IsNullOrWhiteSpace(envPath) && HasDefinitions(envPath))
+            {
+                return Path.GetFullPath(envPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(configuredPath) && Path.IsPathRooted(configuredPath) && HasDefinitions(configuredPath))
+            {
+                return Path.GetFullPath(configuredPath);
+            }
+
+            var candidates = new List<string>();
+            var cwd = Directory.GetCurrentDirectory();
+            var baseDir = AppContext.BaseDirectory;
+
+            if (!string.IsNullOrWhiteSpace(configuredPath))
+            {
+                candidates.Add(Path.Combine(cwd, configuredPath));
+                candidates.Add(Path.Combine(baseDir, configuredPath));
+
+                var probe = cwd;
+                for (int i = 0; i < 6; i++)
+                {
+                    candidates.Add(Path.Combine(probe, configuredPath));
+                    probe = Path.GetFullPath(Path.Combine(probe, ".."));
+                }
+            }
+
+            foreach (var dir in candidates.Distinct())
+            {
+                if (HasDefinitions(dir))
+                {
+                    return Path.GetFullPath(dir);
+                }
+            }
+
+            var checkedList = string.Join(Environment.NewLine + " - ", candidates.Distinct());
+            throw new DirectoryNotFoundException(
+                $"Não foi possível localizar 'events.json' e 'enums.json'. Caminhos testados (BasePath='{configuredPath}'):\n - {checkedList}");
+        }
+
+        private static bool HasDefinitions(string? dir)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) return false;
+            try
+            {
+                var eventsPath = Path.Combine(dir, "events.json");
+                var enumsPath = Path.Combine(dir, "enums.json");
+                return File.Exists(eventsPath) && File.Exists(enumsPath);
+            }
+            catch
+            {
+                return false;
             }
         }
     }
