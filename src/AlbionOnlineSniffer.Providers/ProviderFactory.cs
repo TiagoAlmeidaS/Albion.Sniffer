@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using AlbionOnlineSniffer.Options;
 using AlbionOnlineSniffer.Providers.Interfaces;
 using AlbionOnlineSniffer.Providers.Implementations;
+using System.Net.Http;
 
 namespace AlbionOnlineSniffer.Providers;
 
@@ -20,28 +21,26 @@ public static class ProviderFactory
         IServiceProvider serviceProvider,
         ParsingSettings settings)
     {
-        var logger = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var options = serviceProvider.GetRequiredService<IOptions<SnifferOptions>>();
+        var logger = loggerFactory.CreateLogger("ProviderFactory.BinDump");
         
-        return settings.BinDumpProvider?.ToLowerInvariant() switch
-        {
-            "filesystem" => new FileSystemBinDumpProvider(
-                logger.CreateLogger<FileSystemBinDumpProvider>(),
-                options),
-            
-            "http" => new HttpCachedBinDumpProvider(
-                logger.CreateLogger<HttpCachedBinDumpProvider>(),
-                options,
-                serviceProvider.GetRequiredService<HttpClient>(),
-                serviceProvider.GetRequiredService<IMemoryCache>()),
-            
-            "embedded" => new EmbeddedResourceBinDumpProvider(
-                logger.CreateLogger<EmbeddedResourceBinDumpProvider>()),
-            
-            _ => new FileSystemBinDumpProvider(
-                logger.CreateLogger<FileSystemBinDumpProvider>(),
-                options)
-        };
+        // Build providers
+        var file = new FileSystemBinDumpProvider(
+            loggerFactory.CreateLogger<FileSystemBinDumpProvider>(),
+            options);
+        var embedded = new EmbeddedResourceBinDumpProvider(
+            loggerFactory.CreateLogger<EmbeddedResourceBinDumpProvider>());
+        var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Providers");
+        var http = new HttpCachedBinDumpProvider(
+            loggerFactory.CreateLogger<HttpCachedBinDumpProvider>(),
+            options,
+            httpClient,
+            serviceProvider.GetRequiredService<IMemoryCache>());
+        
+        // Fallback order: FileSystem -> Embedded -> Http
+        logger.LogInformation("Configuring BinDump provider. Preferred={Preferred}", settings.BinDumpProvider);
+        return new FallbackBinDumpProvider(loggerFactory.CreateLogger<FallbackBinDumpProvider>(), settings.BinDumpProvider, file, embedded, http);
     }
     
     /// <summary>
@@ -51,34 +50,236 @@ public static class ProviderFactory
         IServiceProvider serviceProvider,
         ParsingSettings settings)
     {
-        var logger = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var options = serviceProvider.GetRequiredService<IOptions<SnifferOptions>>();
         var cache = serviceProvider.GetRequiredService<IMemoryCache>();
+        var logger = loggerFactory.CreateLogger("ProviderFactory.ItemMetadata");
         
-        return settings.ItemMetadataProvider?.ToLowerInvariant() switch
-        {
-            "filesystem" => new FileSystemItemMetadataProvider(
-                logger.CreateLogger<FileSystemItemMetadataProvider>(),
-                options,
-                cache),
-            
-            "http" => new HttpCachedItemMetadataProvider(
-                logger.CreateLogger<HttpCachedItemMetadataProvider>(),
-                options,
-                serviceProvider.GetRequiredService<HttpClient>(),
-                cache),
-            
-            "embedded" => new EmbeddedResourceItemMetadataProvider(
-                logger.CreateLogger<EmbeddedResourceItemMetadataProvider>()),
-            
-            _ => new FileSystemItemMetadataProvider(
-                logger.CreateLogger<FileSystemItemMetadataProvider>(),
-                options,
-                cache)
-        };
+        var file = new FileSystemItemMetadataProvider(
+            loggerFactory.CreateLogger<FileSystemItemMetadataProvider>(),
+            options,
+            cache);
+        var embedded = new EmbeddedResourceItemMetadataProvider(
+            loggerFactory.CreateLogger<EmbeddedResourceItemMetadataProvider>());
+        var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Providers");
+        var http = new HttpCachedItemMetadataProvider(
+            loggerFactory.CreateLogger<HttpCachedItemMetadataProvider>(),
+            options,
+            httpClient,
+            cache);
+        
+        // Fallback order: FileSystem -> Embedded -> Http
+        logger.LogInformation("Configuring ItemMetadata provider. Preferred={Preferred}", settings.ItemMetadataProvider);
+        return new FallbackItemMetadataProvider(loggerFactory.CreateLogger<FallbackItemMetadataProvider>(), settings.ItemMetadataProvider, file, embedded, http);
     }
 }
 
+/// <summary>
+/// Fallback wrapper for IBinDumpProvider with logging and preferred selection
+/// </summary>
+public class FallbackBinDumpProvider : IBinDumpProvider
+{
+    private readonly ILogger<FallbackBinDumpProvider> _logger;
+    private readonly IReadOnlyList<(string Name, IBinDumpProvider Provider)> _providers;
+    private readonly string _preferred;
+
+    public event EventHandler<DumpsUpdatedEventArgs>? DumpsUpdated
+    {
+        add
+        {
+            foreach (var p in _providers)
+            {
+                p.Provider.DumpsUpdated += value;
+            }
+        }
+        remove
+        {
+            foreach (var p in _providers)
+            {
+                p.Provider.DumpsUpdated -= value;
+            }
+        }
+    }
+
+    public FallbackBinDumpProvider(ILogger<FallbackBinDumpProvider> logger, string preferred, params IBinDumpProvider[] providers)
+    {
+        _logger = logger;
+        _preferred = preferred?.ToLowerInvariant() ?? string.Empty;
+        _providers = new List<(string, IBinDumpProvider)>
+        {
+            ("filesystem", providers[0]),
+            ("embedded", providers[1]),
+            ("http", providers[2])
+        };
+    }
+
+    public async Task<Stream?> GetDumpAsync(string name, CancellationToken cancellationToken = default)
+    {
+        foreach (var (nameProvider, provider) in GetOrderedProviders())
+        {
+            var exists = await provider.ExistsAsync(name, cancellationToken);
+            if (exists)
+            {
+                if (!string.Equals(nameProvider, _preferred, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("BinDump provider fallback: Preferred={Preferred} but using={Using}", _preferred, nameProvider);
+                }
+                return await provider.GetDumpAsync(name, cancellationToken);
+            }
+            else
+            {
+                _logger.LogInformation("BinDump MISS: {Dump} not found on {Provider}", name, nameProvider);
+            }
+        }
+        _logger.LogError("BinDump NOT FOUND on any provider: {Dump}", name);
+        return null;
+    }
+
+    public async Task<IEnumerable<string>> ListDumpsAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var (nameProvider, provider) in GetOrderedProviders())
+        {
+            var list = await provider.ListDumpsAsync(cancellationToken);
+            if (list.Any())
+            {
+                return list;
+            }
+            _logger.LogInformation("BinDump list empty on {Provider}", nameProvider);
+        }
+        return Enumerable.Empty<string>();
+    }
+
+    public async Task<string> GetVersionAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var (_, provider) in GetOrderedProviders())
+        {
+            var version = await provider.GetVersionAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                return version;
+            }
+        }
+        return "unknown";
+    }
+
+    public async Task<bool> ExistsAsync(string name, CancellationToken cancellationToken = default)
+    {
+        foreach (var (nameProvider, provider) in GetOrderedProviders())
+        {
+            var exists = await provider.ExistsAsync(name, cancellationToken);
+            if (exists)
+            {
+                return true;
+            }
+            _logger.LogDebug("BinDump exists=false on {Provider} for {Dump}", nameProvider, name);
+        }
+        return false;
+    }
+
+    private IEnumerable<(string Name, IBinDumpProvider Provider)> GetOrderedProviders()
+    {
+        // Preferred first, then the rest in default fallback order filesystem -> embedded -> http
+        return _providers
+            .OrderByDescending(p => string.Equals(p.Name, _preferred, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(p => p.Name == "filesystem" ? 0 : p.Name == "embedded" ? 1 : 2);
+    }
+}
+
+/// <summary>
+/// Fallback wrapper for IItemMetadataProvider with logging and preferred selection
+/// </summary>
+public class FallbackItemMetadataProvider : IItemMetadataProvider
+{
+    private readonly ILogger<FallbackItemMetadataProvider> _logger;
+    private readonly IReadOnlyList<(string Name, IItemMetadataProvider Provider)> _providers;
+    private readonly string _preferred;
+
+    public FallbackItemMetadataProvider(ILogger<FallbackItemMetadataProvider> logger, string preferred, params IItemMetadataProvider[] providers)
+    {
+        _logger = logger;
+        _preferred = preferred?.ToLowerInvariant() ?? string.Empty;
+        _providers = new List<(string, IItemMetadataProvider)>
+        {
+            ("filesystem", providers[0]),
+            ("embedded", providers[1]),
+            ("http", providers[2])
+        };
+    }
+
+    public async ValueTask<ItemMetadata?> GetItemAsync(string itemId, CancellationToken cancellationToken = default)
+    {
+        foreach (var (nameProvider, provider) in GetOrderedProviders())
+        {
+            var item = await provider.GetItemAsync(itemId, cancellationToken);
+            if (item != null)
+            {
+                if (!string.Equals(nameProvider, _preferred, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("ItemMetadata provider fallback: Preferred={Preferred} but using={Using}", _preferred, nameProvider);
+                }
+                return item;
+            }
+            _logger.LogInformation("ItemMetadata MISS: {Item} not found on {Provider}", itemId, nameProvider);
+        }
+        return null;
+    }
+
+    public async Task<IReadOnlyDictionary<string, ItemMetadata>> GetItemsAsync(IEnumerable<string> itemIds, CancellationToken cancellationToken = default)
+    {
+        var result = new Dictionary<string, ItemMetadata>(StringComparer.OrdinalIgnoreCase);
+        foreach (var id in itemIds)
+        {
+            var item = await GetItemAsync(id, cancellationToken);
+            if (item != null)
+            {
+                result[id] = item;
+            }
+        }
+        return result;
+    }
+
+    public async Task<IEnumerable<ItemMetadata>> SearchItemsAsync(string searchTerm, int maxResults = 10, CancellationToken cancellationToken = default)
+    {
+        foreach (var (nameProvider, provider) in GetOrderedProviders())
+        {
+            var results = await provider.SearchItemsAsync(searchTerm, maxResults, cancellationToken);
+            if (results.Any())
+            {
+                return results;
+            }
+            _logger.LogDebug("ItemMetadata search yielded 0 results on {Provider} for term '{Term}'", nameProvider, searchTerm);
+        }
+        return Enumerable.Empty<ItemMetadata>();
+    }
+
+    public async Task<IEnumerable<ItemMetadata>> GetItemsByTierAsync(int tier, CancellationToken cancellationToken = default)
+    {
+        foreach (var (nameProvider, provider) in GetOrderedProviders())
+        {
+            var results = await provider.GetItemsByTierAsync(tier, cancellationToken);
+            if (results.Any())
+            {
+                return results;
+            }
+        }
+        return Enumerable.Empty<ItemMetadata>();
+    }
+
+    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var (_, provider) in _providers)
+        {
+            await provider.RefreshAsync(cancellationToken);
+        }
+    }
+
+    private IEnumerable<(string Name, IItemMetadataProvider Provider)> GetOrderedProviders()
+    {
+        return _providers
+            .OrderByDescending(p => string.Equals(p.Name, _preferred, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(p => p.Name == "filesystem" ? 0 : p.Name == "embedded" ? 1 : 2);
+    }
+}
 /// <summary>
 /// HTTP-based item metadata provider with caching
 /// </summary>
@@ -89,6 +290,7 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
     private readonly string _cacheDirectory;
+    private readonly string _etagIndexPath;
     private readonly Dictionary<string, ItemMetadata> _items;
     private readonly SemaphoreSlim _loadLock;
     private bool _isLoaded;
@@ -104,6 +306,7 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
         _httpClient = httpClient;
         _cache = cache;
         _cacheDirectory = Path.Combine(_settings.CacheDirectory, "items");
+        _etagIndexPath = Path.Combine(_cacheDirectory, "etag-index.json");
         _items = new Dictionary<string, ItemMetadata>(StringComparer.OrdinalIgnoreCase);
         _loadLock = new SemaphoreSlim(1, 1);
         _isLoaded = false;
@@ -215,10 +418,19 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
                 
                 if (age.TotalHours < _settings.CacheExpirationHours)
                 {
+                    _logger.LogInformation("ItemMetadata cache HIT (fresh): {File}", cacheFile);
                     await LoadItemsFromFileAsync(cacheFile, cancellationToken);
                     _isLoaded = true;
                     return;
                 }
+                else
+                {
+                    _logger.LogInformation("ItemMetadata cache STALE: {File} age={AgeHours:F1}h", cacheFile, age.TotalHours);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("ItemMetadata cache MISS: {File}", cacheFile);
             }
         }
         
@@ -228,8 +440,26 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
             try
             {
                 _logger.LogInformation("Downloading items from: {Url}", _settings.RemoteItemsUrl);
-                
-                var json = await _httpClient.GetStringAsync(_settings.RemoteItemsUrl, cancellationToken);
+                var request = new HttpRequestMessage(HttpMethod.Get, _settings.RemoteItemsUrl);
+                var etagMap = LoadEtagIndex();
+                if (etagMap.TryGetValue("items", out var etag))
+                {
+                    request.Headers.IfNoneMatch.ParseAdd(etag);
+                }
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotModified && _settings.EnableRemoteCache)
+                {
+                    var cacheFile = Path.Combine(_cacheDirectory, "items.json");
+                    if (File.Exists(cacheFile))
+                    {
+                        _logger.LogInformation("Remote items not modified (ETag). Using cached file.");
+                        await LoadItemsFromFileAsync(cacheFile, cancellationToken);
+                        _isLoaded = true;
+                        return;
+                    }
+                }
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
                 var items = System.Text.Json.JsonSerializer.Deserialize<List<ItemMetadata>>(json,
                     new System.Text.Json.JsonSerializerOptions
                     {
@@ -248,6 +478,11 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
                     {
                         var cacheFile = Path.Combine(_cacheDirectory, "items.json");
                         await File.WriteAllTextAsync(cacheFile, json, cancellationToken);
+                        if (response.Headers.ETag != null)
+                        {
+                            etagMap["items"] = response.Headers.ETag.Tag ?? string.Empty;
+                            SaveEtagIndex(etagMap);
+                        }
                     }
                     
                     _logger.LogInformation("Loaded {Count} items from remote", _items.Count);
@@ -287,5 +522,30 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
         {
             _logger.LogError(ex, "Failed to load items from cache");
         }
+    }
+
+    private Dictionary<string, string> LoadEtagIndex()
+    {
+        try
+        {
+            if (File.Exists(_etagIndexPath))
+            {
+                var json = File.ReadAllText(_etagIndexPath);
+                var map = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                return map ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        catch { }
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void SaveEtagIndex(Dictionary<string, string> map)
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(map);
+            File.WriteAllText(_etagIndexPath, json);
+        }
+        catch { }
     }
 }

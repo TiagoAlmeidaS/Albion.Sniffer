@@ -124,7 +124,7 @@ public class FileSystemItemMetadataProvider : IItemMetadataProvider
     
     private async Task LoadItemsAsync(CancellationToken cancellationToken)
     {
-        var itemsPath = _settings.ItemsPath;
+        var itemsPath = ResolveItemsPath();
         
         if (!Directory.Exists(itemsPath))
         {
@@ -135,9 +135,14 @@ public class FileSystemItemMetadataProvider : IItemMetadataProvider
         
         _logger.LogInformation("Loading items from: {Path}", itemsPath);
         
-        // Look for items.json or individual item files
+        // Look for index.json or items.json or individual item files
+        var indexFile = Path.Combine(itemsPath, "index.json");
         var itemsFile = Path.Combine(itemsPath, "items.json");
-        if (File.Exists(itemsFile))
+        if (File.Exists(indexFile))
+        {
+            await LoadIndexAsync(indexFile, cancellationToken);
+        }
+        else if (File.Exists(itemsFile))
         {
             await LoadItemsFromJsonAsync(itemsFile, cancellationToken);
         }
@@ -148,6 +153,44 @@ public class FileSystemItemMetadataProvider : IItemMetadataProvider
         
         _isLoaded = true;
         _logger.LogInformation("Loaded {Count} items", _items.Count);
+    }
+    
+    private string ResolveItemsPath()
+    {
+        var basePath = _settings.ItemsPath;
+        // Support versioned directory ITEMS/{version}
+        if (!string.IsNullOrEmpty(_settings.DumpsVersion))
+        {
+            var versioned = Path.Combine(basePath, _settings.DumpsVersion);
+            if (Directory.Exists(versioned))
+            {
+                return versioned;
+            }
+        }
+        return basePath;
+    }
+
+    private async Task LoadIndexAsync(string indexFile, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var json = await File.ReadAllTextAsync(indexFile, cancellationToken);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, ItemMetadata>>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            if (dict != null)
+            {
+                foreach (var kv in dict)
+                {
+                    _items[kv.Key] = kv.Value;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load index.json: {File}", indexFile);
+        }
     }
     
     private async Task LoadItemsFromJsonAsync(string filePath, CancellationToken cancellationToken)

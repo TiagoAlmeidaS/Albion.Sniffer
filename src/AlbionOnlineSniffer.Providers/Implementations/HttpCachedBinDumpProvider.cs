@@ -18,6 +18,7 @@ public class HttpCachedBinDumpProvider : IBinDumpProvider
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _memoryCache;
     private readonly string _cacheDirectory;
+    private readonly string _etagIndexPath;
     
     public event EventHandler<DumpsUpdatedEventArgs>? DumpsUpdated;
     
@@ -33,6 +34,7 @@ public class HttpCachedBinDumpProvider : IBinDumpProvider
         _memoryCache = memoryCache;
         
         _cacheDirectory = Path.Combine(_settings.CacheDirectory, "dumps");
+        _etagIndexPath = Path.Combine(_cacheDirectory, "etag-index.json");
         
         if (_settings.EnableRemoteCache && !Directory.Exists(_cacheDirectory))
         {
@@ -90,9 +92,28 @@ public class HttpCachedBinDumpProvider : IBinDumpProvider
         {
             _logger.LogInformation("Downloading dump from: {Url}", url);
             
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            // ETag conditional request
+            var etagMap = LoadEtagIndex();
+            if (etagMap.TryGetValue(name, out var etag))
+            {
+                request.Headers.IfNoneMatch.ParseAdd(etag);
+            }
+            
+            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
+                if (response.StatusCode == System.Net.HttpStatusCode.NotModified && _settings.EnableRemoteCache)
+                {
+                    _logger.LogInformation("Dump {Name} cache HIT (ETag not modified)", name);
+                    var cachedFile = Path.Combine(_cacheDirectory, $"{name}.bin");
+                    if (File.Exists(cachedFile))
+                    {
+                        var dataCached = await File.ReadAllBytesAsync(cachedFile, cancellationToken);
+                        _memoryCache.Set(cacheKey, dataCached, TimeSpan.FromMinutes(30));
+                        return new MemoryStream(dataCached);
+                    }
+                }
                 _logger.LogWarning("Failed to download dump {Name}: {Status}", name, response.StatusCode);
                 return null;
             }
@@ -116,6 +137,12 @@ public class HttpCachedBinDumpProvider : IBinDumpProvider
             {
                 var cachedFile = Path.Combine(_cacheDirectory, $"{name}.bin");
                 await File.WriteAllBytesAsync(cachedFile, data, cancellationToken);
+                // Persist ETag
+                if (response.Headers.ETag != null)
+                {
+                    etagMap[name] = response.Headers.ETag.Tag ?? string.Empty;
+                    SaveEtagIndex(etagMap);
+                }
             }
             
             _logger.LogInformation("Successfully downloaded and cached dump {Name}", name);
@@ -127,6 +154,31 @@ public class HttpCachedBinDumpProvider : IBinDumpProvider
             _logger.LogError(ex, "Failed to download dump {Name}", name);
             return null;
         }
+    }
+
+    private Dictionary<string, string> LoadEtagIndex()
+    {
+        try
+        {
+            if (File.Exists(_etagIndexPath))
+            {
+                var json = File.ReadAllText(_etagIndexPath);
+                var map = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                return map ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        catch { }
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void SaveEtagIndex(Dictionary<string, string> map)
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(map);
+            File.WriteAllText(_etagIndexPath, json);
+        }
+        catch { }
     }
     
     public async Task<IEnumerable<string>> ListDumpsAsync(CancellationToken cancellationToken = default)

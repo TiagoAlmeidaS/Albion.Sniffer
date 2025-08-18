@@ -78,7 +78,7 @@ Evoluir o Albion.Sniffer para:
 - `ProfileManager.cs` - Gerenciador de perfis com eventos
 - `TierPalettes.cs` - Sistema de paletas de cores (classic, vibrant, minimal)
 - `IEventEnricher.cs` - Sistema de enrichers configuráveis
-- `DeathelyeProfileMapper.cs` - Mapeador de configurações deatheye
+- `DeatheyeProfileMapper.cs` - Mapeador de configurações deatheye (corrigido typo)
 - `appsettings.Development.json` - Exemplos de perfis configurados
 
 ---
