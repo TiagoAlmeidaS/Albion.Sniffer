@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using AlbionOnlineSniffer.Options;
 using AlbionOnlineSniffer.Providers.Interfaces;
 using AlbionOnlineSniffer.Providers.Implementations;
+using System.Net.Http;
 
 namespace AlbionOnlineSniffer.Providers;
 
@@ -20,26 +21,18 @@ public static class ProviderFactory
         IServiceProvider serviceProvider,
         ParsingSettings settings)
     {
-        var logger = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var options = serviceProvider.GetRequiredService<IOptions<SnifferOptions>>();
         
         return settings.BinDumpProvider?.ToLowerInvariant() switch
         {
             "filesystem" => new FileSystemBinDumpProvider(
-                logger.CreateLogger<FileSystemBinDumpProvider>(),
+                loggerFactory.CreateLogger<FileSystemBinDumpProvider>(),
                 options),
-            
-            "http" => new HttpCachedBinDumpProvider(
-                logger.CreateLogger<HttpCachedBinDumpProvider>(),
-                options,
-                serviceProvider.GetRequiredService<HttpClient>(),
-                serviceProvider.GetRequiredService<IMemoryCache>()),
-            
             "embedded" => new EmbeddedResourceBinDumpProvider(
-                logger.CreateLogger<EmbeddedResourceBinDumpProvider>()),
-            
+                loggerFactory.CreateLogger<EmbeddedResourceBinDumpProvider>()),
             _ => new FileSystemBinDumpProvider(
-                logger.CreateLogger<FileSystemBinDumpProvider>(),
+                loggerFactory.CreateLogger<FileSystemBinDumpProvider>(),
                 options)
         };
     }
@@ -51,34 +44,27 @@ public static class ProviderFactory
         IServiceProvider serviceProvider,
         ParsingSettings settings)
     {
-        var logger = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var options = serviceProvider.GetRequiredService<IOptions<SnifferOptions>>();
         var cache = serviceProvider.GetRequiredService<IMemoryCache>();
         
         return settings.ItemMetadataProvider?.ToLowerInvariant() switch
         {
             "filesystem" => new FileSystemItemMetadataProvider(
-                logger.CreateLogger<FileSystemItemMetadataProvider>(),
+                loggerFactory.CreateLogger<FileSystemItemMetadataProvider>(),
                 options,
                 cache),
-            
-            "http" => new HttpCachedItemMetadataProvider(
-                logger.CreateLogger<HttpCachedItemMetadataProvider>(),
-                options,
-                serviceProvider.GetRequiredService<HttpClient>(),
-                cache),
-            
             "embedded" => new EmbeddedResourceItemMetadataProvider(
-                logger.CreateLogger<EmbeddedResourceItemMetadataProvider>()),
-            
+                loggerFactory.CreateLogger<EmbeddedResourceItemMetadataProvider>()),
             _ => new FileSystemItemMetadataProvider(
-                logger.CreateLogger<FileSystemItemMetadataProvider>(),
+                loggerFactory.CreateLogger<FileSystemItemMetadataProvider>(),
                 options,
                 cache)
         };
     }
 }
 
+// NOTE: Fallback wrappers and HTTP providers moved to a dedicated Providers v2 PR scope.
 /// <summary>
 /// HTTP-based item metadata provider with caching
 /// </summary>
@@ -89,6 +75,7 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
     private readonly string _cacheDirectory;
+    private readonly string _etagIndexPath;
     private readonly Dictionary<string, ItemMetadata> _items;
     private readonly SemaphoreSlim _loadLock;
     private bool _isLoaded;
@@ -104,6 +91,7 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
         _httpClient = httpClient;
         _cache = cache;
         _cacheDirectory = Path.Combine(_settings.CacheDirectory, "items");
+        _etagIndexPath = Path.Combine(_cacheDirectory, "etag-index.json");
         _items = new Dictionary<string, ItemMetadata>(StringComparer.OrdinalIgnoreCase);
         _loadLock = new SemaphoreSlim(1, 1);
         _isLoaded = false;
@@ -215,10 +203,19 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
                 
                 if (age.TotalHours < _settings.CacheExpirationHours)
                 {
+                    _logger.LogInformation("ItemMetadata cache HIT (fresh): {File}", cacheFile);
                     await LoadItemsFromFileAsync(cacheFile, cancellationToken);
                     _isLoaded = true;
                     return;
                 }
+                else
+                {
+                    _logger.LogInformation("ItemMetadata cache STALE: {File} age={AgeHours:F1}h", cacheFile, age.TotalHours);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("ItemMetadata cache MISS: {File}", cacheFile);
             }
         }
         
@@ -228,8 +225,26 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
             try
             {
                 _logger.LogInformation("Downloading items from: {Url}", _settings.RemoteItemsUrl);
-                
-                var json = await _httpClient.GetStringAsync(_settings.RemoteItemsUrl, cancellationToken);
+                var request = new HttpRequestMessage(HttpMethod.Get, _settings.RemoteItemsUrl);
+                var etagMap = LoadEtagIndex();
+                if (etagMap.TryGetValue("items", out var etag))
+                {
+                    request.Headers.IfNoneMatch.ParseAdd(etag);
+                }
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotModified && _settings.EnableRemoteCache)
+                {
+                    var cacheFile = Path.Combine(_cacheDirectory, "items.json");
+                    if (File.Exists(cacheFile))
+                    {
+                        _logger.LogInformation("Remote items not modified (ETag). Using cached file.");
+                        await LoadItemsFromFileAsync(cacheFile, cancellationToken);
+                        _isLoaded = true;
+                        return;
+                    }
+                }
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
                 var items = System.Text.Json.JsonSerializer.Deserialize<List<ItemMetadata>>(json,
                     new System.Text.Json.JsonSerializerOptions
                     {
@@ -248,6 +263,11 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
                     {
                         var cacheFile = Path.Combine(_cacheDirectory, "items.json");
                         await File.WriteAllTextAsync(cacheFile, json, cancellationToken);
+                        if (response.Headers.ETag != null)
+                        {
+                            etagMap["items"] = response.Headers.ETag.Tag ?? string.Empty;
+                            SaveEtagIndex(etagMap);
+                        }
                     }
                     
                     _logger.LogInformation("Loaded {Count} items from remote", _items.Count);
@@ -287,5 +307,30 @@ public class HttpCachedItemMetadataProvider : IItemMetadataProvider
         {
             _logger.LogError(ex, "Failed to load items from cache");
         }
+    }
+
+    private Dictionary<string, string> LoadEtagIndex()
+    {
+        try
+        {
+            if (File.Exists(_etagIndexPath))
+            {
+                var json = File.ReadAllText(_etagIndexPath);
+                var map = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                return map ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        catch { }
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void SaveEtagIndex(Dictionary<string, string> map)
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(map);
+            File.WriteAllText(_etagIndexPath, json);
+        }
+        catch { }
     }
 }

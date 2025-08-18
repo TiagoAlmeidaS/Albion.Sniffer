@@ -150,6 +150,8 @@ public class FileSystemItemMetadataProvider : IItemMetadataProvider
         _logger.LogInformation("Loaded {Count} items", _items.Count);
     }
     
+    // Versioned items and index.json support moved to Providers v2 PR
+    
     private async Task LoadItemsFromJsonAsync(string filePath, CancellationToken cancellationToken)
     {
         try

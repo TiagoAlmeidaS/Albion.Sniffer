@@ -78,15 +78,15 @@ Evoluir o Albion.Sniffer para:
 - `ProfileManager.cs` - Gerenciador de perfis com eventos
 - `TierPalettes.cs` - Sistema de paletas de cores (classic, vibrant, minimal)
 - `IEventEnricher.cs` - Sistema de enrichers configuráveis
-- `DeathelyeProfileMapper.cs` - Mapeador de configurações deatheye
+- `DeatheyeProfileMapper.cs` - Mapeador de configurações deatheye (corrigido typo)
 - `appsettings.Development.json` - Exemplos de perfis configurados
 
 ---
 
-### ✅ Fase 2 - Providers Plugáveis (3 dias)
-**Status**: ✅ Concluída
+### 🟡 Fase 2 - Providers Plugáveis (3 dias)
+**Status**: Em progresso (básico pronto; melhorias em PR dedicado)
 **Início**: 2024-12-28
-**Conclusão**: 2024-12-28
+**Conclusão**: a definir
 
 #### Objetivos
 - Remover acoplamento a arquivos locais
@@ -97,7 +97,7 @@ Evoluir o Albion.Sniffer para:
 - [x] Interface IItemMetadataProvider
 - [x] Implementar FileSystemProvider
 - [x] Implementar EmbeddedResourceProvider
-- [x] Implementar HttpCachedProvider
+- [ ] Implementar HttpCachedProvider (PR dedicado)
 - [x] Seleção por Options
 - [x] Versionamento de dumps
 
@@ -109,10 +109,8 @@ Evoluir o Albion.Sniffer para:
 - `IBinDumpProvider.cs` - Interface para providers de dumps binários
 - `IItemMetadataProvider.cs` - Interface para providers de metadados
 - `FileSystemBinDumpProvider.cs` - Provider para arquivos locais
-- `HttpCachedBinDumpProvider.cs` - Provider HTTP com cache
 - `EmbeddedResourceProvider.cs` - Provider para recursos embarcados
 - `ProviderFactory.cs` - Factory para seleção de providers
-- Sistema de cache com expiração configurável
 
 ---
 
@@ -250,7 +248,7 @@ Evoluir o Albion.Sniffer para:
 |------|--------|-----------|----------------|------------|
 | 0 | ✅ Concluída | 100% | 1 dia | < 1 dia |
 | 1 | ✅ Concluída | 100% | 2 dias | < 1 dia |
-| 2 | ✅ Concluída | 100% | 3 dias | < 1 dia |
+| 2 | 🟡 Em progresso | 70% | 3 dias | - |
 | 3 | ⏳ Pendente | 0% | 2 dias | - |
 | 4 | ⏳ Pendente | 0% | 2 dias | - |
 | 5 | ⏳ Pendente | 0% | 2 dias | - |
@@ -259,26 +257,24 @@ Evoluir o Albion.Sniffer para:
 | 8 | ⏳ Pendente | 0% | 1 dia | - |
 | 9 | ⏳ Pendente | 0% | 1 dia | - |
 
-**Total Geral**: 30% completo (3 de 10 fases)
+**Total Geral**: 27% completo (2.7 de 10 fases)
 
 ---
 
 ## 📝 Notas de Implementação
 
 ### Progresso Acelerado (2024-12-28)
-- **Fases 0, 1 e 2 concluídas em menos de 1 dia**
+- **Fases 0 e 1 concluídas em menos de 1 dia**
 - Implementação eficiente devido à arquitetura bem planejada
 - Reutilização de padrões estabelecidos no projeto base
 
 ### Fase 2 - Providers Plugáveis
-- Sistema de providers totalmente abstrato e configurável
-- Cache em memória e disco para otimização
-- Suporte a múltiplas fontes (FileSystem, HTTP, Embedded)
-- Versionamento automático de dumps por data
+- Sistema de providers configurável (FileSystem, Embedded)
+- HTTP/cache/ETag/logs serão implementados em PR dedicado
 
 ### Fase 1 - Profiles & Personalizações  
 - Sistema de profiles completo com 3 paletas de cores
-- Enrichers modulares e compostos
+- Enrichers modulares e compostos (serão ligados no pipeline – PR F4)
 - Mapeamento automático de configurações deatheye
 
 ### Fase 0 - Baseline

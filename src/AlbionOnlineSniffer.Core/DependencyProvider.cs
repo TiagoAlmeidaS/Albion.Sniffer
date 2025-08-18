@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Albion.Events.V1;
 using System;
 using System.IO;
 using AlbionOnlineSniffer.Core.Services;
