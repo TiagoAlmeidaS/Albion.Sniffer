@@ -71,6 +71,10 @@ public class HttpCachedBinDumpProvider : IBinDumpProvider
                     
                     return new MemoryStream(data);
                 }
+                else
+                {
+                    _logger.LogInformation("Dump {Name} cache STALE (age={AgeHours:F1}h >= {Ttl}h)", name, age.TotalHours, _settings.CacheExpirationHours);
+                }
             }
         }
         

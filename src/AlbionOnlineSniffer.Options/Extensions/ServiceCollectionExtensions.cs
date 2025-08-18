@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
 				if (args[i] == "--profile" && i + 1 < args.Length)
 				{
 					options.ActiveProfile = args[i + 1];
+					options.GetActiveProfile();
 					break;
 				}
 			}
@@ -180,8 +181,24 @@ internal class ProfileLogStartupFilter : IStartupFilter
 	
 	public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
 	{
+		var source = "appsettings";
+		var args = Environment.GetCommandLineArgs();
+		for (int i = 0; i < args.Length - 1; i++)
+		{
+			if (args[i] == "--profile" && i + 1 < args.Length)
+			{
+				source = "cli";
+				break;
+			}
+		}
+		var envProfile = Environment.GetEnvironmentVariable("SNIFFER_PROFILE");
+		var envProfile2 = Environment.GetEnvironmentVariable("SNIFFER__ACTIVEPROFILE");
+		if (!string.IsNullOrEmpty(envProfile) || !string.IsNullOrEmpty(envProfile2))
+		{
+			source = "env";
+		}
 		var profile = _options.Value.GetActiveProfile();
-		_logger.LogInformation("Active profile resolved: {Profile}", profile.Name);
+		_logger.LogInformation("Active profile resolved: {Profile} (source={Source})", profile.Name, source);
 		return next;
 	}
 }
