@@ -23,24 +23,18 @@ public static class ProviderFactory
     {
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var options = serviceProvider.GetRequiredService<IOptions<SnifferOptions>>();
-        var logger = loggerFactory.CreateLogger("ProviderFactory.BinDump");
         
-        // Build providers
-        var file = new FileSystemBinDumpProvider(
-            loggerFactory.CreateLogger<FileSystemBinDumpProvider>(),
-            options);
-        var embedded = new EmbeddedResourceBinDumpProvider(
-            loggerFactory.CreateLogger<EmbeddedResourceBinDumpProvider>());
-        var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Providers");
-        var http = new HttpCachedBinDumpProvider(
-            loggerFactory.CreateLogger<HttpCachedBinDumpProvider>(),
-            options,
-            httpClient,
-            serviceProvider.GetRequiredService<IMemoryCache>());
-        
-        // Fallback order: FileSystem -> Embedded -> Http
-        logger.LogInformation("Configuring BinDump provider. Preferred={Preferred}", settings.BinDumpProvider);
-        return new FallbackBinDumpProvider(loggerFactory.CreateLogger<FallbackBinDumpProvider>(), settings.BinDumpProvider, file, embedded, http);
+        return settings.BinDumpProvider?.ToLowerInvariant() switch
+        {
+            "filesystem" => new FileSystemBinDumpProvider(
+                loggerFactory.CreateLogger<FileSystemBinDumpProvider>(),
+                options),
+            "embedded" => new EmbeddedResourceBinDumpProvider(
+                loggerFactory.CreateLogger<EmbeddedResourceBinDumpProvider>()),
+            _ => new FileSystemBinDumpProvider(
+                loggerFactory.CreateLogger<FileSystemBinDumpProvider>(),
+                options)
+        };
     }
     
     /// <summary>
@@ -53,233 +47,24 @@ public static class ProviderFactory
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var options = serviceProvider.GetRequiredService<IOptions<SnifferOptions>>();
         var cache = serviceProvider.GetRequiredService<IMemoryCache>();
-        var logger = loggerFactory.CreateLogger("ProviderFactory.ItemMetadata");
         
-        var file = new FileSystemItemMetadataProvider(
-            loggerFactory.CreateLogger<FileSystemItemMetadataProvider>(),
-            options,
-            cache);
-        var embedded = new EmbeddedResourceItemMetadataProvider(
-            loggerFactory.CreateLogger<EmbeddedResourceItemMetadataProvider>());
-        var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Providers");
-        var http = new HttpCachedItemMetadataProvider(
-            loggerFactory.CreateLogger<HttpCachedItemMetadataProvider>(),
-            options,
-            httpClient,
-            cache);
-        
-        // Fallback order: FileSystem -> Embedded -> Http
-        logger.LogInformation("Configuring ItemMetadata provider. Preferred={Preferred}", settings.ItemMetadataProvider);
-        return new FallbackItemMetadataProvider(loggerFactory.CreateLogger<FallbackItemMetadataProvider>(), settings.ItemMetadataProvider, file, embedded, http);
-    }
-}
-
-/// <summary>
-/// Fallback wrapper for IBinDumpProvider with logging and preferred selection
-/// </summary>
-public class FallbackBinDumpProvider : IBinDumpProvider
-{
-    private readonly ILogger<FallbackBinDumpProvider> _logger;
-    private readonly IReadOnlyList<(string Name, IBinDumpProvider Provider)> _providers;
-    private readonly string _preferred;
-
-    public event EventHandler<DumpsUpdatedEventArgs>? DumpsUpdated
-    {
-        add
+        return settings.ItemMetadataProvider?.ToLowerInvariant() switch
         {
-            foreach (var p in _providers)
-            {
-                p.Provider.DumpsUpdated += value;
-            }
-        }
-        remove
-        {
-            foreach (var p in _providers)
-            {
-                p.Provider.DumpsUpdated -= value;
-            }
-        }
-    }
-
-    public FallbackBinDumpProvider(ILogger<FallbackBinDumpProvider> logger, string preferred, params IBinDumpProvider[] providers)
-    {
-        _logger = logger;
-        _preferred = preferred?.ToLowerInvariant() ?? string.Empty;
-        _providers = new List<(string, IBinDumpProvider)>
-        {
-            ("filesystem", providers[0]),
-            ("embedded", providers[1]),
-            ("http", providers[2])
+            "filesystem" => new FileSystemItemMetadataProvider(
+                loggerFactory.CreateLogger<FileSystemItemMetadataProvider>(),
+                options,
+                cache),
+            "embedded" => new EmbeddedResourceItemMetadataProvider(
+                loggerFactory.CreateLogger<EmbeddedResourceItemMetadataProvider>()),
+            _ => new FileSystemItemMetadataProvider(
+                loggerFactory.CreateLogger<FileSystemItemMetadataProvider>(),
+                options,
+                cache)
         };
     }
-
-    public async Task<Stream?> GetDumpAsync(string name, CancellationToken cancellationToken = default)
-    {
-        foreach (var (nameProvider, provider) in GetOrderedProviders())
-        {
-            var exists = await provider.ExistsAsync(name, cancellationToken);
-            if (exists)
-            {
-                if (!string.Equals(nameProvider, _preferred, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning("BinDump provider fallback: Preferred={Preferred} but using={Using}", _preferred, nameProvider);
-                }
-                return await provider.GetDumpAsync(name, cancellationToken);
-            }
-            else
-            {
-                _logger.LogInformation("BinDump MISS: {Dump} not found on {Provider}", name, nameProvider);
-            }
-        }
-        _logger.LogError("BinDump NOT FOUND on any provider: {Dump}", name);
-        return null;
-    }
-
-    public async Task<IEnumerable<string>> ListDumpsAsync(CancellationToken cancellationToken = default)
-    {
-        foreach (var (nameProvider, provider) in GetOrderedProviders())
-        {
-            var list = await provider.ListDumpsAsync(cancellationToken);
-            if (list.Any())
-            {
-                return list;
-            }
-            _logger.LogInformation("BinDump list empty on {Provider}", nameProvider);
-        }
-        return Enumerable.Empty<string>();
-    }
-
-    public async Task<string> GetVersionAsync(CancellationToken cancellationToken = default)
-    {
-        foreach (var (_, provider) in GetOrderedProviders())
-        {
-            var version = await provider.GetVersionAsync(cancellationToken);
-            if (!string.IsNullOrWhiteSpace(version))
-            {
-                return version;
-            }
-        }
-        return "unknown";
-    }
-
-    public async Task<bool> ExistsAsync(string name, CancellationToken cancellationToken = default)
-    {
-        foreach (var (nameProvider, provider) in GetOrderedProviders())
-        {
-            var exists = await provider.ExistsAsync(name, cancellationToken);
-            if (exists)
-            {
-                return true;
-            }
-            _logger.LogDebug("BinDump exists=false on {Provider} for {Dump}", nameProvider, name);
-        }
-        return false;
-    }
-
-    private IEnumerable<(string Name, IBinDumpProvider Provider)> GetOrderedProviders()
-    {
-        // Preferred first, then the rest in default fallback order filesystem -> embedded -> http
-        return _providers
-            .OrderByDescending(p => string.Equals(p.Name, _preferred, StringComparison.OrdinalIgnoreCase))
-            .ThenBy(p => p.Name == "filesystem" ? 0 : p.Name == "embedded" ? 1 : 2);
-    }
 }
 
-/// <summary>
-/// Fallback wrapper for IItemMetadataProvider with logging and preferred selection
-/// </summary>
-public class FallbackItemMetadataProvider : IItemMetadataProvider
-{
-    private readonly ILogger<FallbackItemMetadataProvider> _logger;
-    private readonly IReadOnlyList<(string Name, IItemMetadataProvider Provider)> _providers;
-    private readonly string _preferred;
-
-    public FallbackItemMetadataProvider(ILogger<FallbackItemMetadataProvider> logger, string preferred, params IItemMetadataProvider[] providers)
-    {
-        _logger = logger;
-        _preferred = preferred?.ToLowerInvariant() ?? string.Empty;
-        _providers = new List<(string, IItemMetadataProvider)>
-        {
-            ("filesystem", providers[0]),
-            ("embedded", providers[1]),
-            ("http", providers[2])
-        };
-    }
-
-    public async ValueTask<ItemMetadata?> GetItemAsync(string itemId, CancellationToken cancellationToken = default)
-    {
-        foreach (var (nameProvider, provider) in GetOrderedProviders())
-        {
-            var item = await provider.GetItemAsync(itemId, cancellationToken);
-            if (item != null)
-            {
-                if (!string.Equals(nameProvider, _preferred, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning("ItemMetadata provider fallback: Preferred={Preferred} but using={Using}", _preferred, nameProvider);
-                }
-                return item;
-            }
-            _logger.LogInformation("ItemMetadata MISS: {Item} not found on {Provider}", itemId, nameProvider);
-        }
-        return null;
-    }
-
-    public async Task<IReadOnlyDictionary<string, ItemMetadata>> GetItemsAsync(IEnumerable<string> itemIds, CancellationToken cancellationToken = default)
-    {
-        var result = new Dictionary<string, ItemMetadata>(StringComparer.OrdinalIgnoreCase);
-        foreach (var id in itemIds)
-        {
-            var item = await GetItemAsync(id, cancellationToken);
-            if (item != null)
-            {
-                result[id] = item;
-            }
-        }
-        return result;
-    }
-
-    public async Task<IEnumerable<ItemMetadata>> SearchItemsAsync(string searchTerm, int maxResults = 10, CancellationToken cancellationToken = default)
-    {
-        foreach (var (nameProvider, provider) in GetOrderedProviders())
-        {
-            var results = await provider.SearchItemsAsync(searchTerm, maxResults, cancellationToken);
-            if (results.Any())
-            {
-                return results;
-            }
-            _logger.LogDebug("ItemMetadata search yielded 0 results on {Provider} for term '{Term}'", nameProvider, searchTerm);
-        }
-        return Enumerable.Empty<ItemMetadata>();
-    }
-
-    public async Task<IEnumerable<ItemMetadata>> GetItemsByTierAsync(int tier, CancellationToken cancellationToken = default)
-    {
-        foreach (var (nameProvider, provider) in GetOrderedProviders())
-        {
-            var results = await provider.GetItemsByTierAsync(tier, cancellationToken);
-            if (results.Any())
-            {
-                return results;
-            }
-        }
-        return Enumerable.Empty<ItemMetadata>();
-    }
-
-    public async Task RefreshAsync(CancellationToken cancellationToken = default)
-    {
-        foreach (var (_, provider) in _providers)
-        {
-            await provider.RefreshAsync(cancellationToken);
-        }
-    }
-
-    private IEnumerable<(string Name, IItemMetadataProvider Provider)> GetOrderedProviders()
-    {
-        return _providers
-            .OrderByDescending(p => string.Equals(p.Name, _preferred, StringComparison.OrdinalIgnoreCase))
-            .ThenBy(p => p.Name == "filesystem" ? 0 : p.Name == "embedded" ? 1 : 2);
-    }
-}
+// NOTE: Fallback wrappers and HTTP providers moved to a dedicated Providers v2 PR scope.
 /// <summary>
 /// HTTP-based item metadata provider with caching
 /// </summary>

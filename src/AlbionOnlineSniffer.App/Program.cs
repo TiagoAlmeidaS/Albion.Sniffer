@@ -69,11 +69,10 @@ namespace AlbionOnlineSniffer.App
 					// Add logging
 					services.AddLogging(builder => builder.AddConsole());
 					
-					// Options + Profiles + Providers
+					// Options + Profiles
 					services.AddSnifferOptions(configuration);
 					services.ValidateOptionsOnStart<AlbionOnlineSniffer.Options.SnifferOptions>();
 					services.AddProfileManagement();
-					services.AddProviders(configuration);
 
 					// Register Core services (o Core carrega offsets e indexes via DependencyProvider)
 					logger.LogInformation("🔧 Registrando serviços do Core...");
