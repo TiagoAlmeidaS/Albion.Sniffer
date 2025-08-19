@@ -1,17 +1,12 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using AlbionOnlineSniffer.Queue;
-using AlbionOnlineSniffer.Core;
-using AlbionOnlineSniffer.Capture;
-using System.Reflection;
 using Microsoft.Extensions.Options;
 using AlbionOnlineSniffer.Options.Extensions;
-using AlbionOnlineSniffer.Providers.Extensions;
 
 namespace AlbionOnlineSniffer.App
 {
-	class Program
+    class Program
 	{
 		static async Task Main(string[] args)
 		{
@@ -52,11 +47,7 @@ namespace AlbionOnlineSniffer.App
 						.AddEnvironmentVariables()
 						.Build();
 
-					var binDumpsEnabled = configuration.GetValue<bool>("BinDumps:Enabled", true);
-					var binDumpsPath = configuration.GetValue<string>("BinDumps:BasePath", "ao-bin-dumps");
 
-					logger.LogInformation("Configuração de bin-dumps: Habilitado={Enabled}, Caminho={Path}",
-						binDumpsEnabled, binDumpsPath);
 
 					// Publishers
 					logger.LogInformation("📤 Configurando publishers...");
@@ -141,17 +132,9 @@ namespace AlbionOnlineSniffer.App
 
 					// Configurar serviços de parsing usando DI
 					logger.LogInformation("🔧 Configurando serviços de parsing...");
-					var definitionLoader = serviceProvider.GetRequiredService<Core.Services.PhotonDefinitionLoader>();
 					var protocol16Deserializer = serviceProvider.GetRequiredService<Core.Services.Protocol16Deserializer>();
 
-					// Carregar definições dos bin-dumps se habilitado
-					if (binDumpsEnabled)
-					{
-						logger.LogInformation("📂 Carregando definições dos bin-dumps...");
-						var resolvedBinDumps = ResolveBinDumpsPath(binDumpsPath);
-						definitionLoader.Load(resolvedBinDumps);
-						logger.LogInformation("Definições dos bin-dumps carregadas com sucesso de: {Path}", resolvedBinDumps);
-					}
+
 
 					// Configurar captura de pacotes
 					logger.LogInformation("🔧 Configurando captura de pacotes...");
@@ -205,63 +188,6 @@ namespace AlbionOnlineSniffer.App
 			}
 		}
 
-		// Helpers incorporados na classe Program
-		private static string ResolveBinDumpsPath(string configuredPath)
-		{
-			var envPath = Environment.GetEnvironmentVariable("ALBION_BIN_DUMPS_PATH");
-			if (!string.IsNullOrWhiteSpace(envPath) && HasDefinitions(envPath))
-			{
-				return Path.GetFullPath(envPath);
-			}
 
-			if (!string.IsNullOrWhiteSpace(configuredPath) && Path.IsPathRooted(configuredPath) && HasDefinitions(configuredPath))
-			{
-				return Path.GetFullPath(configuredPath);
-			}
-
-			var candidates = new List<string>();
-			var cwd = Directory.GetCurrentDirectory();
-			var baseDir = AppContext.BaseDirectory;
-
-			if (!string.IsNullOrWhiteSpace(configuredPath))
-			{
-				candidates.Add(Path.Combine(cwd, configuredPath));
-				candidates.Add(Path.Combine(baseDir, configuredPath));
-
-				var probe = cwd;
-				for (int i = 0; i < 6; i++)
-				{
-					candidates.Add(Path.Combine(probe, configuredPath));
-					probe = Path.GetFullPath(Path.Combine(probe, ".."));
-				}
-			}
-
-			foreach (var dir in candidates.Distinct())
-			{
-				if (HasDefinitions(dir))
-				{
-					return Path.GetFullPath(dir);
-				}
-			}
-
-			var checkedList = string.Join(Environment.NewLine + " - ", candidates.Distinct());
-			throw new DirectoryNotFoundException(
-				$"Não foi possível localizar 'events.json' e 'enums.json'. Caminhos testados (BasePath='{configuredPath}'):\n - {checkedList}");
-		}
-
-		private static bool HasDefinitions(string? dir)
-		{
-			if (string.IsNullOrWhiteSpace(dir)) return false;
-			try
-			{
-				var eventsPath = Path.Combine(dir, "events.json");
-				var enumsPath = Path.Combine(dir, "enums.json");
-				return File.Exists(eventsPath) && File.Exists(enumsPath);
-			}
-			catch
-			{
-				return false;
-			}
-		}
 	}
 }
