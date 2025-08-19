@@ -7,42 +7,70 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable;
 using AlbionOnlineSniffer.Core.Models.Dependencies.Mob;
 using AlbionOnlineSniffer.Core.Models.Dependencies.Item;
+using System.Linq;
 
 namespace AlbionOnlineSniffer.Core.Services
 {
     /// <summary>
-    /// Serviço para carregar todos os dados XML necessários
-    /// Baseado na estrutura do albion-radar
+    /// Serviço para carregar todos os dados JSON necessários
+    /// Baseado na estrutura do albion-radar, mas usando arquivos do Core
     /// </summary>
     public class DataLoaderService
     {
         private readonly ILogger<DataLoaderService> _logger;
-        private readonly string _basePath;
 
         public DataLoaderService(ILogger<DataLoaderService> logger)
         {
             _logger = logger;
-            _basePath = Directory.GetCurrentDirectory();
         }
 
         /// <summary>
-        /// Carrega dados de clusters do arquivo JSON
+        /// Resolve o caminho para os arquivos JSON do Core
+        /// </summary>
+        private string? ResolveCoreJsonPath(string fileName)
+        {
+            var probePaths = new List<string>
+            {
+                Path.Combine(AppContext.BaseDirectory, "src/AlbionOnlineSniffer.Core/Data/jsons", fileName),
+                Path.Combine(Directory.GetCurrentDirectory(), "src/AlbionOnlineSniffer.Core/Data/jsons", fileName),
+                Path.Combine(AppContext.BaseDirectory, fileName),
+                Path.Combine(Directory.GetCurrentDirectory(), fileName)
+            };
+
+            // Tenta resolver via ContentRoot (Web/App) para o caminho do projeto Core
+            var currentDir = Directory.GetCurrentDirectory();
+            var baseDir = AppContext.BaseDirectory;
+            
+            // Caminho relativo de sibling project (../AlbionOnlineSniffer.Core/...)
+            var siblingCorePath = Path.GetFullPath(Path.Combine(currentDir, "../AlbionOnlineSniffer.Core/Data/jsons", fileName));
+            probePaths.Add(siblingCorePath);
+
+            // Caminho relativo via src (caso ContentRoot seja a raiz do repositório)
+            var srcCorePath = Path.GetFullPath(Path.Combine(currentDir, "src/AlbionOnlineSniffer.Core/Data/jsons", fileName));
+            probePaths.Add(srcCorePath);
+
+            return probePaths.FirstOrDefault(File.Exists);
+        }
+
+        /// <summary>
+        /// Carrega dados de clusters do arquivo JSON do Core
         /// </summary>
         public Dictionary<string, Cluster> LoadClusters()
         {
             try
             {
-                var clustersPath = Path.Combine(_basePath, "ao-bin-dumps", "clusters.json");
-                if (!File.Exists(clustersPath))
+                var clustersPath = ResolveCoreJsonPath("clusters.json");
+                if (string.IsNullOrEmpty(clustersPath))
                 {
-                    _logger.LogWarning("Arquivo de clusters não encontrado: {Path}", clustersPath);
+                    _logger.LogWarning("Arquivo de clusters não encontrado. Verificando caminhos: {CurrentDir}, {BaseDir}", 
+                        Directory.GetCurrentDirectory(), AppContext.BaseDirectory);
                     return new Dictionary<string, Cluster>();
                 }
 
                 var json = File.ReadAllText(clustersPath);
                 var clusters = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, Cluster>>(json);
                 
-                _logger.LogInformation("Carregados {Count} clusters", clusters?.Count ?? 0);
+                _logger.LogInformation("Carregados {Count} clusters de: {Path}", clusters?.Count ?? 0, clustersPath);
                 return clusters ?? new Dictionary<string, Cluster>();
             }
             catch (Exception ex)
@@ -53,13 +81,13 @@ namespace AlbionOnlineSniffer.Core.Services
         }
 
         /// <summary>
-        /// Carrega dados de itens do arquivo XML
+        /// Carrega dados de itens do arquivo XML (mantido para compatibilidade)
         /// </summary>
         public List<PlayerItems> LoadItems()
         {
             try
             {
-                var itemsPath = Path.Combine(_basePath, "ao-bin-dumps", "items.xml");
+                var itemsPath = Path.Combine(Directory.GetCurrentDirectory(), "ao-bin-dumps", "items.xml");
                 if (!File.Exists(itemsPath))
                 {
                     _logger.LogWarning("Arquivo de itens não encontrado: {Path}", itemsPath);
@@ -78,13 +106,13 @@ namespace AlbionOnlineSniffer.Core.Services
         }
 
         /// <summary>
-        /// Carrega dados de mobs do arquivo XML
+        /// Carrega dados de mobs do arquivo XML (mantido para compatibilidade)
         /// </summary>
         public List<MobInfo> LoadMobs()
         {
             try
             {
-                var mobsPath = Path.Combine(_basePath, "ao-bin-dumps", "mobs.xml");
+                var mobsPath = Path.Combine(Directory.GetCurrentDirectory(), "ao-bin-dumps", "mobs.xml");
                 if (!File.Exists(mobsPath))
                 {
                     _logger.LogWarning("Arquivo de mobs não encontrado: {Path}", mobsPath);
@@ -103,13 +131,13 @@ namespace AlbionOnlineSniffer.Core.Services
         }
 
         /// <summary>
-        /// Carrega dados de harvestables do arquivo XML
+        /// Carrega dados de harvestables do arquivo XML (mantido para compatibilidade)
         /// </summary>
         public Dictionary<int, string> LoadHarvestables()
         {
             try
             {
-                var harvestablesPath = Path.Combine(_basePath, "ao-bin-dumps", "harvestables.xml");
+                var harvestablesPath = Path.Combine(Directory.GetCurrentDirectory(), "ao-bin-dumps", "harvestables.xml");
                 if (!File.Exists(harvestablesPath))
                 {
                     _logger.LogWarning("Arquivo de harvestables não encontrado: {Path}", harvestablesPath);
