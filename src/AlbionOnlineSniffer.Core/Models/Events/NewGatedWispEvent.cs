@@ -12,13 +12,17 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public NewGatedWispEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.NewWispGate;
+            offsets = packetOffsets?.NewWispGate ?? new byte[] { 0, 1 };
             
             Id = Convert.ToInt32(parameters[offsets[0]]);
 
             if (parameters.ContainsKey(offsets[1]) && parameters[offsets[1]] is byte[] positionBytes)
             {
                 PositionBytes = positionBytes;
+            }
+            else
+            {
+                PositionBytes = Array.Empty<byte>();
             }
         }
 

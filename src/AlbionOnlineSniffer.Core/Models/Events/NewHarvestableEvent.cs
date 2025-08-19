@@ -35,6 +35,10 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             {
                 PositionBytes = positionBytes;
             }
+            else
+            {
+                PositionBytes = Array.Empty<byte>();
+            }
 
             // Tier e Charges podem estar em diferentes offsets dependendo do tipo
             if (offsets.Length > 3 && parameters.ContainsKey(offsets[3]))
@@ -50,7 +54,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public int Id { get; private set; }
         public int TypeId { get; private set; }
-        public byte[] PositionBytes { get; private set; }
+        public byte[] PositionBytes { get; private set; } = Array.Empty<byte>();
         public byte Tier { get; private set; }
         public byte Charges { get; private set; }
     }

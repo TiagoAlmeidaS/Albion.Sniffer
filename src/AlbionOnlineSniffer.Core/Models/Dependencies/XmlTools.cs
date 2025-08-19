@@ -9,7 +9,10 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies
             var serializer = new XmlSerializer(typeof(T));
             using (FileStream fileStream = new FileStream(filePath, FileMode.Open))
             {
-                return (T)serializer.Deserialize(fileStream);
+                var result = serializer.Deserialize(fileStream);
+                if (result == null)
+                    throw new InvalidOperationException($"Falha ao deserializar arquivo {filePath}");
+                return (T)result;
             }
         }
     }

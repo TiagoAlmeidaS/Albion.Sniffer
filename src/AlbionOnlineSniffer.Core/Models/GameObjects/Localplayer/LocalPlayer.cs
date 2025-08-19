@@ -24,6 +24,11 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer
                 ClusterColor = ClusterColor.Unknown,
                 DisplayName = "Unknown"
             };
+
+            // Inicializar propriedades obrigatórias
+            Nickname = string.Empty;
+            DynamicClusterData = new DynamicClusterData();
+            Chests = new List<string>();
         }
 
         public int Id { get; set; }
@@ -57,6 +62,14 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer
         public DateTime TimeCycle { get; set; }
 
         public int PlayersCount { get; set; }
+
+        public Cluster()
+        {
+            Id = string.Empty;
+            DisplayName = string.Empty;
+            LobbyID = string.Empty;
+            ClusterObjectives = new Dictionary<int, ClusterObjective>();
+        }
     }
 
     public class ClusterObjective
@@ -66,6 +79,11 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer
         public Vector2 Position { get; set; }
         public int Charge {get; set;}
         public string Type { get; set;}
+
+        public ClusterObjective()
+        {
+            Type = string.Empty;
+        }
     }
 
     [Obfuscation(Feature = "renaming", Exclude = true, ApplyToMembers = true)]

@@ -10,8 +10,8 @@ namespace AlbionOnlineSniffer.Core.Services
     /// </summary>
     public static class PacketOffsetsProvider
     {
-        private static IServiceProvider _serviceProvider;
-        private static PacketOffsets _cachedOffsets;
+        private static IServiceProvider? _serviceProvider;
+        private static PacketOffsets? _cachedOffsets;
         
         /// <summary>
         /// Configura o service provider para resolver PacketOffsets

@@ -11,7 +11,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public RegenerationChangedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.RegenerationHealthChangedEvent;
+            offsets = packetOffsets?.RegenerationHealthChangedEvent ?? new byte[] { 0, 1, 2, 3, 4 };
             
             Id = Convert.ToInt32(parameters[offsets[0]]);
 

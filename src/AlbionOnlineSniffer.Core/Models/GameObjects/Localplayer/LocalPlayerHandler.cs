@@ -18,7 +18,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer
             this.clusterList = clusterList ?? new Dictionary<string, Cluster>();
         }
 
-        public bool ChangeCluster(string id, DynamicClusterData dynamicClusterData = null)
+        public bool ChangeCluster(string id, DynamicClusterData? dynamicClusterData = null)
         {
             lock (localPlayer)
             {
@@ -31,7 +31,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer
                 {
                     Cluster cluster = clusterList[id];
 
-                    localPlayer.DynamicClusterData = null;
+                    localPlayer.DynamicClusterData = new DynamicClusterData();
                     localPlayer.CurrentCluster.DisplayName = cluster.DisplayName;
                     localPlayer.CurrentCluster.ClusterColor = cluster.ClusterColor;
                 }

@@ -59,7 +59,7 @@ namespace AlbionOnlineSniffer.Core.Services
                 if (oldConstructor != null)
                 {
                     // Para compatibilidade com eventos que ainda não foram refatorados
-                    return Activator.CreateInstance(eventType, parameters);
+                    return Activator.CreateInstance(eventType, parameters) ?? throw new InvalidOperationException($"Falha ao criar instância do evento {eventType.Name}");
                 }
                 
                 throw new InvalidOperationException($"Não foi possível encontrar um construtor adequado para o tipo {eventType.Name}");

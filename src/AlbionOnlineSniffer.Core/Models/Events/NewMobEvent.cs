@@ -15,7 +15,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public NewMobEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
             var packetOffsets = PacketOffsetsProvider.GetOffsets();
-            offsets = packetOffsets?.NewMobEvent;
+            offsets = packetOffsets?.NewMobEvent ?? Array.Empty<byte>();
             
             InitializeProperties(parameters);
         }
@@ -23,7 +23,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para injeção de dependência direta (se necessário no futuro)
         public NewMobEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.NewMobEvent;
+            offsets = packetOffsets?.NewMobEvent ?? Array.Empty<byte>();
             
             InitializeProperties(parameters);
         }
@@ -36,6 +36,10 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             if (parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[] positionBytes)
             {
                 PositionBytes = positionBytes;
+            }
+            else
+            {
+                PositionBytes = Array.Empty<byte>();
             }
 
             Health = Convert.ToSingle(parameters[offsets[3]]);
@@ -50,7 +54,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public int Id { get; private set; }
         public int TypeId { get; private set; }
-        public byte[] PositionBytes { get; private set; }
+        public byte[] PositionBytes { get; private set; } = Array.Empty<byte>();
         public float Health { get; private set; }
         public float MaxHealth { get; private set; }
         public byte EnchantmentLevel { get; private set; }

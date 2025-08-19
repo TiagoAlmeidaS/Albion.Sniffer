@@ -4,20 +4,30 @@ using Albion.Events.V1;
 using System;
 using System.IO;
 using AlbionOnlineSniffer.Core.Services;
-using AlbionOnlineSniffer.Core.Interfaces;
-using AlbionOnlineSniffer.Core.Models;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
+using AlbionOnlineSniffer.Core.Pipeline;
+using AlbionOnlineSniffer.Core.Enrichers;
+using AlbionOnlineSniffer.Options;
+using Albion.Network;
+using Microsoft.Extensions.Hosting;
+using AlbionOnlineSniffer.Options.Profiles;
+using AlbionOnlineSniffer.Core.Contracts;
+using AlbionOnlineSniffer.Core.Contracts.Transformers;
+using AlbionOnlineSniffer.Core.Observability;
+using AlbionOnlineSniffer.Core.Observability.Metrics;
+using AlbionOnlineSniffer.Core.Observability.HealthChecks;
+using AlbionOnlineSniffer.Core.Observability.Tracing;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Dungeons;
 using AlbionOnlineSniffer.Core.Models.GameObjects.FishNodes;
 using AlbionOnlineSniffer.Core.Models.GameObjects.GatedWisps;
-using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
-using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
-using AlbionOnlineSniffer.Core.Models.ResponseObj;
-using System.Linq;
-using Albion.Network;
-using Microsoft.Extensions.Hosting;
+using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
+using AlbionOnlineSniffer.Core.Handlers;
+using AlbionOnlineSniffer.Core.Interfaces;
+using AlbionOnlineSniffer.Core.Models;
 
 namespace AlbionOnlineSniffer.Core
 {
@@ -37,7 +47,7 @@ namespace AlbionOnlineSniffer.Core
         /// <param name="services">ServiceCollection para registrar os serviços</param>
         /// <param name="customPacketOffsets">PacketOffsets customizado (opcional)</param>
         /// <param name="customPacketIndexes">PacketIndexes customizado (opcional)</param>
-        public static void RegisterDataLoader(IServiceCollection services, PacketOffsets customPacketOffsets = null, PacketIndexes customPacketIndexes = null)
+        public static void RegisterDataLoader(IServiceCollection services, PacketOffsets? customPacketOffsets = null, PacketIndexes? customPacketIndexes = null)
         {
             // Services
             services.AddSingleton<PacketOffsetsLoader>(sp =>
@@ -267,6 +277,8 @@ namespace AlbionOnlineSniffer.Core
                 var factory = sp.GetRequiredService<ILoggerFactory>();
                 return new PositionDecryptor(factory.CreateLogger<PositionDecryptor>());
             });
+            // Serviço usado pelos transformers V1 para descriptografar posições
+            services.AddSingleton<PositionDecryptionService>();
             services.AddSingleton<ClusterService>(sp =>
             {
                 var factory = sp.GetRequiredService<ILoggerFactory>();
@@ -343,6 +355,78 @@ namespace AlbionOnlineSniffer.Core
 
             // Configuration
             services.AddSingleton<ConfigHandler>();
+
+            // Register pipeline configuration
+            services.Configure<PipelineConfiguration>(options =>
+            {
+                options.BufferSize = 10000;
+                options.WorkerCount = 4;
+                options.MaxConcurrency = 8;
+                options.RetryAttempts = 3;
+                options.RetryDelayMs = 1000;
+                options.CircuitBreakerThreshold = 5;
+                options.CircuitBreakerDurationMs = 30000;
+                options.TimeoutMs = 5000;
+                options.EnableBackpressure = true;
+                options.EnableCircuitBreaker = true;
+                options.EnableRetryPolicies = true;
+            });
+            
+            // Register enrichers
+            services.AddTransient<TierColorEnricher>();
+            services.AddTransient<ProfileFilterEnricher>();
+            services.AddTransient<ProximityAlertEnricher>();
+            
+            // Register composite enricher
+            services.AddSingleton<IEventEnricher>(provider =>
+            {
+                var enrichers = new IEventEnricher[]
+                {
+                    provider.GetRequiredService<TierColorEnricher>(),
+                    provider.GetRequiredService<ProfileFilterEnricher>(),
+                    provider.GetRequiredService<ProximityAlertEnricher>()
+                };
+                
+                var logger = provider.GetRequiredService<ILogger<CompositeEventEnricher>>();
+                return new CompositeEventEnricher(enrichers, logger);
+            });
+            
+            // Register pipeline
+            services.AddSingleton<IEventPipeline, EventPipeline>();
+            
+            // Register profile management (if not already registered)
+            services.AddSingleton<IProfileManager, ProfileManager>();
+            services.AddSingleton<ITierPaletteManager, TierPaletteManager>();
+
+            // V1 Contracts pipeline: router + transformers + bridge
+            services.AddSingleton<EventContractRouter>();
+            services.AddSingleton<IEventContractTransformer, NewCharacterToPlayerSpottedV1>();
+            services.AddSingleton<IEventContractTransformer, MoveEventToPlayerSpottedV1>();
+            services.AddSingleton<IEventContractTransformer, NewMobToMobSpawnedV1>();
+            // Removido: transformers agora registrados em Queue.DependencyProvider
+            
+            // Sincronização de código XOR para descriptografia de posições
+            services.AddSingleton<XorCodeSynchronizer>();
+
+            // 🚀 SISTEMA DE OBSERVABILIDADE (Fase 5)
+            // Métricas
+            services.AddSingleton<IMetricsCollector, PrometheusMetricsCollector>();
+            
+            // Health Checks
+            services.AddSingleton<IHealthCheckService, HealthCheckService>();
+            
+            // Tracing
+            services.AddSingleton<ITracingService, OpenTelemetryTracingService>();
+            
+            // Serviço principal de observabilidade
+            services.AddSingleton<IObservabilityService, ObservabilityService>();
+
+            // Configuração do OpenTelemetry
+            services.AddOpenTelemetry()
+                .WithMetrics(builder => builder
+                    .AddMeter("AlbionOnlineSniffer"))
+                .WithTracing(builder => builder
+                    .AddSource("AlbionOnlineSniffer"));
         }
 
         /// <summary>

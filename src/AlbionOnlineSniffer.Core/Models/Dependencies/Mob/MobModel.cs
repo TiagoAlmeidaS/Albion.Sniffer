@@ -9,6 +9,11 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Mob
     {
         [XmlElement(ElementName = "Harvestable")]
         public ShortHarvestableMetaData Harvestable { get; set; }
+
+        public LootMetaData()
+        {
+            Harvestable = new ShortHarvestableMetaData();
+        }
     }
 
     [XmlRoot(ElementName = "Mob")]
@@ -70,6 +75,21 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Mob
         public string MobTypeCategory { get; set; }
 
         [XmlElement(ElementName = "Loot")] public LootMetaData Loot { get; set; }
+
+        public MobMetaData()
+        {
+            UniqueName = string.Empty;
+            NpcHostility = string.Empty;
+            Faction = string.Empty;
+            AttackType = string.Empty;
+            Avatar = string.Empty;
+            AvatarRing = string.Empty;
+            DangerState = string.Empty;
+            NameLocaTag = string.Empty;
+            Category = string.Empty;
+            MobTypeCategory = string.Empty;
+            Loot = new LootMetaData();
+        }
     }
 
     [XmlRoot(ElementName = "Harvestable")]
@@ -78,12 +98,22 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Mob
         [XmlAttribute(AttributeName = "type")] public string Type { get; set; }
 
         [XmlAttribute(AttributeName = "tier")] public int Tier { get; set; }
+
+        public ShortHarvestableMetaData()
+        {
+            Type = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "Mobs")]
     public class Root
     {
         [XmlElement(ElementName = "Mob")] public List<MobMetaData> Mobs { get; set; }
+
+        public Root()
+        {
+            Mobs = new List<MobMetaData>();
+        }
     }
 
     public static class MobData

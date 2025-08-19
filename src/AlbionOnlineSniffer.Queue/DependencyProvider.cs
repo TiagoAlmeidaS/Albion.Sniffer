@@ -31,6 +31,39 @@ namespace AlbionOnlineSniffer.Queue
                 var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
                 return new EventToQueueBridge(dispatcher, publisher, loggerFactory.CreateLogger<EventToQueueBridge>());
             });
+
+            // V1 Contracts pipeline: router + transformers + bridge
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.EventContractRouter>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewCharacterToPlayerSpottedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.MoveEventToPlayerSpottedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewMobToMobSpawnedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.ChangeClusterToClusterChangedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.ChangeFlaggingFinishedToFlaggingFinishedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.CharacterEquipmentChangedToEquipmentChangedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.HarvestableChangeStateToHarvestableStateChangedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.HealthUpdateToHealthUpdatedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.KeySyncToKeySyncV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.LeaveToEntityLeftV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.LoadClusterObjectsToClusterObjectsLoadedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.MistsPlayerJoinedInfoToMistsPlayerJoinedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.MobChangeStateToMobStateChangedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.MountedToMountedStateChangedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewDungeonToDungeonFoundV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewFishingZoneToFishingZoneFoundV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewGatedWispToGatedWispFoundV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewHarvestableToHarvestableFoundV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewHarvestablesListToHarvestablesListFoundV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.NewLootChestToLootChestFoundV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.RegenerationChangedToRegenerationChangedV1>();
+            services.AddSingleton<AlbionOnlineSniffer.Core.Contracts.IEventContractTransformer, AlbionOnlineSniffer.Core.Contracts.Transformers.WispGateOpenedToWispGateOpenedV1>();
+            services.AddSingleton<V1ContractPublisherBridge>(sp =>
+            {
+                var dispatcher = sp.GetRequiredService<AlbionOnlineSniffer.Core.Services.EventDispatcher>();
+                var router = sp.GetRequiredService<AlbionOnlineSniffer.Core.Contracts.EventContractRouter>();
+                var publisher = sp.GetRequiredService<IQueuePublisher>();
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                return new V1ContractPublisherBridge(dispatcher, router, publisher, loggerFactory.CreateLogger<V1ContractPublisherBridge>());
+            });
         }
 
         /// <summary>

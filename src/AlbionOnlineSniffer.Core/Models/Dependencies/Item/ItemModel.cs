@@ -20,11 +20,14 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Item
             {
                 foreach (XmlNode item in applicableNodes)
                 {
+                    var uniquenameAttr = item.Attributes?["uniquename"];
+                    if (uniquenameAttr?.Value == null) continue;
+
                     var playerItem = new PlayerItems
                     {
                         Id = id++,
-                        Name = item.Attributes["uniquename"].Value,
-                        Itempower = int.TryParse(item.Attributes["itempower"]?.Value ?? "0", out var ip) ? ip : 0
+                        Name = uniquenameAttr.Value,
+                        Itempower = int.TryParse(item.Attributes?["itempower"]?.Value ?? "0", out var ip) ? ip : 0
                     };
                     
                     if (playerItem.Itempower > 0)
@@ -38,11 +41,14 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Item
                     {
                         foreach (XmlNode enchantment in enchantments)
                         {
+                            var enchantmentLevelAttr = enchantment.Attributes?["enchantmentlevel"];
+                            if (enchantmentLevelAttr?.Value == null) continue;
+
                             var enchantmentItem = new PlayerItems
                             {
                                 Id = id++,
-                                Name = item.Attributes["uniquename"].Value + "@" + enchantment.Attributes["enchantmentlevel"].Value,
-                                Itempower = int.TryParse(enchantment.Attributes["itempower"]?.Value ?? "0", out var eip) ? eip : 0
+                                Name = uniquenameAttr.Value + "@" + enchantmentLevelAttr.Value,
+                                Itempower = int.TryParse(enchantment.Attributes?["itempower"]?.Value ?? "0", out var eip) ? eip : 0
                             };
                             
                             if (enchantmentItem.Itempower > 0)

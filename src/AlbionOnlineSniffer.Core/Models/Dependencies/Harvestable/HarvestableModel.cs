@@ -13,6 +13,11 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable
 
         [XmlAttribute(AttributeName = "yield")]
         public float Yield { get; set; }
+
+        public HarvestableChargeMetaData()
+        {
+            Level = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "Tier")]
@@ -23,6 +28,12 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable
         [XmlAttribute(AttributeName = "tier")] public int Tier { get; set; }
 
         [XmlAttribute(AttributeName = "item")] public string Item { get; set; }
+
+        public HarvestableTierMetaData()
+        {
+            Charge = new List<HarvestableChargeMetaData>();
+            Item = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "Harvestable")]
@@ -36,6 +47,13 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable
         public string Resource { get; set; }
 
         [XmlIgnore] public readonly Dictionary<long, long> MaxChargesByTier = new Dictionary<long, long>();
+
+        public HarvestableMetaData()
+        {
+            Tier = new List<HarvestableTierMetaData>();
+            Name = string.Empty;
+            Resource = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "AO-Harvestables")]
@@ -43,6 +61,11 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Harvestable
     {
         [XmlElement(ElementName = "Harvestable")]
         public List<HarvestableMetaData> Harvestables { get; set; }
+
+        public Root()
+        {
+            Harvestables = new List<HarvestableMetaData>();
+        }
     }
 
     public static class HarvestableData

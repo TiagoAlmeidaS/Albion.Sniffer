@@ -19,6 +19,9 @@ using System.Numerics;
 using AlbionOnlineSniffer.Queue;
 using System.IO;
 using System.Linq;
+using AlbionOnlineSniffer.Queue.Publishers;
+using AlbionOnlineSniffer.Core.Pipeline;
+using AlbionOnlineSniffer.Core.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,6 +123,24 @@ app.MapGet("/api/metrics", (MetricsService metrics) =>
     return Results.Json(metricsData);
 });
 
+// Observability (Core) endpoints
+app.MapGet("/obs/metrics", (IObservabilityService obs) => 
+{
+    var text = obs.GetPrometheusMetrics();
+    return Results.Text(text, "text/plain");
+});
+
+app.MapGet("/obs/metrics/json", (IObservabilityService obs) => 
+{
+    return Results.Json(obs.GetJsonMetrics());
+});
+
+app.MapGet("/obs/healthz", async (IObservabilityService obs) => 
+{
+    var report = await obs.CheckHealthAsync();
+    return Results.Json(report);
+});
+
 // API endpoints para dados
 app.MapGet("/api/packets", (IInMemoryRepository<Packet> packets, int skip = 0, int take = 100) => 
 {
@@ -211,6 +232,13 @@ using (var scope = app.Services.CreateScope())
 
 	// Instancia o pipeline (DI faz o wire)
 	services.GetRequiredService<SnifferWebPipeline>();
+
+	// Força a criação do bridge de publicação V1 para escutar eventos imediatamente
+	services.GetService<V1ContractPublisherBridge>();
+
+	// Inicializa Observabilidade (Core)
+	var obs = services.GetService<IObservabilityService>();
+	obs?.InitializeAsync().GetAwaiter().GetResult();
 }
 
 app.Lifetime.ApplicationStarted.Register(() =>
@@ -219,6 +247,16 @@ app.Lifetime.ApplicationStarted.Register(() =>
 	{
 		var pipeline = app.Services.GetRequiredService<SnifferWebPipeline>();
 		pipeline.Start();
+
+		// Inicia o pipeline Core (assíncrono)
+		var corePipeline = app.Services.GetService<IEventPipeline>();
+		if (corePipeline != null)
+		{
+			Task.Run(() => corePipeline.StartAsync());
+		}
+
+		// Garante que o bridge V1 esteja instanciado
+		app.Services.GetService<V1ContractPublisherBridge>();
 	}
 	catch (Exception ex)
 	{

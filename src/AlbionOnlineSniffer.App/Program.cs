@@ -101,6 +101,28 @@ namespace AlbionOnlineSniffer.App
 					var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
 					var packetOffsets = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketOffsets>();
 					var packetIndexes = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketIndexes>();
+					
+					// Get pipeline service
+					var pipeline = serviceProvider.GetRequiredService<Core.Pipeline.IEventPipeline>();
+					logger.LogInformation("🚀 Pipeline obtido: {PipelineType}", pipeline.GetType().Name);
+					
+					// Start the pipeline
+					await pipeline.StartAsync();
+					logger.LogInformation("✅ Pipeline iniciado com sucesso!");
+					
+					// Register pipeline handler with EventDispatcher
+					eventDispatcher.RegisterHandler("*", async (eventType, eventData) =>
+					{
+						try
+						{
+							await pipeline.EnqueueAsync(eventType, eventData);
+						}
+						catch (Exception ex)
+						{
+							logger.LogError(ex, "Erro ao enfileirar evento {EventType} no pipeline", eventType);
+						}
+					});
+					logger.LogInformation("🔗 Pipeline conectado ao EventDispatcher");
 
 					// 🔧 VERIFICAR SE OS OFFSETS FORAM CARREGADOS CORRETAMENTE (via Core)
 					logger.LogInformation("🔍 VERIFICANDO OFFSETS CARREGADOS (via Core):");

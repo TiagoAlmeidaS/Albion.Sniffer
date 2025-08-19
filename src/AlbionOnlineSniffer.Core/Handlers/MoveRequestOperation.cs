@@ -11,8 +11,11 @@ namespace AlbionOnlineSniffer.Core.Handlers
         
         public MoveRequestOperation(Dictionary<byte, object> parameters) : base(parameters)
         {
-            Position = Additions.fromFArray((float[])parameters[offsets[0]]);
-            NewPosition = Additions.fromFArray((float[])parameters[offsets[1]]);
+            var positionArray = parameters[offsets[0]] as float[];
+            var newPositionArray = parameters[offsets[1]] as float[];
+            
+            Position = positionArray != null ? Additions.fromFArray(positionArray) : Vector2.Zero;
+            NewPosition = newPositionArray != null ? Additions.fromFArray(newPositionArray) : Vector2.Zero;
             Speed = parameters.ContainsKey(offsets[2]) ? (float)parameters[offsets[2]] : 0f;
             Time = DateTime.UtcNow;
         }

@@ -20,11 +20,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             }
             offsets = packetOffsets?.ChangeCluster ?? new byte[] { 0 };
 
-            LocationId = parameters.TryGetValue(offsets[0], out var loc) ? loc as string : null;
-            Type = (offsets.Length > 1 && parameters.TryGetValue(offsets[1], out var typeObj)) ? typeObj as string : "NULL";
+            LocationId = parameters.TryGetValue(offsets[0], out var loc) ? loc as string ?? string.Empty : string.Empty;
+            Type = (offsets.Length > 1 && parameters.TryGetValue(offsets[1], out var typeObj)) ? typeObj as string ?? "NULL" : "NULL";
             DynamicClusterData = (offsets.Length > 2 && parameters.TryGetValue(offsets[2], out var dataObj) && dataObj is byte[] bytes)
                 ? ReadClusterData(bytes)
-                : null;
+                : new DynamicClusterData();
         }
 
         // Construtor para injeção de dependência direta (se necessário no futuro)
@@ -32,11 +32,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         {
             offsets = packetOffsets?.ChangeCluster ?? new byte[] { 0 };
             
-            LocationId = parameters[offsets[0]] as string;
-            Type = parameters.ContainsKey(offsets[1]) ? parameters[offsets[1]] as string : "NULL";
+            LocationId = parameters[offsets[0]] as string ?? string.Empty;
+            Type = parameters.ContainsKey(offsets[1]) ? parameters[offsets[1]] as string ?? "NULL" : "NULL";
             DynamicClusterData = parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[]
                 ? ReadClusterData(parameters[offsets[2]] as byte[])
-                : null;
+                : new DynamicClusterData();
         }
 
         public string LocationId { get; }
@@ -138,6 +138,16 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public byte UnknownByte3;
         public List<DynamicExit> Exits;
 
+        public DynamicClusterData()
+        {
+            ClusterId = string.Empty;
+            LongClusterId = string.Empty;
+            TemplateInstances = new List<TemplateInstance>();
+            ClusterName = string.Empty;
+            ClusterType = string.Empty;
+            Exits = new List<DynamicExit>();
+        }
+
         public bool HasNextFloor => Exits?.Count == 2 && !string.IsNullOrWhiteSpace(Exits[1].Str1);
     }
 
@@ -147,6 +157,14 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public string Str2;
         public string Str3;
         public string Str4;
+
+        public DynamicExit()
+        {
+            Str1 = string.Empty;
+            Str2 = string.Empty;
+            Str3 = string.Empty;
+            Str4 = string.Empty;
+        }
     }
 
     public class TemplateInstance
@@ -156,5 +174,12 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         public Vector3 Position;
         public float Rotation;
         public List<string> Layers;
+
+        public TemplateInstance()
+        {
+            TemplateInstanceId = string.Empty;
+            TemplateName = string.Empty;
+            Layers = new List<string>();
+        }
     }
 }

@@ -51,6 +51,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
         public PlayersHandler(List<PlayerItems> itemsList)
         {
             this.itemsList = itemsList ?? new List<PlayerItems>();
+            XorCode = Array.Empty<byte>();
         }
 
         // Overload to support tests providing List<ItemInfo>
@@ -59,6 +60,7 @@ namespace AlbionOnlineSniffer.Core.Models.GameObjects.Players
             this.itemsList = itemInfos != null
                 ? itemInfos.Select(i => new PlayerItems { Id = i.Id, Name = i.Name, Itempower = 0 }).ToList()
                 : new List<PlayerItems>();
+            XorCode = Array.Empty<byte>();
         }
 
         public void AddPlayer(int id, string name, string guild, string alliance, Vector2 position, Health health, Faction faction, int[] equipments, int[] spells)

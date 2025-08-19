@@ -5,13 +5,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AssemblyName>Albion.Events.V1</AssemblyName>
     <RootNamespace>Albion.Events.V1</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.6.101" />
+    <PackageReference Include="MessagePack" Version="3.1.4" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 

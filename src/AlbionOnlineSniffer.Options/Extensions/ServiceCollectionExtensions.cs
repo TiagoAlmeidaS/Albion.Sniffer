@@ -66,6 +66,8 @@ public static class ServiceCollectionExtensions
 	public static IServiceCollection AddProfileManagement(this IServiceCollection services)
 	{
 		services.AddSingleton<IProfileManager, ProfileManager>();
+		services.AddSingleton<ITierPaletteManager, TierPaletteManager>();
+		
 		return services;
 	}
 

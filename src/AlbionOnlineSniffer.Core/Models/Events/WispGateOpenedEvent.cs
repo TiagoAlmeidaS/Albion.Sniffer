@@ -10,7 +10,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public WispGateOpenedEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.WispGateOpened;
+            offsets = packetOffsets?.WispGateOpened ?? new byte[] { 0, 1 };
             
             Id = Convert.ToInt32(parameters[offsets[0]]);
             isCollected = parameters.ContainsKey(offsets[1]) && parameters[offsets[1]].ToString() == "2";

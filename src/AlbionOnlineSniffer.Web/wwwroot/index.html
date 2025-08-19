@@ -1,130 +1,1057 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Albion Sniffer - Web</title>
-	<style>
-		body { font-family: system-ui, sans-serif; margin: 16px; background: #0b0f14; color: #e6edf3; }
-		h1 { margin: 0 0 12px; font-size: 20px; }
-		.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-		.card { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 12px; }
-		.card h2 { margin: 0 0 8px; font-size: 16px; }
-		.list { max-height: 420px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-		.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #1f2937; font-size: 12px; }
-		.row { display: flex; gap: 8px; align-items: center; }
-		small { color: #9ca3af; }
-		.controls { display: flex; gap: 8px; margin-bottom: 12px; }
-		button { background: #2563eb; color: white; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-		button.secondary { background: #374151; }
-		pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
-	</style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Albion Sniffer - Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --darker: #020617;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo i {
+            font-size: 2rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .status-online {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .controls-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .metric-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .metric-icon.blue { background: rgba(59, 130, 246, 0.2); color: var(--primary); }
+        .metric-icon.green { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .metric-icon.orange { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .metric-icon.red { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .metric-icon.cyan { background: rgba(6, 182, 212, 0.2); color: var(--accent); }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-change {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .events-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .event-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .event-type {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.875rem;
+        }
+
+        .event-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .event-data {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .packets-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .packet-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .packet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .packet-size {
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .packet-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .packet-hex {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .health-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .health-status {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .health-status.healthy { color: var(--success); }
+        .health-status.warning { color: var(--warning); }
+        .health-status.critical { color: var(--danger); }
+
+        .health-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .main-container {
+                padding: 1rem;
+            }
+        }
+
+        .scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+    </style>
 </head>
 <body>
-	<h1>AlbionOnlineSniffer - Web</h1>
-	<div class="controls">
-		<button id="startBtn">Iniciar Captura</button>
-		<button id="stopBtn" class="secondary">Parar Captura</button>
-		<span id="status" class="badge">Status: —</span>
-	</div>
-	<div class="grid">
-		<div class="card">
-			<h2>Métricas</h2>
-			<div id="metrics"></div>
-		</div>
-		<div class="card">
-			<h2>Payloads UDP (recentes)</h2>
-			<div id="payloads" class="list"></div>
-		</div>
-		<div class="card">
-			<h2>Eventos (parseados)</h2>
-			<div id="events" class="list"></div>
-		</div>
-		<div class="card">
-			<h2>Log</h2>
-			<div id="log" class="list"></div>
-		</div>
-	</div>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-radar"></i>
+                Albion Sniffer
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <i class="fas fa-circle"></i>
+                <span id="statusText">Conectando...</span>
+            </div>
+        </div>
+    </header>
 
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" integrity="sha512-Ny8mQNy1d1nVqvmLxjlJjzq8W5oNtFqksXC9Y+f4rJ+0grKrV3M+nq54cY7i0F2nM2j1G6V9i6f6rS1HNAsAKQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script>
-		const hub = new signalR.HubConnectionBuilder()
-			.withUrl('/hubs/sniffer')
-			.withAutomaticReconnect()
-			.build();
+    <main class="main-container">
+        <!-- Controles -->
+        <section class="controls-section">
+            <div class="control-group">
+                <button class="btn btn-primary" id="startBtn">
+                    <i class="fas fa-play"></i>
+                    Iniciar Captura
+                </button>
+                <button class="btn btn-secondary" id="stopBtn">
+                    <i class="fas fa-stop"></i>
+                    Parar Captura
+                </button>
+                <button class="btn btn-secondary" id="clearBtn">
+                    <i class="fas fa-trash"></i>
+                    Limpar Dados
+                </button>
+            </div>
+            <div class="control-group">
+                <button class="btn btn-secondary" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i>
+                    Atualizar
+                </button>
+            </div>
+        </section>
 
-		const $metrics = document.getElementById('metrics');
-		const $payloads = document.getElementById('payloads');
-		const $events = document.getElementById('events');
-		const $log = document.getElementById('log');
-		const $status = document.getElementById('status');
+        <!-- Métricas Principais -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Pacotes Capturados</span>
+                    <div class="metric-icon blue">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="packetsMetric">0</div>
+                <div class="metric-change" id="packetsChange">0 pkt/s</div>
+            </div>
 
-		function log(msg) {
-			const el = document.createElement('div');
-			el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-			$log.prepend(el);
-		}
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Eventos Processados</span>
+                    <div class="metric-icon green">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="eventsMetric">0</div>
+                <div class="metric-change" id="eventsChange">0 evt/s</div>
+            </div>
 
-		function renderMetrics(m) {
-			$status.textContent = `Status: ${m.status || m.Status}`;
-			$metrics.innerHTML = `
-				<div class="row"><span class="badge">Pacotes</span><small>${m.validPacketsCaptured ?? m.ValidPacketsCaptured}/${m.totalPacketsCaptured ?? m.TotalPacketsCaptured}</small></div>
-				<div class="row"><span class="badge">Bytes</span><small>${m.totalBytesCapturated ?? m.TotalBytesCapturated}</small></div>
-				<div class="row"><span class="badge">Rate</span><small>${(m.packetsPerSecond ?? m.PacketsPerSecond)?.toFixed?.(2) ?? (m.packetsPerSecond ?? m.PacketsPerSecond)} pkt/s, ${(m.bytesPerSecond ?? m.BytesPerSecond)?.toFixed?.(2) ?? (m.bytesPerSecond ?? m.BytesPerSecond)} B/s</small></div>
-				<div class="row"><span class="badge">Erros</span><small>${m.captureErrors ?? m.CaptureErrors}</small></div>
-				<div class="row"><span class="badge">Interface</span><small>${(m.lastInterface ?? m.LastInterface) || '—'}</small></div>
-				<div class="row"><span class="badge">Filtro</span><small>${(m.lastFilter ?? m.LastFilter) || '—'}</small></div>
-			`;
-		}
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Throughput</span>
+                    <div class="metric-icon orange">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="throughputMetric">0</div>
+                <div class="metric-change" id="throughputChange">0 B/s</div>
+            </div>
 
-		hub.on('metrics', renderMetrics);
-		hub.on('udpPayload', p => {
-			const el = document.createElement('pre');
-			const length = p.length ?? p.Length;
-			const hex = p.hex ?? p.Hex ?? '';
-			el.textContent = `${length} bytes\n${hex.substring(0, 256)}${hex.length > 256 ? '…' : ''}`;
-			$payloads.prepend(el);
-		});
-		hub.on('gameEvent', e => {
-			const el = document.createElement('pre');
-			el.textContent = JSON.stringify(e, null, 2);
-			$events.prepend(el);
-		});
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Taxa de Erro</span>
+                    <div class="metric-icon red">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="errorMetric">0%</div>
+                <div class="metric-change" id="errorChange">0 erros</div>
+            </div>
 
-		hub.onreconnecting(() => log('Reconectando ao hub...'));
-		hub.onreconnected(() => log('Reconectado.'));
-		hub.onclose(() => log('Conexão encerrada.'));
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Pipeline Buffer</span>
+                    <div class="metric-icon cyan">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="bufferMetric">0%</div>
+                <div class="metric-change" id="bufferChange">0/1000</div>
+            </div>
 
-		hub.start().then(async () => {
-			log('Conectado ao hub. Carregando dados recentes...');
-			const [m, events, packets] = await Promise.all([
-				fetch('/api/metrics').then(r => r.json()).catch(() => null),
-				fetch('/api/events/recent').then(r => r.json()).catch(() => []),
-				fetch('/api/packets/recent').then(r => r.json()).catch(() => []),
-			]);
-			if (m) renderMetrics(m);
-			for (const e of events.reverse()) {
-				const el = document.createElement('pre');
-				el.textContent = JSON.stringify(e, null, 2);
-				$events.append(el);
-			}
-			for (const p of packets.reverse()) {
-				const el = document.createElement('pre');
-				const length = p.length ?? p.Length;
-				const hex = p.hex ?? p.Hex ?? '';
-				el.textContent = `${length} bytes\n${hex.substring(0, 256)}${hex.length > 256 ? '…' : ''}`;
-				$payloads.append(el);
-			}
-		}).catch(err => log('Erro conectando ao hub: ' + err));
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Latência</span>
+                    <div class="metric-icon blue">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="latencyMetric">0ms</div>
+                <div class="metric-change" id="latencyChange">Média</div>
+            </div>
+        </section>
 
-		document.getElementById('startBtn').onclick = async () => {
-			await fetch('/api/capture/start', { method: 'POST' });
-			log('Captura iniciada.');
-		};
-		document.getElementById('stopBtn').onclick = async () => {
-			await fetch('/api/capture/stop', { method: 'POST' });
-			log('Captura parada.');
-		};
-	</script>
+        <!-- Dashboard Principal -->
+        <section class="dashboard-grid">
+            <div class="main-content">
+                <!-- Eventos em Tempo Real -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-stream"></i>
+                            Eventos em Tempo Real
+                        </h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-secondary" id="clearEventsBtn">
+                                <i class="fas fa-trash"></i>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="events-list scrollbar" id="eventsList">
+                        <div class="empty-state">
+                            <i class="fas fa-stream"></i>
+                            <p>Nenhum evento capturado ainda</p>
+                            <small>Inicie a captura para ver eventos em tempo real</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contratos V1 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-file-contract"></i>
+                            Contratos V1 Publicados
+                        </h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-secondary" id="clearV1Btn">
+                                <i class="fas fa-trash"></i>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="events-list scrollbar" id="v1List">
+                        <div class="empty-state">
+                            <i class="fas fa-file-contract"></i>
+                            <p>Nenhum contrato V1 publicado ainda</p>
+                            <small>Os contratos aparecerão aqui após processamento</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <!-- Health Checks -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-heartbeat"></i>
+                            Status dos Serviços
+                        </h2>
+                    </div>
+                    <div class="health-grid" id="healthGrid">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            Carregando...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pacotes UDP -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-network-wired"></i>
+                            Pacotes UDP Recentes
+                        </h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-secondary" id="clearPacketsBtn">
+                                <i class="fas fa-trash"></i>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="packets-list scrollbar" id="packetsList">
+                        <div class="empty-state">
+                            <i class="fas fa-network-wired"></i>
+                            <p>Nenhum pacote capturado ainda</p>
+                            <small>Inicie a captura para ver pacotes UDP</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs do Sistema -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-list-alt"></i>
+                            Logs do Sistema
+                        </h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-secondary" id="clearLogsBtn">
+                                <i class="fas fa-trash"></i>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="events-list scrollbar" id="logsList">
+                        <div class="empty-state">
+                            <i class="fas fa-list-alt"></i>
+                            <p>Nenhum log disponível</p>
+                            <small>Os logs aparecerão aqui durante a execução</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        class AlbionSnifferDashboard {
+            constructor() {
+                this.hub = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/sniffer')
+                    .withAutomaticReconnect()
+                    .build();
+
+                this.metrics = {
+                    packets: 0,
+                    events: 0,
+                    throughput: 0,
+                    errors: 0,
+                    buffer: 0,
+                    latency: 0
+                };
+
+                this.lastUpdate = Date.now();
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.setupSignalR();
+                this.startMetricsUpdate();
+                this.loadInitialData();
+            }
+
+            setupEventListeners() {
+                document.getElementById('startBtn').onclick = () => this.startCapture();
+                document.getElementById('stopBtn').onclick = () => this.stopCapture();
+                document.getElementById('clearBtn').onclick = () => this.clearAllData();
+                document.getElementById('refreshBtn').onclick = () => this.refreshData();
+                document.getElementById('clearEventsBtn').onclick = () => this.clearEvents();
+                document.getElementById('clearV1Btn').onclick = () => this.clearV1();
+                document.getElementById('clearPacketsBtn').onclick = () => this.clearPackets();
+                document.getElementById('clearLogsBtn').onclick = () => this.clearLogs();
+            }
+
+            setupSignalR() {
+                this.hub.on('metrics', (data) => this.updateMetrics(data));
+                this.hub.on('udpPayload', (data) => this.addPacket(data));
+                this.hub.on('gameEvent', (data) => this.addEvent(data));
+                this.hub.on('v1Contract', (data) => this.addV1Contract(data));
+
+                this.hub.onreconnecting(() => this.updateStatus('Reconectando...', 'warning'));
+                this.hub.onreconnected(() => this.updateStatus('Conectado', 'online'));
+                this.hub.onclose(() => this.updateStatus('Desconectado', 'offline'));
+
+                this.hub.start()
+                    .then(() => this.updateStatus('Conectado', 'online'))
+                    .catch(err => {
+                        console.error('Erro conectando ao hub:', err);
+                        this.updateStatus('Erro de Conexão', 'offline');
+                    });
+            }
+
+            updateStatus(text, type) {
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                indicator.className = `status-indicator status-${type}`;
+                statusText.textContent = text;
+            }
+
+            updateMetrics(data) {
+                // Atualiza métricas principais
+                if (data.validPacketsCaptured !== undefined) {
+                    this.metrics.packets = data.validPacketsCaptured;
+                    document.getElementById('packetsMetric').textContent = this.formatNumber(data.validPacketsCaptured);
+                }
+
+                if (data.packetsPerSecond !== undefined) {
+                    document.getElementById('packetsChange').textContent = `${data.packetsPerSecond.toFixed(1)} pkt/s`;
+                }
+
+                if (data.totalBytesCapturated !== undefined) {
+                    this.metrics.throughput = data.totalBytesCapturated;
+                    document.getElementById('throughputMetric').textContent = this.formatBytes(data.totalBytesCapturated);
+                }
+
+                if (data.bytesPerSecond !== undefined) {
+                    document.getElementById('throughputChange').textContent = `${this.formatBytes(data.bytesPerSecond)}/s`;
+                }
+
+                if (data.captureErrors !== undefined) {
+                    this.metrics.errors = data.captureErrors;
+                    const errorRate = data.totalPacketsCaptured > 0 ? (data.captureErrors / data.totalPacketsCaptured * 100) : 0;
+                    document.getElementById('errorMetric').textContent = `${errorRate.toFixed(2)}%`;
+                    document.getElementById('errorChange').textContent = `${data.captureErrors} erros`;
+                }
+
+                // Atualiza status de captura
+                if (data.status) {
+                    this.updateStatus(data.status === 'Running' ? 'Capturando' : 'Parado', 
+                                   data.status === 'Running' ? 'online' : 'warning');
+                }
+            }
+
+            addEvent(event) {
+                const eventsList = document.getElementById('eventsList');
+                const emptyState = eventsList.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                const eventItem = document.createElement('div');
+                eventItem.className = 'event-item';
+                eventItem.innerHTML = `
+                    <div class="event-header">
+                        <span class="event-type">${event.eventType || 'Unknown'}</span>
+                        <span class="event-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="event-data">${JSON.stringify(event, null, 2)}</div>
+                `;
+
+                eventsList.insertBefore(eventItem, eventsList.firstChild);
+                
+                // Limita a 50 eventos
+                while (eventsList.children.length > 50) {
+                    eventsList.removeChild(eventsList.lastChild);
+                }
+
+                this.metrics.events++;
+                document.getElementById('eventsMetric').textContent = this.formatNumber(this.metrics.events);
+            }
+
+            addV1Contract(contract) {
+                const v1List = document.getElementById('v1List');
+                const emptyState = v1List.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                const contractItem = document.createElement('div');
+                contractItem.className = 'event-item';
+                contractItem.innerHTML = `
+                    <div class="event-header">
+                        <span class="event-type">${contract.topic || 'V1 Contract'}</span>
+                        <span class="event-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="event-data">${JSON.stringify(contract, null, 2)}</div>
+                `;
+
+                v1List.insertBefore(contractItem, v1List.firstChild);
+                
+                // Limita a 30 contratos
+                while (v1List.children.length > 30) {
+                    v1List.removeChild(v1List.lastChild);
+                }
+            }
+
+            addPacket(packet) {
+                const packetsList = document.getElementById('packetsList');
+                const emptyState = packetsList.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                const packetItem = document.createElement('div');
+                packetItem.className = 'packet-item';
+                packetItem.innerHTML = `
+                    <div class="packet-header">
+                        <span class="packet-size">${packet.length || packet.Length || 0} bytes</span>
+                        <span class="packet-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="packet-hex">${(packet.hex || packet.Hex || '').substring(0, 128)}${(packet.hex || packet.Hex || '').length > 128 ? '...' : ''}</div>
+                `;
+
+                packetsList.insertBefore(packetItem, packetsList.firstChild);
+                
+                // Limita a 100 pacotes
+                while (packetsList.children.length > 100) {
+                    packetsList.removeChild(packetsList.lastChild);
+                }
+            }
+
+            addLog(message) {
+                const logsList = document.getElementById('logsList');
+                const emptyState = logsList.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                const logItem = document.createElement('div');
+                logItem.className = 'event-item';
+                logItem.innerHTML = `
+                    <div class="event-header">
+                        <span class="event-type">Log</span>
+                        <span class="event-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="event-data">${message}</div>
+                `;
+
+                logsList.insertBefore(logItem, logsList.firstChild);
+                
+                // Limita a 100 logs
+                while (logsList.children.length > 100) {
+                    logsList.removeChild(logsList.lastChild);
+                }
+            }
+
+            async startCapture() {
+                try {
+                    await fetch('/api/capture/start', { method: 'POST' });
+                    this.addLog('Captura iniciada via API');
+                } catch (error) {
+                    this.addLog(`Erro ao iniciar captura: ${error.message}`);
+                }
+            }
+
+            async stopCapture() {
+                try {
+                    await fetch('/api/capture/stop', { method: 'POST' });
+                    this.addLog('Captura parada via API');
+                } catch (error) {
+                    this.addLog(`Erro ao parar captura: ${error.message}`);
+                }
+            }
+
+            async clearAllData() {
+                try {
+                    await fetch('/api/repositories/clear', { method: 'POST' });
+                    this.clearEvents();
+                    this.clearV1();
+                    this.clearPackets();
+                    this.addLog('Todos os dados foram limpos');
+                } catch (error) {
+                    this.addLog(`Erro ao limpar dados: ${error.message}`);
+                }
+            }
+
+            clearEvents() {
+                const eventsList = document.getElementById('eventsList');
+                eventsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-stream"></i>
+                        <p>Nenhum evento capturado ainda</p>
+                        <small>Inicie a captura para ver eventos em tempo real</small>
+                    </div>
+                `;
+            }
+
+            clearV1() {
+                const v1List = document.getElementById('v1List');
+                v1List.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-file-contract"></i>
+                        <p>Nenhum contrato V1 publicado ainda</p>
+                        <small>Os contratos aparecerão aqui após processamento</small>
+                    </div>
+                `;
+            }
+
+            clearPackets() {
+                const packetsList = document.getElementById('packetsList');
+                packetsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-network-wired"></i>
+                        <p>Nenhum pacote capturado ainda</p>
+                        <small>Inicie a captura para ver pacotes UDP</small>
+                    </div>
+                `;
+            }
+
+            clearLogs() {
+                const logsList = document.getElementById('logsList');
+                logsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-list-alt"></i>
+                        <p>Nenhum log disponível</p>
+                        <small>Os logs aparecerão aqui durante a execução</small>
+                    </div>
+                `;
+            }
+
+            async refreshData() {
+                this.addLog('Atualizando dados...');
+                await this.loadInitialData();
+                this.addLog('Dados atualizados');
+            }
+
+            async loadInitialData() {
+                try {
+                    const [metrics, events, packets, health] = await Promise.all([
+                        fetch('/api/metrics').then(r => r.json()).catch(() => null),
+                        fetch('/api/events/recent').then(r => r.json()).catch(() => []),
+                        fetch('/api/packets/recent').then(r => r.json()).catch(() => []),
+                        fetch('/obs/healthz').then(r => r.json()).catch(() => null)
+                    ]);
+
+                    if (metrics) this.updateMetrics(metrics);
+                    if (health) this.updateHealthStatus(health);
+                    
+                    // Carrega eventos históricos
+                    events.reverse().forEach(event => this.addEvent(event));
+                    packets.reverse().forEach(packet => this.addPacket(packet));
+                    
+                } catch (error) {
+                    this.addLog(`Erro ao carregar dados iniciais: ${error.message}`);
+                }
+            }
+
+            updateHealthStatus(health) {
+                const healthGrid = document.getElementById('healthGrid');
+                if (!health || !health.checks) return;
+
+                healthGrid.innerHTML = health.checks.map(check => `
+                    <div class="health-item">
+                        <div class="health-status ${check.status.toLowerCase()}">${check.name}</div>
+                        <div class="health-value">${check.status}</div>
+                    </div>
+                `).join('');
+            }
+
+            startMetricsUpdate() {
+                setInterval(() => {
+                    this.updateMetricsDisplay();
+                }, 1000);
+            }
+
+            updateMetricsDisplay() {
+                const now = Date.now();
+                const delta = (now - this.lastUpdate) / 1000;
+                this.lastUpdate = now;
+
+                // Atualiza métricas em tempo real
+                if (delta > 0) {
+                    // Aqui você pode adicionar cálculos de métricas em tempo real
+                }
+            }
+
+            formatNumber(num) {
+                if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                return num.toString();
+            }
+
+            formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // Inicializa o dashboard quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            new AlbionSnifferDashboard();
+        });
+    </script>
 </body>
 </html>

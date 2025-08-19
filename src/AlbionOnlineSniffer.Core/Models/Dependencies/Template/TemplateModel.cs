@@ -14,6 +14,14 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
 
         [XmlElement(ElementName = "compoundtile")]
         public List<CompoundTile> CompoundTiles { get; set; }
+
+        public Layer()
+        {
+            Id = string.Empty;
+            Name = string.Empty;
+            Tiles = new List<Tile>();
+            CompoundTiles = new List<CompoundTile>();
+        }
     }
 
     [XmlRoot(ElementName = "tile")]
@@ -29,6 +37,15 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
         public string Scale { get; set; }
 
         [XmlAttribute(AttributeName = "rot")] public string Rot { get; set; }
+
+        public Tile()
+        {
+            Name = string.Empty;
+            Pos = string.Empty;
+            RotY = string.Empty;
+            Scale = string.Empty;
+            Rot = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "compoundtile")]
@@ -39,6 +56,13 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
         [XmlAttribute(AttributeName = "pos")] public string Pos { get; set; }
 
         [XmlAttribute(AttributeName = "roty")] public string RotY { get; set; }
+
+        public CompoundTile()
+        {
+            Name = string.Empty;
+            Pos = string.Empty;
+            RotY = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "layergroup")]
@@ -47,6 +71,12 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
         [XmlElement(ElementName = "layer")] public List<Layer> Layers { get; set; }
 
         [XmlAttribute(AttributeName = "name")] public string Name { get; set; }
+
+        public LayerGroup()
+        {
+            Layers = new List<Layer>();
+            Name = string.Empty;
+        }
     }
 
     [XmlRoot(ElementName = "tiles")]
@@ -56,12 +86,23 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
         public List<LayerGroup> LayerGroups { get; set; }
 
         [XmlElement(ElementName = "tile")] public List<Tile> Tiles { get; set; }
+
+        public TilesRoot()
+        {
+            LayerGroups = new List<LayerGroup>();
+            Tiles = new List<Tile>();
+        }
     }
 
     [XmlRoot(ElementName = "template")]
     public class Template
     {
         [XmlElement(ElementName = "tiles")] public TilesRoot TilesRoot { get; set; }
+
+        public Template()
+        {
+            TilesRoot = new TilesRoot();
+        }
     }
 
     public static class TemplateData
@@ -98,7 +139,7 @@ namespace AlbionOnlineSniffer.Core.Models.Dependencies.Template
                 Console.Error.WriteLine($"Can't read template data {path}/{name}: " + e.Message);
             }
 
-            return null;
+            return new Template();
         }
     }
 }

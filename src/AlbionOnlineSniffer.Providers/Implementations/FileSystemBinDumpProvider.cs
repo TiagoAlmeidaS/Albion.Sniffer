@@ -70,7 +70,7 @@ public class FileSystemBinDumpProvider : IBinDumpProvider
                     }
                     else if (ext == ".zip")
                     {
-                        var archive = new ZipArchive(fileStream, ZipArchiveMode.Read);
+                        using var archive = new ZipArchive(fileStream, ZipArchiveMode.Read, leaveOpen: true);
                         var entry = archive.Entries.FirstOrDefault();
                         if (entry != null)
                         {
@@ -97,7 +97,7 @@ public class FileSystemBinDumpProvider : IBinDumpProvider
         var basePath = GetDumpsPath();
         if (!Directory.Exists(basePath))
         {
-            return Task.FromResult(Enumerable.Empty<string>());
+            return Task.FromResult((IEnumerable<string>)Enumerable.Empty<string>());
         }
         
         var dumps = Directory.GetFiles(basePath, "*.bin")
@@ -107,7 +107,7 @@ public class FileSystemBinDumpProvider : IBinDumpProvider
             .Distinct()
             .OrderBy(n => n);
         
-        return Task.FromResult(dumps);
+        return Task.FromResult((IEnumerable<string>)dumps);
     }
     
     public Task<string> GetVersionAsync(CancellationToken cancellationToken = default)

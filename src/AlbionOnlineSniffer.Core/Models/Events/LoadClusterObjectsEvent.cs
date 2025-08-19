@@ -9,10 +9,10 @@ namespace AlbionOnlineSniffer.Core.Models.Events
     {
         public LoadClusterObjectsEvent(Dictionary<byte, object> parameters) : base(parameters)
         {
+            ClusterObjectives = new Dictionary<int, ClusterObjective>();
+
             if (((byte[][])parameters[1]).Length != 0)
             {
-                ClusterObjectives = new Dictionary<int, ClusterObjective>();
-
                 for (int i = 0; i < ((byte[][])parameters[1]).Length; i++)
                 {
                     int id = ConvertId(parameters, i);
@@ -35,7 +35,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
                 }
 
                 if (ClusterObjectives.Count() == 0)
-                    ClusterObjectives = null;
+                    ClusterObjectives = new Dictionary<int, ClusterObjective>();
             }
         }
 

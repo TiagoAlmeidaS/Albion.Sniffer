@@ -12,7 +12,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         public NewDungeonEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.NewDungeonExit;
+            offsets = packetOffsets?.NewDungeonExit ?? new byte[] { 0, 1, 2, 3 };
             
             Id = Convert.ToInt32(parameters[offsets[0]]);
 
@@ -20,8 +20,12 @@ namespace AlbionOnlineSniffer.Core.Models.Events
             {
                 PositionBytes = positionBytes;
             }
+            else
+            {
+                PositionBytes = Array.Empty<byte>();
+            }
 
-            Type = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string : "NULL";
+            Type = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string ?? "NULL" : "NULL";
 
             Charges = Convert.ToInt32(parameters[offsets[3]]);
         }

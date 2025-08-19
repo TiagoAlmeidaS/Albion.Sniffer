@@ -26,9 +26,7 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         // Construtor para injeção de dependência direta (se necessário no futuro)
         public MoveEvent(Dictionary<byte, object> parameters, PacketOffsets packetOffsets) : base(parameters)
         {
-            offsets = packetOffsets?.Move;
-            if (offsets == null)
-                throw new NullReferenceException("PacketOffsets.Move is null");
+            offsets = packetOffsets?.Move ?? new byte[] { 0, 1 };
             
             InitializeProperties(parameters);
         }
@@ -66,8 +64,8 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         }
 
         public int Id { get; private set; }
-        public byte[] PositionBytes { get; private set; }
-        public byte[] NewPositionBytes { get; private set; }
+        public byte[] PositionBytes { get; private set; } = Array.Empty<byte>();
+        public byte[] NewPositionBytes { get; private set; } = Array.Empty<byte>();
         public float Speed { get; private set; }
         public DateTime Time { get; private set; }
 

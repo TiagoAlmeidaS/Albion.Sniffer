@@ -33,27 +33,35 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         private void InitializeProperties(Dictionary<byte, object> parameters)
         {
             Id = Convert.ToInt32(parameters[offsets[0]]);
-            Name = (string)parameters[offsets[1]];
-            GuildName = (string)parameters[offsets[2]];
-            AllianceName = (string)parameters[offsets[3]];
+            Name = (string)parameters[offsets[1]] ?? string.Empty;
+            GuildName = (string)parameters[offsets[2]] ?? string.Empty;
+            AllianceName = (string)parameters[offsets[3]] ?? string.Empty;
 
             if (offsets.Length > 4 && parameters.ContainsKey(offsets[4]) && parameters[offsets[4]] is byte[] positionBytes)
             {
                 PositionBytes = positionBytes;
+            }
+            else
+            {
+                PositionBytes = Array.Empty<byte>();
             }
 
             if (offsets.Length > 5 && parameters.TryGetValue(offsets[5], out var itemsObj) && itemsObj is float[] f)
             {
                 Items = f;
             }
+            else
+            {
+                Items = Array.Empty<float>();
+            }
         }
 
         public int Id { get; private set; }
-        public string Name { get; private set; }
-        public string GuildName { get; private set; }
-        public string AllianceName { get; private set; }
-        public byte[] PositionBytes { get; private set; }
-        public float[] Items { get; private set; }
+        public string Name { get; private set; } = string.Empty;
+        public string GuildName { get; private set; } = string.Empty;
+        public string AllianceName { get; private set; } = string.Empty;
+        public byte[] PositionBytes { get; private set; } = Array.Empty<byte>();
+        public float[] Items { get; private set; } = Array.Empty<float>();
 
         public Vector2 Position { get; set; }
 
