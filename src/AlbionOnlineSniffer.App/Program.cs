@@ -13,7 +13,7 @@ namespace AlbionOnlineSniffer.App
 {
 	class Program
 	{
-		static void Main(string[] args)
+		static async Task Main(string[] args)
 		{
 			try
 			{
@@ -21,7 +21,7 @@ namespace AlbionOnlineSniffer.App
 				Console.WriteLine($"📁 Diretório atual: {Directory.GetCurrentDirectory()}");
 				Console.WriteLine($"🔧 Versão do .NET: {Environment.Version}");
 				Console.WriteLine($"💻 Arquitetura: {(Environment.Is64BitProcess ? "x64" : "x86")}");
-				
+
 				// Verificar assemblies carregados
 				Console.WriteLine("📦 Assemblies carregados:");
 				foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -54,8 +54,8 @@ namespace AlbionOnlineSniffer.App
 
 					var binDumpsEnabled = configuration.GetValue<bool>("BinDumps:Enabled", true);
 					var binDumpsPath = configuration.GetValue<string>("BinDumps:BasePath", "ao-bin-dumps");
-					
-					logger.LogInformation("Configuração de bin-dumps: Habilitado={Enabled}, Caminho={Path}", 
+
+					logger.LogInformation("Configuração de bin-dumps: Habilitado={Enabled}, Caminho={Path}",
 						binDumpsEnabled, binDumpsPath);
 
 					// Publishers
@@ -65,10 +65,10 @@ namespace AlbionOnlineSniffer.App
 					// Configure dependency injection
 					logger.LogInformation("🔧 Configurando injeção de dependências...");
 					var services = new ServiceCollection();
-					
+
 					// Add logging
 					services.AddLogging(builder => builder.AddConsole());
-					
+
 					// Options + Profiles
 					services.AddSnifferOptions(configuration);
 					services.ValidateOptionsOnStart<AlbionOnlineSniffer.Options.SnifferOptions>();
@@ -87,39 +87,40 @@ namespace AlbionOnlineSniffer.App
 						new Capture.PacketCaptureService(udpPort, sp.GetService<Core.Interfaces.IAlbionEventLogger>()));
 					// Pipeline App
 					services.AddSingleton<App.Services.CapturePipeline>();
-					
+
 					// Build service provider
 					logger.LogInformation("🔧 Construindo service provider...");
 					var serviceProvider = services.BuildServiceProvider();
-					
+
 					// Force validation and log active profile
 					var snifferOptions = serviceProvider.GetRequiredService<IOptions<AlbionOnlineSniffer.Options.SnifferOptions>>().Value;
 					logger.LogInformation("Profile ativo: {Profile}", snifferOptions.GetActiveProfile().Name);
-					
+
 					// Get services from DI container
 					logger.LogInformation("🔧 Obtendo serviços do container...");
 					var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
 					var packetOffsets = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketOffsets>();
 					var packetIndexes = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketIndexes>();
-					
+
 					// Get pipeline service
 					var pipeline = serviceProvider.GetRequiredService<Core.Pipeline.IEventPipeline>();
 					logger.LogInformation("🚀 Pipeline obtido: {PipelineType}", pipeline.GetType().Name);
-					
+
 					// Start the pipeline
 					await pipeline.StartAsync();
 					logger.LogInformation("✅ Pipeline iniciado com sucesso!");
-					
-					// Register pipeline handler with EventDispatcher
-					eventDispatcher.RegisterHandler("*", async (eventType, eventData) =>
+
+					// Register pipeline handler with EventDispatcher (global handler)
+					eventDispatcher.RegisterGlobalHandler(async (eventData) =>
 					{
 						try
 						{
-							await pipeline.EnqueueAsync(eventType, eventData);
+							var eventTypeName = eventData.GetType().Name;
+							await pipeline.EnqueueAsync(eventTypeName, eventData);
 						}
 						catch (Exception ex)
 						{
-							logger.LogError(ex, "Erro ao enfileirar evento {EventType} no pipeline", eventType);
+							logger.LogError(ex, "Erro ao enfileirar evento no pipeline");
 						}
 					});
 					logger.LogInformation("🔗 Pipeline conectado ao EventDispatcher");
@@ -130,12 +131,12 @@ namespace AlbionOnlineSniffer.App
 					logger.LogInformation("  - HealthUpdateEvent: [{Offsets}]", string.Join(", ", packetOffsets.HealthUpdateEvent));
 					logger.LogInformation("  - NewCharacter: [{Offsets}]", string.Join(", ", packetOffsets.NewCharacter));
 					logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
-					
+
 					// 🔧 INTEGRAÇÃO COM MENSAGERIA - Bridge via DI
 					logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
 					serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
 					logger.LogInformation("✅ Bridge Event->Queue registrada!");
-					logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados", 
+					logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados",
 						eventDispatcher.GetHandlerCount("*"));
 
 					// Configurar serviços de parsing usando DI
@@ -193,13 +194,13 @@ namespace AlbionOnlineSniffer.App
 				Console.WriteLine($"💥 ERRO FATAL: {ex.Message}");
 				Console.WriteLine($"📋 Tipo: {ex.GetType().Name}");
 				Console.WriteLine($"📋 Stack Trace: {ex.StackTrace}");
-				
+
 				if (ex.InnerException != null)
 				{
 					Console.WriteLine($"📋 Inner Exception: {ex.InnerException.Message}");
 					Console.WriteLine($"📋 Inner Stack Trace: {ex.InnerException.StackTrace}");
 				}
-				
+
 				Environment.Exit(1);
 			}
 		}

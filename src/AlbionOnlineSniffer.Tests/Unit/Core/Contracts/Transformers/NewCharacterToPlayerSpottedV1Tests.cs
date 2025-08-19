@@ -4,20 +4,18 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 using AlbionOnlineSniffer.Core.Contracts.Transformers;
-using AlbionOnlineSniffer.Core.Services;
 using Albion.Events.V1;
-using AlbionOnlineSniffer.Core.Events;
 
 namespace AlbionOnlineSniffer.Tests.Unit.Core.Contracts.Transformers
 {
     public class NewCharacterToPlayerSpottedV1Tests
     {
-        private readonly Mock<IPositionDecryptionService> _positionDecryptionServiceMock;
+        private readonly Mock<PositionDecryptionService> _positionDecryptionServiceMock;
         private readonly NewCharacterToPlayerSpottedV1 _transformer;
 
         public NewCharacterToPlayerSpottedV1Tests()
         {
-            _positionDecryptionServiceMock = new Mock<IPositionDecryptionService>();
+            _positionDecryptionServiceMock = new Mock<PositionDecryptionService>(MockBehavior.Strict, (Microsoft.Extensions.Logging.ILogger<PositionDecryptionService>)Mock.Of<Microsoft.Extensions.Logging.ILogger<PositionDecryptionService>>());
             _transformer = new NewCharacterToPlayerSpottedV1(_positionDecryptionServiceMock.Object);
         }
 

@@ -3,11 +3,11 @@ using Albion.Events.V1;
 using MessagePack;
 using VerifyTests;
 using VerifyXunit;
+using VerifyTests;
 using Xunit;
 
 namespace AlbionOnlineSniffer.Tests.Contracts;
 
-[UsesVerify]
 public class PlayerSpottedV1_SnapshotTests
 {
     [Fact]

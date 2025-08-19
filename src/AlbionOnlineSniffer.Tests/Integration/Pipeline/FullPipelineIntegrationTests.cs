@@ -7,8 +7,8 @@ using Xunit;
 using AlbionOnlineSniffer.Core.Pipeline;
 using AlbionOnlineSniffer.Core.Enrichers;
 using AlbionOnlineSniffer.Core.Observability;
-using AlbionOnlineSniffer.Core.Options.Profiles;
-using AlbionOnlineSniffer.Core.Options;
+using AlbionOnlineSniffer.Options.Profiles;
+using AlbionOnlineSniffer.Options;
 
 namespace AlbionOnlineSniffer.Tests.Integration.Pipeline
 {

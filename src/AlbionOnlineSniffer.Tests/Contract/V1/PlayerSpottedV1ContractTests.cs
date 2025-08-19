@@ -1,13 +1,12 @@
 using System;
 using System.Threading.Tasks;
-using Verify.Xunit;
-using Verify.MessagePack;
+using VerifyXunit;
+using VerifyTests;
 using Xunit;
 using Albion.Events.V1;
 
 namespace AlbionOnlineSniffer.Tests.Contract.V1
 {
-    [UsesVerify]
     public class PlayerSpottedV1ContractTests
     {
         [Fact]

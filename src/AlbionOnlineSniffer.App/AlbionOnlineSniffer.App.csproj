@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AlbionOnlineSniffer.Core\AlbionOnlineSniffer.Core.csproj" />
+    <ProjectReference Include="..\AlbionOnlineSniffer.Providers\AlbionOnlineSniffer.Providers.csproj" />
     <ProjectReference Include="..\AlbionOnlineSniffer.Queue\AlbionOnlineSniffer.Queue.csproj" />
     <ProjectReference Include="..\AlbionOnlineSniffer.Capture\AlbionOnlineSniffer.Capture.csproj" />
   </ItemGroup>

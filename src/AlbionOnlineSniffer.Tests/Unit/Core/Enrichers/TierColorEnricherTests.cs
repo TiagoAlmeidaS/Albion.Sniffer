@@ -4,7 +4,7 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 using AlbionOnlineSniffer.Core.Enrichers;
-using AlbionOnlineSniffer.Core.Options.Profiles;
+using AlbionOnlineSniffer.Options.Profiles;
 using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Tests.Unit.Core.Enrichers

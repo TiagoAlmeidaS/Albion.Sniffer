@@ -8,8 +8,8 @@ using AlbionOnlineSniffer.Core.Observability.Metrics;
 using AlbionOnlineSniffer.Core.Observability.HealthChecks;
 using AlbionOnlineSniffer.Core.Observability.Tracing;
 using AlbionOnlineSniffer.Core.Enrichers;
-using AlbionOnlineSniffer.Core.Options.Profiles;
-using AlbionOnlineSniffer.Core.Options;
+using AlbionOnlineSniffer.Options.Profiles;
+using AlbionOnlineSniffer.Options;
 using System.Threading.Tasks;
 
 namespace AlbionOnlineSniffer.Tests
