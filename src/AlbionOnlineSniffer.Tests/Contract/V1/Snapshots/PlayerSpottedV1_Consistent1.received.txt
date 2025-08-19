@@ -1,0 +1,11 @@
+﻿{
+  EventId: consistent-test-1,
+  ObservedAt: DateTimeOffset_1,
+  Cluster: ,
+  Region: ,
+  PlayerId: 12345,
+  PlayerName: ConsistentPlayer,
+  X: 300.1,
+  Y: 400.2,
+  Tier: 5
+}

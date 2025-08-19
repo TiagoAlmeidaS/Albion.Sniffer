@@ -1,0 +1,17 @@
+﻿{
+  json:
+{
+  "EventId": "evt-123",
+  "ObservedAt": "2025-01-02T03:04:05+00:00",
+  "Cluster": "lymhurst",
+  "Region": "forest",
+  "PlayerId": 42,
+  "PlayerName": "JohnDoe",
+  "GuildName": "GuildX",
+  "AllianceName": "AllianceY",
+  "X": 123.45,
+  "Y": 67.89,
+  "Tier": 6
+},
+  messagePack: i6dFdmVudElkp2V2dC0xMjOqT2JzZXJ2ZWRBdJLW/2d2AiUAp0NsdXN0ZXKobHltaHVyc3SmUmVnaW9upmZvcmVzdKhQbGF5ZXJJZCqqUGxheWVyTmFtZadKb2huRG9lqUd1aWxkTmFtZaZHdWlsZFisQWxsaWFuY2VOYW1lqUFsbGlhbmNlWaFYykL25mahWcpCh8eupFRpZXIG
+}

@@ -1,0 +1,13 @@
+﻿{
+  EventId: special-chars-123,
+  ObservedAt: DateTimeOffset_1,
+  Cluster: Cluster with spaces,
+  Region: Region-with-dashes,
+  PlayerId: 123,
+  PlayerName: Player with spaces & symbols!,
+  GuildName: Guild with 'quotes' and "double quotes",
+  AllianceName: Alliance with émojis 🎮,
+  X: -100.5,
+  Y: -200.3,
+  Tier: 7
+}

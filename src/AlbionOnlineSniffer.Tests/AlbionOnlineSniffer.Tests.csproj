@@ -40,8 +40,6 @@
   <!-- Temporarily exclude out-of-sync tests while updating to new Core APIs -->
   <ItemGroup>
     <Compile Remove="Capture/**/*" />
-    <Compile Remove="Contract/**/*" />
-    <Compile Remove="Contracts/**/*" />
     <Compile Remove="Core/**/*" />
     <Compile Remove="Integration/**/*" />
     <Compile Remove="Performance/**/*" />
@@ -56,6 +54,8 @@
   <!-- Keep only a sanity test to ensure project builds -->
   <ItemGroup>
     <Compile Include="UnitTest1.cs" />
+    <Compile Include="Contracts/**/*.cs" />
+    <Compile Include="Contract/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>

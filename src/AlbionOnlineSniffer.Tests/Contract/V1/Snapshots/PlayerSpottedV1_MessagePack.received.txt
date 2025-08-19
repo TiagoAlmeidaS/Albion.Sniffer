@@ -1,0 +1,13 @@
+﻿{
+  EventId: test-event-123,
+  ObservedAt: DateTimeOffset_1,
+  Cluster: TestCluster,
+  Region: TestRegion,
+  PlayerId: 456,
+  PlayerName: TestPlayer,
+  GuildName: TestGuild,
+  AllianceName: TestAlliance,
+  X: 100.5,
+  Y: 200.3,
+  Tier: 6
+}

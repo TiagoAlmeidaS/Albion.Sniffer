@@ -1,0 +1,11 @@
+﻿{
+  EventId: test-event-456,
+  ObservedAt: DateTimeOffset_1,
+  Cluster: AnotherCluster,
+  Region: AnotherRegion,
+  PlayerId: 789,
+  PlayerName: AnotherPlayer,
+  X: 150.7,
+  Y: 250.9,
+  Tier: 8
+}

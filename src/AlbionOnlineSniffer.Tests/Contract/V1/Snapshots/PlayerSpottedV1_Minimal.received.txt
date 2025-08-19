@@ -1,0 +1,7 @@
+﻿{
+  EventId: minimal-event,
+  ObservedAt: DateTimeOffset_1,
+  Cluster: ,
+  Region: ,
+  PlayerName: MinimalPlayer
+}

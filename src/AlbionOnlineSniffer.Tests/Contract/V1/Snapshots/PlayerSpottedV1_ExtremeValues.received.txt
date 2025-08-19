@@ -1,0 +1,13 @@
+﻿{
+  EventId: extreme-values,
+  ObservedAt: Date_MaxValue,
+  Cluster: VeryLongClusterNameThatExceedsNormalLengthsAndTestsBoundaries,
+  Region: VeryLongRegionNameThatExceedsNormalLengthsAndTestsBoundaries,
+  PlayerId: 2147483647,
+  PlayerName: VeryLongPlayerNameThatExceedsNormalLengthsAndTestsBoundaries,
+  GuildName: VeryLongGuildNameThatExceedsNormalLengthsAndTestsBoundaries,
+  AllianceName: VeryLongAllianceNameThatExceedsNormalLengthsAndTestsBoundaries,
+  X: 3.4028235E+38,
+  Y: -3.4028235E+38,
+  Tier: 2147483647
+}

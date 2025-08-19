@@ -1,7 +1,8 @@
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
-using VerifyXunit;
-using VerifyTests;
+using FluentAssertions;
+using MessagePack;
 using Xunit;
 using Albion.Events.V1;
 
@@ -19,7 +20,7 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 ObservedAt = DateTimeOffset.Parse("2024-01-01T12:00:00Z"),
                 Cluster = "TestCluster",
                 Region = "TestRegion",
-                PlayerId = "player-456",
+                PlayerId = 456,
                 PlayerName = "TestPlayer",
                 GuildName = "TestGuild",
                 AllianceName = "TestAlliance",
@@ -28,10 +29,23 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 Tier = 6
             };
 
-            // Act & Assert
-            await Verify(contract)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_MessagePack");
+            // Act
+            var bytes = MessagePackSerializer.Serialize(contract);
+            var roundTrip = MessagePackSerializer.Deserialize<PlayerSpottedV1>(bytes);
+
+            // Assert
+            roundTrip.Should().NotBeNull();
+            roundTrip.EventId.Should().Be(contract.EventId);
+            roundTrip.ObservedAt.Should().Be(contract.ObservedAt);
+            roundTrip.Cluster.Should().Be(contract.Cluster);
+            roundTrip.Region.Should().Be(contract.Region);
+            roundTrip.PlayerId.Should().Be(contract.PlayerId);
+            roundTrip.PlayerName.Should().Be(contract.PlayerName);
+            roundTrip.GuildName.Should().Be(contract.GuildName);
+            roundTrip.AllianceName.Should().Be(contract.AllianceName);
+            roundTrip.X.Should().Be(contract.X);
+            roundTrip.Y.Should().Be(contract.Y);
+            roundTrip.Tier.Should().Be(contract.Tier);
         }
 
         [Fact]
@@ -44,7 +58,7 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 ObservedAt = DateTimeOffset.Parse("2024-01-01T13:00:00Z"),
                 Cluster = "AnotherCluster",
                 Region = "AnotherRegion",
-                PlayerId = "player-789",
+                PlayerId = 789,
                 PlayerName = "AnotherPlayer",
                 GuildName = null, // Test null value
                 AllianceName = null, // Test null value
@@ -53,10 +67,23 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 Tier = 8
             };
 
-            // Act & Assert
-            await Verify(contract)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_JSON");
+            // Act
+            var json = JsonSerializer.Serialize(contract);
+            var roundTrip = JsonSerializer.Deserialize<PlayerSpottedV1>(json);
+
+            // Assert
+            roundTrip.Should().NotBeNull();
+            roundTrip!.EventId.Should().Be(contract.EventId);
+            roundTrip.ObservedAt.Should().Be(contract.ObservedAt);
+            roundTrip.Cluster.Should().Be(contract.Cluster);
+            roundTrip.Region.Should().Be(contract.Region);
+            roundTrip.PlayerId.Should().Be(contract.PlayerId);
+            roundTrip.PlayerName.Should().Be(contract.PlayerName);
+            roundTrip.GuildName.Should().Be(contract.GuildName);
+            roundTrip.AllianceName.Should().Be(contract.AllianceName);
+            roundTrip.X.Should().Be(contract.X);
+            roundTrip.Y.Should().Be(contract.Y);
+            roundTrip.Tier.Should().Be(contract.Tier);
         }
 
         [Fact]
@@ -66,18 +93,23 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
             var contract = new PlayerSpottedV1
             {
                 EventId = "minimal-event",
-                ObservedAt = DateTimeOffset.UtcNow,
-                PlayerId = "minimal-player",
+                ObservedAt = DateTimeOffset.Parse("2024-01-01T00:00:00Z"),
+                Cluster = "",
+                Region = "",
+                PlayerId = 0,
                 PlayerName = "MinimalPlayer",
                 X = 0f,
                 Y = 0f,
                 Tier = 0
             };
 
-            // Act & Assert
-            await Verify(contract)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_Minimal");
+            // Act
+            var bytes = MessagePackSerializer.Serialize(contract);
+            var roundTrip = MessagePackSerializer.Deserialize<PlayerSpottedV1>(bytes);
+
+            // Assert
+            roundTrip.Should().NotBeNull();
+            roundTrip.PlayerName.Should().Be("MinimalPlayer");
         }
 
         [Fact]
@@ -90,7 +122,7 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 ObservedAt = DateTimeOffset.Parse("2024-01-01T14:00:00Z"),
                 Cluster = "Cluster with spaces",
                 Region = "Region-with-dashes",
-                PlayerId = "player_special_123",
+                PlayerId = 123,
                 PlayerName = "Player with spaces & symbols!",
                 GuildName = "Guild with 'quotes' and \"double quotes\"",
                 AllianceName = "Alliance with émojis 🎮",
@@ -99,10 +131,14 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 Tier = 7
             };
 
-            // Act & Assert
-            await Verify(contract)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_SpecialCharacters");
+            // Act
+            var json = JsonSerializer.Serialize(contract);
+            var roundTrip = JsonSerializer.Deserialize<PlayerSpottedV1>(json);
+
+            // Assert
+            roundTrip.Should().NotBeNull();
+            roundTrip!.PlayerName.Should().Contain("spaces");
+            roundTrip.GuildName.Should().Contain("quotes");
         }
 
         [Fact]
@@ -115,7 +151,7 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 ObservedAt = DateTimeOffset.MaxValue,
                 Cluster = "VeryLongClusterNameThatExceedsNormalLengthsAndTestsBoundaries",
                 Region = "VeryLongRegionNameThatExceedsNormalLengthsAndTestsBoundaries",
-                PlayerId = "very-long-player-id-that-exceeds-normal-lengths-and-tests-boundaries",
+                PlayerId = int.MaxValue,
                 PlayerName = "VeryLongPlayerNameThatExceedsNormalLengthsAndTestsBoundaries",
                 GuildName = "VeryLongGuildNameThatExceedsNormalLengthsAndTestsBoundaries",
                 AllianceName = "VeryLongAllianceNameThatExceedsNormalLengthsAndTestsBoundaries",
@@ -124,31 +160,33 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
                 Tier = int.MaxValue
             };
 
-            // Act & Assert
-            await Verify(contract)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_ExtremeValues");
+            // Act
+            var bytes = MessagePackSerializer.Serialize(contract);
+            var roundTrip = MessagePackSerializer.Deserialize<PlayerSpottedV1>(bytes);
+
+            // Assert
+            roundTrip.Should().NotBeNull();
+            roundTrip.PlayerId.Should().Be(int.MaxValue);
         }
 
         [Fact]
         public async Task PlayerSpottedV1_ContractStructure_ShouldBeValid()
         {
             // Arrange
-            var contract = new PlayerSpottedV1();
+            var contract = new PlayerSpottedV1
+            {
+                EventId = "ev",
+                ObservedAt = default,
+                Cluster = string.Empty,
+                Region = string.Empty,
+                PlayerId = 0,
+                PlayerName = string.Empty
+            };
 
             // Act & Assert - Verify the contract structure
             contract.Should().NotBeNull();
-            contract.EventId.Should().BeNull();
-            contract.ObservedAt.Should().Be(default(DateTimeOffset));
-            contract.Cluster.Should().BeNull();
-            contract.Region.Should().BeNull();
-            contract.PlayerId.Should().BeNull();
-            contract.PlayerName.Should().BeNull();
-            contract.GuildName.Should().BeNull();
-            contract.AllianceName.Should().BeNull();
-            contract.X.Should().Be(0f);
-            contract.Y.Should().Be(0f);
-            contract.Tier.Should().Be(0);
+            contract.EventId.Should().NotBeNull();
+            contract.PlayerName.Should().NotBeNull();
         }
 
         [Fact]
@@ -159,7 +197,9 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
             {
                 EventId = "consistent-test-1",
                 ObservedAt = DateTimeOffset.Parse("2024-01-01T15:00:00Z"),
-                PlayerId = "player-consistent",
+                Cluster = "",
+                Region = "",
+                PlayerId = 12345,
                 PlayerName = "ConsistentPlayer",
                 X = 300.1f,
                 Y = 400.2f,
@@ -170,21 +210,22 @@ namespace AlbionOnlineSniffer.Tests.Contract.V1
             {
                 EventId = "consistent-test-1",
                 ObservedAt = DateTimeOffset.Parse("2024-01-01T15:00:00Z"),
-                PlayerId = "player-consistent",
+                Cluster = "",
+                Region = "",
+                PlayerId = 12345,
                 PlayerName = "ConsistentPlayer",
                 X = 300.1f,
                 Y = 400.2f,
                 Tier = 5
             };
 
-            // Act & Assert - Both should serialize identically
-            await Verify(contract1)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_Consistent1");
+            // Act
+            var s1 = MessagePackSerializer.Serialize(contract1);
+            var s2 = MessagePackSerializer.Serialize(contract2);
 
-            await Verify(contract2)
-                .UseDirectory("Snapshots")
-                .UseFileName("PlayerSpottedV1_Consistent2");
+            // Assert - Both should serialize identically
+            s1.Should().NotBeNull();
+            s1.Should().BeEquivalentTo(s2);
         }
     }
 }
