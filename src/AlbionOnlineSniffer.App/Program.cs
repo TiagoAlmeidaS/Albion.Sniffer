@@ -15,7 +15,7 @@ namespace AlbionOnlineSniffer.App
         {
             try
             {
-                Console.WriteLine("🚀 Iniciando AlbionOnlineSniffer...");
+                Console.WriteLine("🚀 Iniciando AlbionOnlineSniffer (UDP Mode)...");
                 Console.WriteLine($"📁 Diretório atual: {Directory.GetCurrentDirectory()}");
                 Console.WriteLine($"🔧 Versão do .NET: {Environment.Version}");
                 Console.WriteLine($"💻 Arquitetura: {(Environment.Is64BitProcess ? "x64" : "x86")}");
@@ -36,7 +36,7 @@ namespace AlbionOnlineSniffer.App
 
                 try
                 {
-                    logger.LogInformation("Iniciando AlbionOnlineSniffer...");
+                    logger.LogInformation("Iniciando AlbionOnlineSniffer em modo UDP...");
 
                     // 🎨 VALIDAR LOGO DO APLICATIVO
                     logger.LogInformation("🎨 Verificando logo do aplicativo...");
@@ -49,11 +49,6 @@ namespace AlbionOnlineSniffer.App
                         .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
                         .AddEnvironmentVariables()
                         .Build();
-
-
-                    // Publishers
-                    logger.LogInformation("📤 Configurando publishers...");
-                    // Publisher via DI (configurado no módulo de Queue)
 
                     // Configure dependency injection
                     logger.LogInformation("🔧 Configurando injeção de dependências...");
@@ -75,15 +70,26 @@ namespace AlbionOnlineSniffer.App
                     logger.LogInformation("🔧 Registrando serviços do Queue...");
                     Queue.DependencyProvider.AddQueueServices(services, configuration);
 
-                    // Serviços de captura usando DependencyProvider do módulo Capture
-                    services.AddCaptureServices(configuration);
+                    // Serviços de captura via DependencyProvider (igual ao Core)
+                    logger.LogInformation("🔧 Registrando serviços de captura...");
+                    Capture.DependencyProvider.RegisterServices(services, configuration);
                     
-                    // Pipeline App usando serviço híbrido quando disponível
+                    // Pipeline App usando serviço UDP
                     services.AddSingleton<App.Services.CapturePipeline>();
 
                     // Build service provider
                     logger.LogInformation("🔧 Construindo service provider...");
                     var serviceProvider = services.BuildServiceProvider();
+
+                    // ✅ CONFIGURAR PACKET OFFSETS PROVIDER
+                    logger.LogInformation("🔧 Configurando PacketOffsetsProvider...");
+                    AlbionOnlineSniffer.Core.Services.PacketOffsetsProvider.Configure(serviceProvider);
+                    logger.LogInformation("✅ PacketOffsetsProvider configurado!");
+
+                    // ✅ FORÇAR CARREGAMENTO DO PACKET INDEXES (configura GlobalPacketIndexes)
+                    logger.LogInformation("🔧 Forçando carregamento do PacketIndexes...");
+                    var packetIndexes = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketIndexes>();
+                    logger.LogInformation("✅ PacketIndexes carregado e GlobalPacketIndexes configurado!");
 
                     // Force validation and log active profile
                     var snifferOptions = serviceProvider
@@ -94,7 +100,6 @@ namespace AlbionOnlineSniffer.App
                     logger.LogInformation("🔧 Obtendo serviços do container...");
                     var eventDispatcher = serviceProvider.GetRequiredService<Core.Services.EventDispatcher>();
                     var packetOffsets = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketOffsets>();
-                    var packetIndexes = serviceProvider.GetRequiredService<Core.Models.ResponseObj.PacketIndexes>();
 
                     // Get pipeline service
                     var pipeline = serviceProvider.GetRequiredService<Core.Pipeline.IEventPipeline>();
@@ -140,26 +145,25 @@ namespace AlbionOnlineSniffer.App
                     var protocol16Deserializer =
                         serviceProvider.GetRequiredService<Core.Services.Protocol16Deserializer>();
 
-
-                    // Configurar captura de pacotes
-                    logger.LogInformation("🔧 Configurando captura de pacotes...");
+                    // Configurar captura de pacotes UDP
+                    logger.LogInformation("🔧 Configurando captura de pacotes UDP...");
                     var capturePipeline = serviceProvider.GetRequiredService<App.Services.CapturePipeline>();
-                    logger.LogInformation("✅ Captura de pacotes configurada (pipeline)!");
+                    logger.LogInformation("✅ Captura de pacotes UDP configurada (pipeline)!");
 
-                    // Iniciar captura
-                    logger.LogInformation("🚀 Iniciando captura de pacotes...");
+                    // Iniciar captura UDP
+                    logger.LogInformation("🚀 Iniciando captura de pacotes UDP na porta 5050...");
                     capturePipeline.Start();
 
-                    logger.LogInformation("✅ AlbionOnlineSniffer iniciado com sucesso!");
-                    logger.LogInformation("📡 Aguardando pacotes do Albion Online...");
+                    logger.LogInformation("✅ AlbionOnlineSniffer iniciado com sucesso em modo UDP!");
+                    logger.LogInformation("📡 Aguardando pacotes UDP do Albion Online na porta 5050...");
                     logger.LogInformation("🛑 Pressione Ctrl+C para parar");
 
                     // Manter a aplicação rodando
                     Console.CancelKeyPress += (sender, e) =>
                     {
-                        logger.LogInformation("🛑 Parando captura...");
+                        logger.LogInformation("🛑 Parando captura UDP...");
                         capturePipeline.Stop();
-                        logger.LogInformation("✅ Captura parada. Saindo...");
+                        logger.LogInformation("✅ Captura UDP parada. Saindo...");
                         Environment.Exit(0);
                     };
 

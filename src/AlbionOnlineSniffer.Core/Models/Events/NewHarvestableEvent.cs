@@ -2,6 +2,7 @@ using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using System.Numerics;
+using AlbionOnlineSniffer.Core.Utility;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -28,28 +29,16 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         private void InitializeProperties(Dictionary<byte, object> parameters)
         {
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-            TypeId = Convert.ToInt32(parameters[offsets[1]]);
-
-            if (offsets.Length > 2 && parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[] positionBytes)
-            {
-                PositionBytes = positionBytes;
-            }
-            else
-            {
-                PositionBytes = Array.Empty<byte>();
-            }
-
-            // Tier e Charges podem estar em diferentes offsets dependendo do tipo
-            if (offsets.Length > 3 && parameters.ContainsKey(offsets[3]))
-            {
-                Tier = Convert.ToByte(parameters[offsets[3]]);
-            }
-
-            if (offsets.Length > 4 && parameters.ContainsKey(offsets[4]))
-            {
-                Charges = Convert.ToByte(parameters[offsets[4]]);
-            }
+            // ✅ SEGURO: Usar SafeParameterExtractor para evitar KeyNotFoundException
+            Id = SafeParameterExtractor.GetInt32(parameters, offsets[0]);
+            TypeId = SafeParameterExtractor.GetInt32(parameters, offsets[1]);
+            
+            // ✅ SEGURO: Usar SafeParameterExtractor para arrays
+            PositionBytes = SafeParameterExtractor.GetByteArray(parameters, offsets[2]);
+            
+            // ✅ SEGURO: Usar SafeParameterExtractor para bytes
+            Tier = SafeParameterExtractor.GetByte(parameters, offsets[3]);
+            Charges = SafeParameterExtractor.GetByte(parameters, offsets[4]);
         }
 
         public int Id { get; private set; }

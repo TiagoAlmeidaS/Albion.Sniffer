@@ -1,0 +1,108 @@
+name: Build and Publish NuGet Package
+
+on:
+  push:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'src/Albion.Events.V1/Albion.Events.V1.csproj'
+  PACKAGE_OUTPUT_DIRECTORY: ${{ github.workspace }}/output
+
+jobs:
+  set-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.setver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set version
+        id: setver
+        run: |
+          # Tenta pegar a tag mais recente (ex: v2.1), remove o 'v' se existir
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0")
+          PREFIX=${TAG#v}
+          VERSION="${PREFIX}.${GITHUB_RUN_NUMBER}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
+  build-and-test:
+    name: Build and Tests
+    needs: set-version
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Create clean nuget.config for CI/CD
+      run: |
+        cat > nuget.config << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+            <add key="github" value="https://nuget.pkg.github.com/TiagoAlmeidaS/index.json" />
+          </packageSources>
+          <packageSourceCredentials>
+            <github>
+              <add key="Username" value="TiagoAlmeidaS" />
+              <add key="ClearTextPassword" value="%PAT_TOKEN%" />
+            </github>
+          </packageSourceCredentials>
+        </configuration>
+        EOF
+
+    - name: Restore dependencies
+      run: dotnet restore AlbionOnlineSniffer.sln
+
+    - name: Build
+      run: dotnet build AlbionOnlineSniffer.sln --no-restore --configuration Release
+
+    - name: Test
+      run: dotnet test AlbionOnlineSniffer.sln --no-build --configuration Release --verbosity normal
+
+    - name: Pack
+      run: |
+        echo "Using version: ${{ needs.set-version.outputs.version }}"
+        dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build -p:PackageVersion=${{ needs.set-version.outputs.version }} --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages
+        path: ${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg
+
+  publish-nuget:
+    name: Publish to NuGet.org
+    needs: [build-and-test, set-version]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: nuget-packages
+        path: ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
+
+    - name: Publish to NuGet.org
+      run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIRECTORY }}/*.nupkg" --source 'https://nuget.pkg.github.com/TiagoAlmeidaS/index.json' --api-key ${{ secrets.PAT_TOKEN }} --skip-duplicate

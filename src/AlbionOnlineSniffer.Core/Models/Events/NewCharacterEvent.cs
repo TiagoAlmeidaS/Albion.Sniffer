@@ -5,6 +5,7 @@ using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Services;
 using System.Collections.Generic;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
+using AlbionOnlineSniffer.Core.Utility;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -32,27 +33,28 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         private void InitializeProperties(Dictionary<byte, object> parameters)
         {
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-            Name = (string)parameters[offsets[1]] ?? string.Empty;
-            GuildName = (string)parameters[offsets[2]] ?? string.Empty;
-            AllianceName = (string)parameters[offsets[3]] ?? string.Empty;
+            // ✅ DEBUG: Log dos offsets e parâmetros recebidos
+            var debugInfo = $"Offsets: [{string.Join(", ", offsets)}], Parameters: [{string.Join(", ", parameters.Keys)}]";
+            System.Diagnostics.Debug.WriteLine($"🔍 NewCharacterEvent.InitializeProperties: {debugInfo}");
+            
+            try
+            {
+                // ✅ SEGURO: Usar SafeParameterExtractor para evitar KeyNotFoundException
+                Id = SafeParameterExtractor.GetInt32(parameters, offsets[0]);
+                Name = SafeParameterExtractor.GetString(parameters, offsets[1]);
+                GuildName = SafeParameterExtractor.GetString(parameters, offsets[2]);
+                AllianceName = SafeParameterExtractor.GetString(parameters, offsets[3]);
 
-            if (offsets.Length > 4 && parameters.ContainsKey(offsets[4]) && parameters[offsets[4]] is byte[] positionBytes)
-            {
-                PositionBytes = positionBytes;
+            // ✅ SEGURO: Usar SafeParameterExtractor para arrays
+            PositionBytes = SafeParameterExtractor.GetByteArray(parameters, offsets[4]);
+            Items = SafeParameterExtractor.GetFloatArray(parameters, offsets[5]);
             }
-            else
+            catch (Exception ex)
             {
-                PositionBytes = Array.Empty<byte>();
-            }
-
-            if (offsets.Length > 5 && parameters.TryGetValue(offsets[5], out var itemsObj) && itemsObj is float[] f)
-            {
-                Items = f;
-            }
-            else
-            {
-                Items = Array.Empty<float>();
+                System.Diagnostics.Debug.WriteLine($"❌ ERRO em NewCharacterEvent.InitializeProperties: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"🔍 Offsets: [{string.Join(", ", offsets)}]");
+                System.Diagnostics.Debug.WriteLine($"🔍 Parameters: [{string.Join(", ", parameters.Keys)}]");
+                throw; // Re-throw para manter o comportamento original
             }
         }
 

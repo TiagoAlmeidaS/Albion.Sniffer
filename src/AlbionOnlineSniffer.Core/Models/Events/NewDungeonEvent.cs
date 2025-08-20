@@ -14,20 +14,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         {
             offsets = packetOffsets?.NewDungeonExit ?? new byte[] { 0, 1, 2, 3 };
             
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-
-            if (parameters.ContainsKey(offsets[1]) && parameters[offsets[1]] is byte[] positionBytes)
-            {
-                PositionBytes = positionBytes;
-            }
-            else
-            {
-                PositionBytes = Array.Empty<byte>();
-            }
-
-            Type = parameters.ContainsKey(offsets[2]) ? parameters[offsets[2]] as string ?? "NULL" : "NULL";
-
-            Charges = Convert.ToInt32(parameters[offsets[3]]);
+            // ✅ SEGURO: Usar SafeParameterExtractor para evitar KeyNotFoundException
+            Id = SafeParameterExtractor.GetInt32(parameters, offsets[0]);
+            PositionBytes = SafeParameterExtractor.GetByteArray(parameters, offsets[1]);
+            Type = SafeParameterExtractor.GetString(parameters, offsets[2], "NULL");
+            Charges = SafeParameterExtractor.GetInt32(parameters, offsets[3]);
         }
 
         public int Id { get; private set; }

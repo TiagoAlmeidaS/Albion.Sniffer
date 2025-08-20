@@ -35,11 +35,9 @@ namespace AlbionOnlineSniffer.Core.Services
         /// <summary>
         /// Configura o ReceiverBuilder com os handlers necessários
         /// </summary>
-        /// <returns>ReceiverBuilder configurado</returns>
-        public ReceiverBuilder ConfigureReceiverBuilder()
+        /// <param name="builder">ReceiverBuilder do Albion.Network</param>
+        public void ConfigureReceiverBuilder(Albion.Network.ReceiverBuilder builder)
         {
-            var builder = new ReceiverBuilder();
-            
             // Registrar handlers usando a abordagem correta baseada nos handlers existentes
             builder.AddEventHandler(new LeaveEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
@@ -188,7 +186,6 @@ namespace AlbionOnlineSniffer.Core.Services
             ));
 
             _logger.LogInformation("ReceiverBuilder configurado com {HandlerCount} handlers", 25);
-            return builder;
         }
     }
 } 

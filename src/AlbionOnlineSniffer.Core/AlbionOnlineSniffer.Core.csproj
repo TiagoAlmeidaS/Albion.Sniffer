@@ -30,6 +30,10 @@
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.RabbitMQ" Version="8.0.2" />
+    
+    <!-- ✅ ALBION.NETWORK REAL - Baseado no albion-radar -->
+    <PackageReference Include="Albion.Network" Version="5.0.1" />
+    <PackageReference Include="PhotonPackageParser" Version="4.1.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -266,10 +266,17 @@ namespace AlbionOnlineSniffer.Core
             {
                 var factory = sp.GetRequiredService<ILoggerFactory>();
                 var logger = factory.CreateLogger<Protocol16Deserializer>();
-                // Construir o receiver real usando o AlbionNetworkHandlerManager
+                
+                // ✅ USAR ALBION.NETWORK REAL - Baseado no albion-radar
+                var receiverBuilder = Albion.Network.ReceiverBuilder.Create();
+                
+                // ✅ REGISTRAR HANDLERS REAIS
                 var albionNetworkHandlerManager = sp.GetRequiredService<AlbionNetworkHandlerManager>();
-                var receiverBuilder = albionNetworkHandlerManager.ConfigureReceiverBuilder();
+                albionNetworkHandlerManager.ConfigureReceiverBuilder(receiverBuilder);
+                
                 var photonReceiver = receiverBuilder.Build();
+                logger.LogInformation("🎯 ReceiverBuilder configurado com Albion.Network real");
+                
                 return new Protocol16Deserializer(photonReceiver, logger);
             });
             services.AddSingleton<PositionDecryptor>(sp =>

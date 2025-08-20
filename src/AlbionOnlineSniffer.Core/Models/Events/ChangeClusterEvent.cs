@@ -2,6 +2,7 @@ using System.Numerics;
 using Albion.Network;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models.ResponseObj;
+using AlbionOnlineSniffer.Core.Utility;
 
 namespace AlbionOnlineSniffer.Core.Models.Events
 {
@@ -32,11 +33,11 @@ namespace AlbionOnlineSniffer.Core.Models.Events
         {
             offsets = packetOffsets?.ChangeCluster ?? new byte[] { 0 };
             
-            LocationId = parameters[offsets[0]] as string ?? string.Empty;
-            Type = parameters.ContainsKey(offsets[1]) ? parameters[offsets[1]] as string ?? "NULL" : "NULL";
-            DynamicClusterData = parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[]
-                ? ReadClusterData(parameters[offsets[2]] as byte[])
-                : new DynamicClusterData();
+            // ✅ SEGURO: Usar SafeParameterExtractor para evitar KeyNotFoundException
+            LocationId = SafeParameterExtractor.GetString(parameters, offsets[0]);
+            Type = SafeParameterExtractor.GetString(parameters, offsets[1], "NULL");
+            var clusterBytes = SafeParameterExtractor.GetByteArray(parameters, offsets[2]);
+            DynamicClusterData = clusterBytes.Length > 0 ? ReadClusterData(clusterBytes) : new DynamicClusterData();
         }
 
         public string LocationId { get; }

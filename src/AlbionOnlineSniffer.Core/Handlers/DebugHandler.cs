@@ -32,10 +32,6 @@ namespace AlbionOnlineSniffer.Core.Handlers
             return Task.CompletedTask;
         }
 
-        // Also provide non-async override for shim compatibility
-        protected override void OnHandle(object packet)
-        {
-            // no-op
-        }
+        // Removido OnHandle - não existe mais na nova versão do Albion.Network
     }
 }

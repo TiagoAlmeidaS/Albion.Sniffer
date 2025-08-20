@@ -30,26 +30,13 @@ namespace AlbionOnlineSniffer.Core.Models.Events
 
         private void InitializeProperties(Dictionary<byte, object> parameters)
         {
-            Id = Convert.ToInt32(parameters[offsets[0]]);
-            TypeId = Convert.ToInt32(parameters[offsets[1]]);
-
-            if (parameters.ContainsKey(offsets[2]) && parameters[offsets[2]] is byte[] positionBytes)
-            {
-                PositionBytes = positionBytes;
-            }
-            else
-            {
-                PositionBytes = Array.Empty<byte>();
-            }
-
-            Health = Convert.ToSingle(parameters[offsets[3]]);
-            MaxHealth = Convert.ToSingle(parameters[offsets[4]]);
-
-            // Pode não existir
-            if (parameters.ContainsKey(offsets[5]))
-            {
-                EnchantmentLevel = Convert.ToByte(parameters[offsets[5]]);
-            }
+            // ✅ SEGURO: Usar SafeParameterExtractor para evitar KeyNotFoundException
+            Id = SafeParameterExtractor.GetInt32(parameters, offsets[0]);
+            TypeId = SafeParameterExtractor.GetInt32(parameters, offsets[1]);
+            PositionBytes = SafeParameterExtractor.GetByteArray(parameters, offsets[2]);
+            Health = SafeParameterExtractor.GetFloat(parameters, offsets[3]);
+            MaxHealth = SafeParameterExtractor.GetFloat(parameters, offsets[4]);
+            EnchantmentLevel = SafeParameterExtractor.GetByte(parameters, offsets[5]);
         }
 
         public int Id { get; private set; }
