@@ -3,6 +3,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using AlbionOnlineSniffer.Options.Extensions;
+using AlbionOnlineSniffer.Capture;
+using AlbionOnlineSniffer.Core;
+using AlbionOnlineSniffer.Queue;
 
 namespace AlbionOnlineSniffer.App
 {
@@ -64,18 +67,18 @@ namespace AlbionOnlineSniffer.App
                     services.ValidateOptionsOnStart<AlbionOnlineSniffer.Options.SnifferOptions>();
                     services.AddProfileManagement();
 
-                    // Register Core services (o Core carrega offsets e indexes via DependencyProvider)
+                    // Core services (registra EventDispatcher, PacketOffsets, etc.)
                     logger.LogInformation("🔧 Registrando serviços do Core...");
                     Core.DependencyProvider.RegisterServices(services);
-                    // Serviços de fila lendo configuração
+
+                    // Queue services + Event->Queue Bridge
+                    logger.LogInformation("🔧 Registrando serviços do Queue...");
                     Queue.DependencyProvider.AddQueueServices(services, configuration);
-                    // Serviços de captura com porta configurável (default 5050)
-                    var udpPort = configuration.GetValue<int?>("Capture:UdpPort")
-                                  ?? configuration.GetValue<int?>("PacketCaptureSettings:UdpPort")
-                                  ?? 5050;
-                    services.AddSingleton<Capture.Interfaces.IPacketCaptureService>(sp =>
-                        new Capture.PacketCaptureService(udpPort, sp.GetService<Core.Interfaces.IAlbionEventLogger>()));
-                    // Pipeline App
+
+                    // Serviços de captura usando DependencyProvider do módulo Capture
+                    services.AddCaptureServices(configuration);
+                    
+                    // Pipeline App usando serviço híbrido quando disponível
                     services.AddSingleton<App.Services.CapturePipeline>();
 
                     // Build service provider

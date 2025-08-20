@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using AlbionOnlineSniffer.Core;
-
+using AlbionOnlineSniffer.Options.Extensions;
 using AlbionOnlineSniffer.Capture;
 using AlbionOnlineSniffer.Capture.Services;
 using AlbionOnlineSniffer.Capture.Interfaces;
@@ -55,16 +56,13 @@ builder.Services.AddSingleton<EventStreamService>();
 // Core services
 AlbionOnlineSniffer.Core.DependencyProvider.RegisterServices(builder.Services);
 
-// Capture services (igual ao App)
-builder.Services.AddCaptureServices();
+// Options + Profiles (igual ao App)
+builder.Services.AddSnifferOptions(builder.Configuration);
+builder.Services.ValidateOptionsOnStart<AlbionOnlineSniffer.Options.SnifferOptions>();
+builder.Services.AddProfileManagement();
 
-// Override opcional da porta via configuração (default 5050)
-var udpPort = builder.Configuration.GetValue<int?>(
-    "Capture:UdpPort")
-    ?? builder.Configuration.GetValue<int?>("PacketCaptureSettings:UdpPort")
-    ?? 5050;
-builder.Services.AddSingleton<IPacketCaptureService>(sp =>
-    new PacketCaptureService(udpPort, sp.GetService<IAlbionEventLogger>()));
+// Capture services usando DependencyProvider do módulo Capture (igual ao App)
+builder.Services.AddCaptureServices(builder.Configuration);
 
 // Web pipeline via DI
 builder.Services.AddSingleton<SnifferWebPipeline>();
@@ -221,8 +219,51 @@ using (var scope = app.Services.CreateScope())
 	logger.LogInformation("  - NewCharacter: [{Offsets}]", (packetOffsets.NewCharacter != null && packetOffsets.NewCharacter.Length > 0) ? string.Join(", ", packetOffsets.NewCharacter) : "<nulo>");
 	logger.LogInformation("  - Move: [{Offsets}]", (packetOffsets.Move != null && packetOffsets.Move.Length > 0) ? string.Join(", ", packetOffsets.Move) : "<nulo>");
 
+	// 🔧 OBTER EVENTDISPATCHER (igual ao App)
+	var eventDispatcher = services.GetRequiredService<AlbionOnlineSniffer.Core.Services.EventDispatcher>();
+
+	// 🔧 INTEGRAÇÃO COM MENSAGERIA - Bridge via DI (igual ao App)
+	logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
+	services.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
+	logger.LogInformation("✅ Bridge Event->Queue registrada!");
+	logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados",
+		eventDispatcher.GetHandlerCount("*"));
+
+	// 🔧 CONFIGURAR SERVIÇOS DE PARSING (igual ao App)
+	logger.LogInformation("🔧 Configurando serviços de parsing...");
+	var protocol16Deserializer = services.GetRequiredService<AlbionOnlineSniffer.Core.Services.Protocol16Deserializer>();
+	logger.LogInformation("✅ Protocol16Deserializer configurado!");
+
+	// 🔧 CONFIGURAR CAPTURA DE PACOTES (igual ao App)
+	logger.LogInformation("🔧 Configurando captura de pacotes...");
+	var capturePipeline = services.GetRequiredService<SnifferWebPipeline>();
+	logger.LogInformation("✅ Captura de pacotes configurada (pipeline)!");
+
 	// Instancia o pipeline (DI faz o wire)
 	services.GetRequiredService<SnifferWebPipeline>();
+
+	// 🔧 INICIALIZAÇÃO DO PIPELINE CORE (igual ao App)
+	var corePipeline = services.GetRequiredService<AlbionOnlineSniffer.Core.Pipeline.IEventPipeline>();
+	logger.LogInformation("🚀 Pipeline Core obtido: {PipelineType}", corePipeline.GetType().Name);
+	
+	// Start the pipeline Core
+	await corePipeline.StartAsync();
+	logger.LogInformation("✅ Pipeline Core iniciado com sucesso!");
+
+	// 🔧 REGISTRAR GLOBAL HANDLER NO EVENTDISPATCHER (igual ao App)
+	eventDispatcher.RegisterGlobalHandler(async (eventData) =>
+	{
+		try
+		{
+			var eventTypeName = eventData.GetType().Name;
+			await corePipeline.EnqueueAsync(eventTypeName, eventData);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Erro ao enfileirar evento no pipeline Core");
+		}
+	});
+	logger.LogInformation("🔗 Pipeline Core conectado ao EventDispatcher");
 
 	// Força a criação do bridge de publicação V1 para escutar eventos imediatamente
 	services.GetService<V1ContractPublisherBridge>();
