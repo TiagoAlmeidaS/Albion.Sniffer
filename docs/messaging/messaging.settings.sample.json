@@ -1,0 +1,378 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Albion.Sniffer Messaging Configuration",
+  "description": "Complete messaging configuration for Albion.Sniffer including RabbitMQ topology provisioning",
+  "type": "object",
+  "properties": {
+    "Publishing": {
+      "description": "Event publishing configuration",
+      "type": "object",
+      "properties": {
+        "PublisherType": {
+          "type": "string",
+          "enum": ["RabbitMQ", "Redis", "InMemory"],
+          "default": "RabbitMQ"
+        },
+        "ConnectionString": {
+          "type": "string",
+          "description": "Connection string for the message broker",
+          "default": "amqp://guest:guest@localhost:5672"
+        },
+        "Exchange": {
+          "type": "string",
+          "description": "Exchange name for publishing events",
+          "default": "albion.events"
+        },
+        "PersistentMessages": {
+          "type": "boolean",
+          "description": "Enable message persistence",
+          "default": true
+        },
+        "SerializationFormat": {
+          "type": "string",
+          "enum": ["MessagePack", "Json"],
+          "default": "MessagePack"
+        },
+        "EnableCompression": {
+          "type": "boolean",
+          "default": true
+        },
+        "BatchSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 100
+        },
+        "BatchTimeoutMs": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 5000,
+          "default": 100
+        },
+        "Retry": {
+          "type": "object",
+          "properties": {
+            "MaxAttempts": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 3
+            },
+            "InitialDelayMs": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 10000,
+              "default": 100
+            },
+            "MaxDelayMs": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 60000,
+              "default": 5000
+            },
+            "UseExponentialBackoff": {
+              "type": "boolean",
+              "default": true
+            },
+            "UseJitter": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "CircuitBreaker": {
+          "type": "object",
+          "properties": {
+            "Enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "FailureThreshold": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 5
+            },
+            "SamplingDurationSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "default": 60
+            },
+            "BreakDurationSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "default": 30
+            },
+            "MinimumThroughput": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10
+            }
+          }
+        },
+        "EnableDeadLetterQueue": {
+          "type": "boolean",
+          "default": true
+        },
+        "DeadLetterQueue": {
+          "type": "string",
+          "default": "albion.events.dlq"
+        }
+      },
+      "required": ["PublisherType", "ConnectionString", "Exchange"]
+    },
+    "MessagingProvisioning": {
+      "description": "Auto-provisioning configuration for RabbitMQ topology",
+      "type": "object",
+      "properties": {
+        "Enabled": {
+          "type": "boolean",
+          "description": "Enable automatic topology provisioning on startup",
+          "default": false
+        },
+        "ConnectionString": {
+          "type": "string",
+          "description": "RabbitMQ connection string (uses Publishing.ConnectionString if not specified)",
+          "default": null
+        },
+        "Exchange": {
+          "type": "object",
+          "properties": {
+            "Name": {
+              "type": "string",
+              "default": "albion.events"
+            },
+            "Type": {
+              "type": "string",
+              "enum": ["topic", "direct", "fanout", "headers"],
+              "default": "topic"
+            },
+            "Durable": {
+              "type": "boolean",
+              "default": true
+            },
+            "AutoDelete": {
+              "type": "boolean",
+              "default": false
+            },
+            "Arguments": {
+              "type": "object",
+              "properties": {
+                "x-message-ttl": {
+                  "type": "integer",
+                  "description": "Message TTL in milliseconds",
+                  "default": 86400000
+                }
+              }
+            }
+          }
+        },
+        "DeadLetterExchange": {
+          "type": "object",
+          "properties": {
+            "Name": {
+              "type": "string",
+              "default": "albion.events.dlx"
+            },
+            "Type": {
+              "type": "string",
+              "default": "topic"
+            },
+            "Durable": {
+              "type": "boolean",
+              "default": true
+            },
+            "AutoDelete": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "Queues": {
+          "type": "array",
+          "description": "Queue definitions with bindings",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Name": {
+                "type": "string",
+                "description": "Queue name"
+              },
+              "Durable": {
+                "type": "boolean",
+                "default": true
+              },
+              "Exclusive": {
+                "type": "boolean",
+                "default": false
+              },
+              "AutoDelete": {
+                "type": "boolean",
+                "default": false
+              },
+              "Arguments": {
+                "type": "object",
+                "properties": {
+                  "x-message-ttl": {
+                    "type": "integer",
+                    "description": "Message TTL in milliseconds"
+                  },
+                  "x-max-length": {
+                    "type": "integer",
+                    "description": "Maximum number of messages"
+                  },
+                  "x-overflow": {
+                    "type": "string",
+                    "enum": ["drop-head", "reject-publish"],
+                    "description": "Overflow behavior"
+                  },
+                  "x-max-priority": {
+                    "type": "integer",
+                    "description": "Maximum priority level"
+                  },
+                  "x-dead-letter-exchange": {
+                    "type": "string",
+                    "description": "Dead letter exchange name"
+                  }
+                }
+              },
+              "Bindings": {
+                "type": "array",
+                "description": "Routing keys to bind to this queue",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["Name", "Bindings"]
+          },
+          "default": [
+            {
+              "Name": "radar.overlay",
+              "Durable": true,
+              "Arguments": {
+                "x-message-ttl": 300000,
+                "x-max-length": 10000,
+                "x-overflow": "drop-head"
+              },
+              "Bindings": [
+                "albion.event.player.*.v1",
+                "albion.event.world.*.v1",
+                "albion.event.pve.*.v1",
+                "albion.event.resource.*.v1"
+              ]
+            },
+            {
+              "Name": "analytics.ingest",
+              "Durable": true,
+              "Arguments": {
+                "x-message-ttl": 604800000,
+                "x-max-length": 1000000,
+                "x-overflow": "reject-publish"
+              },
+              "Bindings": [
+                "albion.event.#"
+              ]
+            },
+            {
+              "Name": "alerts.ops",
+              "Durable": true,
+              "Arguments": {
+                "x-message-ttl": 3600000,
+                "x-max-priority": 10,
+                "x-max-length": 1000
+              },
+              "Bindings": [
+                "albion.event.player.spotted.v1",
+                "albion.event.pve.chest.spawned.v1",
+                "albion.event.world.hideout.spotted.v1"
+              ]
+            },
+            {
+              "Name": "sniffer.telemetry",
+              "Durable": true,
+              "Arguments": {
+                "x-message-ttl": 86400000,
+                "x-max-length": 10000
+              },
+              "Bindings": [
+                "albion.event.system.*.v1"
+              ]
+            },
+            {
+              "Name": "player.profile",
+              "Durable": true,
+              "Arguments": {
+                "x-message-ttl": 2592000000,
+                "x-max-length": 100000
+              },
+              "Bindings": [
+                "albion.event.player.spotted.v1",
+                "albion.event.player.equipment.changed.v1"
+              ]
+            },
+            {
+              "Name": "resource.tracker",
+              "Durable": true,
+              "Arguments": {
+                "x-message-ttl": 7200000,
+                "x-max-length": 50000
+              },
+              "Bindings": [
+                "albion.event.resource.node.v1",
+                "albion.event.resource.fishing.found.v1"
+              ]
+            }
+          ]
+        },
+        "DeadLetterQueue": {
+          "type": "object",
+          "properties": {
+            "Name": {
+              "type": "string",
+              "default": "albion.events.dlq"
+            },
+            "Durable": {
+              "type": "boolean",
+              "default": true
+            },
+            "Arguments": {
+              "type": "object",
+              "properties": {
+                "x-message-ttl": {
+                  "type": "integer",
+                  "default": 2592000000
+                },
+                "x-max-length": {
+                  "type": "integer",
+                  "default": 100000
+                }
+              }
+            },
+            "Bindings": {
+              "type": "array",
+              "default": ["#"]
+            }
+          }
+        },
+        "EnableInEnvironments": {
+          "type": "array",
+          "description": "Environments where provisioning is enabled",
+          "items": {
+            "type": "string",
+            "enum": ["Development", "Testing", "Staging", "Production"]
+          },
+          "default": ["Development", "Testing"]
+        },
+        "LogLevel": {
+          "type": "string",
+          "enum": ["Trace", "Debug", "Information", "Warning", "Error"],
+          "default": "Information"
+        }
+      }
+    }
+  }
+}

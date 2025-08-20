@@ -2,8 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using AlbionOnlineSniffer.Queue.Interfaces;
 using AlbionOnlineSniffer.Queue.Publishers;
+using AlbionOnlineSniffer.Queue.Services;
 using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Core.Services;
+using AlbionOnlineSniffer.Options;
 using Microsoft.Extensions.Logging;
 
 namespace AlbionOnlineSniffer.Queue
@@ -72,16 +74,32 @@ namespace AlbionOnlineSniffer.Queue
         /// </summary>
         public static void AddQueueServices(this IServiceCollection services, IConfiguration configuration)
         {
+            // Configure publishing settings
+            services.Configure<PublishingSettings>(configuration.GetSection("Publishing"));
+            
+            // Configure messaging provisioning options
+            services.Configure<MessagingProvisioningOptions>(configuration.GetSection("MessagingProvisioning"));
+            
+            // Add RabbitMQ topology provisioning if configured
+            var provisioningSection = configuration.GetSection("MessagingProvisioning");
+            if (provisioningSection.Exists() && provisioningSection.GetValue<bool>("Enabled"))
+            {
+                services.AddRabbitTopologyProvisioning(configuration);
+            }
+            
             services.AddSingleton<IQueuePublisher>(provider =>
             {
                 var eventLogger = provider.GetService<IAlbionEventLogger>();
                 var connectionString = configuration.GetConnectionString("RabbitMQ")
                     ?? configuration.GetValue<string>("RabbitMQ:ConnectionString")
                     ?? configuration.GetValue<string>("Queue:ConnectionString")
+                    ?? configuration.GetValue<string>("Publishing:ConnectionString")
                     ?? "amqp://localhost";
                 var exchange = configuration.GetValue<string>("RabbitMQ:Exchange")
                     ?? configuration.GetValue<string>("Queue:ExchangeName")
-                    ?? "albion.sniffer";
+                    ?? configuration.GetValue<string>("Publishing:Exchange")
+                    ?? configuration.GetValue<string>("MessagingProvisioning:Exchange:Name")
+                    ?? "albion.events";
                 return new RabbitMqPublisher(connectionString, exchange, eventLogger);
             });
 

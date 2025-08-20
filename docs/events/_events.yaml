@@ -1,0 +1,518 @@
+# Albion.Sniffer Events Source of Truth
+# This file defines all events published by the Albion.Sniffer system
+
+exchange: albion.events
+exchange_type: topic
+durable: true
+content_types:
+  - application/x-msgpack
+  - application/json
+
+standard_headers:
+  - name: x-event-id
+    type: string(uuid)
+    required: true
+    description: Unique event identifier
+  - name: x-event-ts
+    type: string(date-time)
+    required: true
+    description: Event timestamp in RFC3339 UTC format
+  - name: x-contract
+    type: string
+    required: true
+    description: Full contract type name
+  - name: x-profile
+    type: string
+    required: false
+    description: Player profile identifier when applicable
+
+events:
+  # Player Domain Events
+  - name: PlayerSpotted
+    version: v1
+    routing_key: albion.event.player.spotted.v1
+    domain: players
+    contract: Albion.Events.V1.PlayerSpottedV1
+    description: Emitted when a player is observed in the game world
+    frequency: High (every player movement)
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+        description: Unique event identifier
+      ObservedAt:
+        type: string(date-time)
+        required: true
+        description: Timestamp when player was observed
+      Cluster:
+        type: string
+        required: true
+        description: Current cluster/zone identifier
+      Region:
+        type: string
+        required: true
+        description: Region name
+      PlayerId:
+        type: int
+        required: true
+        description: Unique player identifier
+      PlayerName:
+        type: string
+        required: true
+        description: Player character name
+      GuildName:
+        type: string
+        required: false
+        description: Guild tag if player is in a guild
+      AllianceName:
+        type: string
+        required: false
+        description: Alliance name if guild is in an alliance
+      X:
+        type: float
+        required: true
+        description: X coordinate in world space
+      Y:
+        type: float
+        required: true
+        description: Y coordinate in world space
+      Tier:
+        type: int
+        required: true
+        description: Estimated equipment tier
+    example:
+      EventId: "550e8400-e29b-41d4-a716-446655440000"
+      ObservedAt: "2025-01-19T14:30:00Z"
+      Cluster: "Caerleon"
+      Region: "Royal"
+      PlayerId: 12345
+      PlayerName: "JohnDoe"
+      GuildName: "ARCH"
+      AllianceName: "ARCH Alliance"
+      X: 1024.5
+      Y: 768.2
+      Tier: 8
+
+  - name: PlayerLost
+    version: v1
+    routing_key: albion.event.player.lost.v1
+    domain: players
+    contract: Albion.Events.V1.EntityLeftV1
+    description: Emitted when a player leaves the observable area
+    frequency: Medium
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+        description: Entity ID that left
+    example:
+      EventId: "660e8400-e29b-41d4-a716-446655440001"
+      ObservedAt: "2025-01-19T14:35:00Z"
+      Id: 12345
+
+  - name: EquipmentChanged
+    version: v1
+    routing_key: albion.event.player.equipment.changed.v1
+    domain: players
+    contract: Albion.Events.V1.EquipmentChangedV1
+    description: Emitted when a player's equipment changes
+    frequency: Low
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+      MainHand:
+        type: string
+        required: false
+      OffHand:
+        type: string
+        required: false
+      Head:
+        type: string
+        required: false
+      Chest:
+        type: string
+        required: false
+      Shoes:
+        type: string
+        required: false
+    example:
+      EventId: "770e8400-e29b-41d4-a716-446655440002"
+      ObservedAt: "2025-01-19T14:40:00Z"
+      Id: 12345
+      MainHand: "T8_MAIN_CURSEDSTAFF"
+      OffHand: "T8_OFF_BOOK"
+      Head: "T8_HEAD_CLOTH_SET3"
+      Chest: "T8_ARMOR_CLOTH_SET3"
+      Shoes: "T8_SHOES_CLOTH_SET3"
+
+  # World Domain Events
+  - name: MapChanged
+    version: v1
+    routing_key: albion.event.world.mapchanged.v1
+    domain: world
+    contract: Albion.Events.V1.ClusterChangedV1
+    description: Emitted when the observed player changes map/cluster
+    frequency: Low
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      ClusterIndex:
+        type: string
+        required: true
+      ClusterName:
+        type: string
+        required: true
+      Region:
+        type: string
+        required: true
+      MapType:
+        type: string
+        required: true
+        description: Type of map (OPEN_WORLD, DUNGEON, EXPEDITION, etc.)
+    example:
+      EventId: "880e8400-e29b-41d4-a716-446655440003"
+      ObservedAt: "2025-01-19T15:00:00Z"
+      ClusterIndex: "1004"
+      ClusterName: "Bridgewatch"
+      Region: "Royal"
+      MapType: "OPEN_WORLD"
+
+  - name: HideoutSpotted
+    version: v1
+    routing_key: albion.event.world.hideout.spotted.v1
+    domain: world
+    contract: Albion.Events.V1.HideoutSpottedV1
+    description: Emitted when a hideout is discovered
+    frequency: Very Low
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      HideoutId:
+        type: int
+        required: true
+      GuildName:
+        type: string
+        required: true
+      AllianceName:
+        type: string
+        required: false
+      X:
+        type: float
+        required: true
+      Y:
+        type: float
+        required: true
+      Tier:
+        type: int
+        required: true
+    example:
+      EventId: "990e8400-e29b-41d4-a716-446655440004"
+      ObservedAt: "2025-01-19T15:30:00Z"
+      HideoutId: 98765
+      GuildName: "ARCH"
+      AllianceName: "ARCH Alliance"
+      X: 2048.0
+      Y: 1536.0
+      Tier: 8
+
+  # PvE Domain Events
+  - name: DungeonFound
+    version: v1
+    routing_key: albion.event.pve.dungeon.found.v1
+    domain: pve
+    contract: Albion.Events.V1.DungeonFoundV1
+    description: Emitted when a dungeon entrance is discovered
+    frequency: Low
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+      Type:
+        type: string
+        required: true
+        description: Dungeon type (SOLO, GROUP, AVALONIAN)
+      X:
+        type: float
+        required: true
+      Y:
+        type: float
+        required: true
+    example:
+      EventId: "aa0e8400-e29b-41d4-a716-446655440005"
+      ObservedAt: "2025-01-19T16:00:00Z"
+      Id: 54321
+      Type: "GROUP"
+      X: 3072.0
+      Y: 2048.0
+
+  - name: ChestSpawned
+    version: v1
+    routing_key: albion.event.pve.chest.spawned.v1
+    domain: pve
+    contract: Albion.Events.V1.LootChestFoundV1
+    description: Emitted when a loot chest is discovered
+    frequency: Medium
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+      X:
+        type: float
+        required: true
+      Y:
+        type: float
+        required: true
+    example:
+      EventId: "bb0e8400-e29b-41d4-a716-446655440006"
+      ObservedAt: "2025-01-19T16:15:00Z"
+      Id: 11111
+      X: 1500.0
+      Y: 1200.0
+
+  - name: MobSpawned
+    version: v1
+    routing_key: albion.event.pve.mob.spawned.v1
+    domain: pve
+    contract: Albion.Events.V1.MobSpawnedV1
+    description: Emitted when a mob is spawned or discovered
+    frequency: High
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+      Name:
+        type: string
+        required: true
+      Type:
+        type: string
+        required: true
+      Tier:
+        type: int
+        required: true
+      X:
+        type: float
+        required: true
+      Y:
+        type: float
+        required: true
+    example:
+      EventId: "cc0e8400-e29b-41d4-a716-446655440007"
+      ObservedAt: "2025-01-19T16:30:00Z"
+      Id: 22222
+      Name: "Elite Keeper"
+      Type: "KEEPER"
+      Tier: 8
+      X: 1800.0
+      Y: 1400.0
+
+  # Resource Domain Events
+  - name: ResourceNode
+    version: v1
+    routing_key: albion.event.resource.node.v1
+    domain: resource
+    contract: Albion.Events.V1.HarvestableFoundV1
+    description: Emitted when a harvestable resource node is discovered
+    frequency: Medium
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+      Type:
+        type: string
+        required: true
+        description: Resource type (WOOD, STONE, ORE, FIBER, HIDE)
+      Tier:
+        type: int
+        required: true
+      Charges:
+        type: int
+        required: true
+        description: Remaining charges/resources
+      X:
+        type: float
+        required: true
+      Y:
+        type: float
+        required: true
+    example:
+      EventId: "dd0e8400-e29b-41d4-a716-446655440008"
+      ObservedAt: "2025-01-19T17:00:00Z"
+      Id: 33333
+      Type: "ORE"
+      Tier: 8
+      Charges: 27
+      X: 2200.0
+      Y: 1800.0
+
+  - name: FishingZoneFound
+    version: v1
+    routing_key: albion.event.resource.fishing.found.v1
+    domain: resource
+    contract: Albion.Events.V1.FishingZoneFoundV1
+    description: Emitted when a fishing zone is discovered
+    frequency: Low
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      Id:
+        type: int
+        required: true
+      Tier:
+        type: int
+        required: true
+      X:
+        type: float
+        required: true
+      Y:
+        type: float
+        required: true
+    example:
+      EventId: "ee0e8400-e29b-41d4-a716-446655440009"
+      ObservedAt: "2025-01-19T17:30:00Z"
+      Id: 44444
+      Tier: 6
+      X: 2500.0
+      Y: 2000.0
+
+  # System Domain Events
+  - name: Heartbeat
+    version: v1
+    routing_key: albion.event.system.heartbeat.v1
+    domain: system
+    contract: Albion.Events.V1.HeartbeatV1
+    description: Periodic heartbeat to indicate system is alive
+    frequency: Very Low (every 60 seconds)
+    idempotent: true
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      SnifferId:
+        type: string
+        required: true
+        description: Unique sniffer instance identifier
+      Version:
+        type: string
+        required: true
+        description: Sniffer version
+      Uptime:
+        type: int
+        required: true
+        description: Uptime in seconds
+      EventsProcessed:
+        type: int
+        required: true
+        description: Total events processed since startup
+      PacketsCaptured:
+        type: int
+        required: true
+        description: Total packets captured since startup
+    example:
+      EventId: "ff0e8400-e29b-41d4-a716-446655440010"
+      ObservedAt: "2025-01-19T18:00:00Z"
+      SnifferId: "sniffer-001"
+      Version: "1.0.0"
+      Uptime: 3600
+      EventsProcessed: 150000
+      PacketsCaptured: 500000
+
+  - name: PublishFailure
+    version: v1
+    routing_key: albion.event.system.publishfailure.v1
+    domain: system
+    contract: Albion.Events.V1.PublishFailureV1
+    description: Emitted when event publishing fails after retries
+    frequency: Very Low
+    idempotent: false
+    schema:
+      EventId:
+        type: string(uuid)
+        required: true
+      ObservedAt:
+        type: string(date-time)
+        required: true
+      OriginalEventType:
+        type: string
+        required: true
+        description: Type of event that failed to publish
+      OriginalEventId:
+        type: string
+        required: true
+        description: ID of event that failed to publish
+      Error:
+        type: string
+        required: true
+        description: Error message
+      RetryCount:
+        type: int
+        required: true
+        description: Number of retries attempted
+    example:
+      EventId: "110e8400-e29b-41d4-a716-446655440011"
+      ObservedAt: "2025-01-19T18:30:00Z"
+      OriginalEventType: "PlayerSpottedV1"
+      OriginalEventId: "550e8400-e29b-41d4-a716-446655440000"
+      Error: "Connection timeout after 5 retries"
+      RetryCount: 5
