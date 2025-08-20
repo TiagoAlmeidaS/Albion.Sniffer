@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Dungeons;
 using AlbionOnlineSniffer.Core.Models.GameObjects.FishNodes;
@@ -49,8 +50,21 @@ namespace AlbionOnlineSniffer.Core.Handlers
             gatedWispsHandler.Clear();
             lootChestsHandler.Clear();
 
-            // Emitir evento para o EventDispatcher
-            await eventDispatcher.DispatchEvent(value);
+                            // 🚀 CRIAR E DESPACHAR EVENTO V1
+                var clusterChangedV1 = new ClusterChangedV1
+                {
+                    EventId = Guid.NewGuid().ToString("n"),
+                    ObservedAt = DateTimeOffset.UtcNow,
+                    LocationId = value.LocationId,
+                    Type = value.Type?.ToString() ?? "Unknown",
+                    ClusterId = value.DynamicClusterData?.ToString()
+                };
+
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(clusterChangedV1);
         }
     }
 }

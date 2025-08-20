@@ -414,6 +414,7 @@ namespace AlbionOnlineSniffer.Core
             
             // Sincronização de código XOR para descriptografia de posições
             services.AddSingleton<XorCodeSynchronizer>();
+            services.AddSingleton<LocationService>();
 
             // 🚀 SISTEMA DE OBSERVABILIDADE (Fase 5)
             // Métricas

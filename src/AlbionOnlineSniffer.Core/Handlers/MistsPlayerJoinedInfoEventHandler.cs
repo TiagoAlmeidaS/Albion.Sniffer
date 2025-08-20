@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Services;
@@ -20,9 +21,19 @@ namespace AlbionOnlineSniffer.Core.Handlers
         {
             localPlayerHandler.UpdateClusterTimeCycle(value.TimeCycle);
 
-            await eventDispatcher.DispatchEvent(value);
+            // 🚀 CRIAR E DESPACHAR EVENTO V1
+            var mistsPlayerJoinedV1 = new MistsPlayerJoinedV1
+            {
+                EventId = Guid.NewGuid().ToString("n"),
+                ObservedAt = DateTimeOffset.UtcNow,
+                TimeCycle = value.TimeCycle
+            };
 
-            return;
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(mistsPlayerJoinedV1);
         }
     }
 }

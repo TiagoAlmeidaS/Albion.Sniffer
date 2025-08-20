@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
@@ -18,12 +19,13 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly LocalPlayerHandler localPlayerHandler;
         private readonly PlayersHandler playerHandler;
         private readonly EventDispatcher eventDispatcher;
+        private readonly LocationService locationService;
 
         // Removido o uso de Properties.Resources - será implementado quando necessário
         // Stream beep = Properties.Resources.beep;
         // SoundPlayer player;
 
-        public NewCharacterEventHandler(PlayersHandler playerHandler, LocalPlayerHandler localPlayerHandler, ConfigHandler configHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewCharacter ?? 0)
+        public NewCharacterEventHandler(PlayersHandler playerHandler, LocalPlayerHandler localPlayerHandler, ConfigHandler configHandler, EventDispatcher eventDispatcher, LocationService locationService) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewCharacter ?? 0)
         {
             // player = new SoundPlayer(beep);
 
@@ -31,36 +33,52 @@ namespace AlbionOnlineSniffer.Core.Handlers
             this.localPlayerHandler = localPlayerHandler;
             this.configHandler = configHandler;
             this.eventDispatcher = eventDispatcher;
+            this.locationService = locationService;
         }
 
         // Overload required by tests: accepts only PlayersHandler and EventDispatcher
-        public NewCharacterEventHandler(PlayersHandler playerHandler, EventDispatcher eventDispatcher)
+        public NewCharacterEventHandler(PlayersHandler playerHandler, EventDispatcher eventDispatcher, LocationService locationService)
             : this(
                 playerHandler,
                 new LocalPlayerHandler(new Dictionary<string, Cluster>()),
                 new ConfigHandler(),
-                eventDispatcher)
+                eventDispatcher,
+                locationService)
         {
         }
 
         protected override async Task OnActionAsync(NewCharacterEvent value)
         {
-            Vector2 pos = Vector2.Zero;
-            
-            if (playerHandler.XorCode != null && value.PositionBytes != null)
-            {
-                var coords = playerHandler.Decrypt(value.PositionBytes);
-                pos = new Vector2(coords[1], coords[0]);
-            }
-            // Caso não tenha bytes, mantém Vector2.Zero
+            // 🔐 DESCRIPTOGRAFAR POSIÇÃO USANDO LOCATIONSERVICE
+            Vector2 pos = locationService.ProcessPosition(value.PositionBytes, value.Position);
             
             // Preencher Position no próprio evento para publicação reutilizável (IHasPosition)
             value.Position = pos;
 
             playerHandler.AddPlayer(value.Id, value.Name, value.GuildName, value.AllianceName, pos, new Health(0,0), Utility.Faction.NoPVP, new int[0], new int[0]);
 
-            // Emitir evento para o EventDispatcher
-            await eventDispatcher.DispatchEvent(value);
+            // 🚀 CRIAR E DESPACHAR EVENTO V1 COM POSIÇÃO DESCRIPTOGRAFADA
+            var playerSpottedV1 = new PlayerSpottedV1
+            {
+                EventId = Guid.NewGuid().ToString("n"),
+                ObservedAt = DateTimeOffset.UtcNow,
+                Cluster = localPlayerHandler.localPlayer?.CurrentCluster?.DisplayName ?? "Unknown",
+                Region = localPlayerHandler.localPlayer?.CurrentCluster?.ClusterColor.ToString() ?? "Unknown",
+                PlayerId = value.Id,
+                PlayerName = value.Name,
+                GuildName = string.IsNullOrWhiteSpace(value.GuildName) ? null : value.GuildName,
+                AllianceName = string.IsNullOrWhiteSpace(value.AllianceName) ? null : value.AllianceName,
+                X = pos.X,
+                Y = pos.Y,
+                Tier = 0 // TODO: Extrair do equipamento quando disponível
+            };
+
+            //TODO: Omitir o evento Core para handlers legados
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(playerSpottedV1);
 
             if (localPlayerHandler.localPlayer.CurrentCluster.ClusterColor != ClusterColor.City)
             {

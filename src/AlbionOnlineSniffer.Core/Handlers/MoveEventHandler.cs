@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
@@ -12,30 +13,52 @@ namespace AlbionOnlineSniffer.Core.Handlers
         private readonly PlayersHandler playerHandler;
         private readonly MobsHandler mobHandler;
         private readonly EventDispatcher eventDispatcher;
+        private readonly LocationService locationService;
 
-        public MoveEventHandler(PlayersHandler playerHandler, MobsHandler mobsHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.Move ?? 0)
+        public MoveEventHandler(PlayersHandler playerHandler, MobsHandler mobsHandler, EventDispatcher eventDispatcher, LocationService locationService) : base(PacketIndexesLoader.GlobalPacketIndexes?.Move ?? 0)
         {
             this.playerHandler = playerHandler;
             this.mobHandler = mobsHandler;
             this.eventDispatcher = eventDispatcher;
+            this.locationService = locationService;
         }
 
         protected override async Task OnActionAsync(MoveEvent value)
         {
+            // 🔐 DESCRIPTOGRAFAR POSIÇÕES USANDO LOCATIONSERVICE
+            var fromPosition = locationService.ProcessPosition(value.PositionBytes);
+            var toPosition = locationService.ProcessPosition(value.NewPositionBytes);
+            
+            // Atualizar posições nos handlers
             playerHandler.UpdatePlayerPosition(value.Id, value.PositionBytes, value.NewPositionBytes, value.Speed, value.Time);
             mobHandler.UpdateMobPosition(value.Id, value.PositionBytes, value.NewPositionBytes, value.Speed, value.Time);
             
-            // Enriquecer o evento com posições decriptadas (se houver chave)
-            if (playerHandler.XorCode != null)
-            {
-                var pos = playerHandler.Decrypt(value.PositionBytes);
-                var newPos = playerHandler.Decrypt(value.NewPositionBytes);
-                value.Position = new Vector2(pos[1], pos[0]);
-                value.NewPosition = new Vector2(newPos[1], newPos[0]);
-            }
+            // Enriquecer o evento Core com posições decriptadas
+            value.Position = fromPosition;
+            value.NewPosition = toPosition;
 
-            // Emitir evento para o EventDispatcher
-            await eventDispatcher.DispatchEvent(value);
+            // 🚀 CRIAR E DESPACHAR EVENTO V1 COM POSIÇÕES DESCRIPTOGRAFADAS
+            var playerMovedV1 = new PlayerMovedV1
+            {
+                EventId = Guid.NewGuid().ToString("n"),
+                ObservedAt = DateTimeOffset.UtcNow,
+                Cluster = "Unknown", // TODO: Obter do LocalPlayerHandler
+                Region = "Unknown",  // TODO: Obter do LocalPlayerHandler
+                PlayerId = value.Id,
+                PlayerName = "Unknown", // TODO: Obter do PlayersHandler
+                FromX = fromPosition.X,
+                FromY = fromPosition.Y,
+                ToX = toPosition.X,
+                ToY = toPosition.Y,
+                Speed = value.Speed,
+                Timestamp = value.Time
+            };
+
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(playerMovedV1);
         }
     }
 }

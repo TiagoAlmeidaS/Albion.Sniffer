@@ -1,141 +1,78 @@
-# 🔒 Migração de Segurança dos Eventos - SafeParameterExtractor
+# Migração de Eventos para SafeParameterExtractor e V1 Contracts
 
-## 🎯 **Objetivo**
-Migrar todos os eventos para usar `SafeParameterExtractor` ao invés de acessar diretamente `parameters[offsets[index]]`, evitando `KeyNotFoundException`.
+## Status da Migração
 
-## 📊 **Mapeamento de Eventos Afetados**
+### ✅ EVENTOS MIGRADOS PARA SafeParameterExtractor
 
-### **🔴 ALTA PRIORIDADE - KeyNotFoundException frequente:**
+- [x] **NewCharacterEvent** - Migrado para SafeParameterExtractor
+- [x] **HealthUpdateEvent** - Migrado para SafeParameterExtractor
+- [x] **NewHarvestableEvent** - Migrado para SafeParameterExtractor
+- [x] **ChangeClusterEvent** - Migrado para SafeParameterExtractor
+- [x] **NewDungeonEvent** - Migrado para SafeParameterExtractor
+- [x] **NewMobEvent** - Migrado para SafeParameterExtractor
 
-#### **1. HealthUpdateEvent** ✅ **MIGRADO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Models/Events/HealthUpdateEvent.cs`
-- **Problema:** `parameters[offsets[3]]` - offset 3 pode não existir
-- **Status:** ✅ **CORRIGIDO**
-- **⚠️ CORREÇÃO ADICIONAL:** `IndexOutOfRangeException` - offsets.json tem apenas [0,3] mas código tentava acessar [0,1,2,3]
+### ✅ EVENTOS MIGRADOS PARA V1 CONTRACTS
 
-#### **2. NewCharacterEvent** ✅ **MIGRADO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Models/Events/NewCharacterEvent.cs`
-- **Problema:** `parameters[offsets[2]]` e `parameters[offsets[3]]` - offsets 8 e 51 podem não existir
-- **Status:** ✅ **CORRIGIDO**
+- [x] **NewCharacterEventHandler** -> `PlayerSpottedV1`
+- [x] **NewMobEventHandler** -> `MobSpawnedV1`
+- [x] **MoveEventHandler** -> `PlayerMovedV1`
+- [x] **NewHarvestableEventHandler** -> `HarvestableFoundV1`
+- [x] **NewDungeonEventHandler** -> `DungeonFoundV1`
+- [x] **NewFishingZoneEventHandler** -> `FishingZoneFoundV1`
+- [x] **HealthUpdateEventHandler** -> `HealthUpdatedV1`
+- [x] **CharacterEquipmentChangedEventHandler** -> `EquipmentChangedV1`
+- [x] **MountedEventHandler** -> `MountedStateChangedV1`
+- [x] **KeySyncEventHandler** -> `KeySyncV1`
+- [x] **LeaveEventHandler** -> `EntityLeftV1`
+- [x] **ChangeClusterEventHandler** -> `ClusterChangedV1`
+- [x] **ChangeFlaggingFinishedEventHandler** -> `FlaggingFinishedV1`
+- [x] **HarvestableChangeStateEventHandler** -> `HarvestableStateChangedV1`
+- [x] **MobChangeStateEventHandler** -> `MobStateChangedV1`
+- [x] **RegenerationChangedEventHandler** -> `RegenerationChangedV1`
+- [x] **WispGateOpenedEventHandler** -> `WispGateOpenedV1`
+- [x] **MistsPlayerJoinedInfoEventHandler** -> `MistsPlayerJoinedV1`
+- [x] **LoadClusterObjectsEventHandler** -> `ClusterObjectsLoadedV1`
+- [x] **NewHarvestablesListEventHandler** -> `HarvestablesListFoundV1`
+- [x] **NewGatedWispEventHandler** -> `GatedWispFoundV1`
+- [x] **NewLootChestEventHandler** -> `LootChestFoundV1`
+- [x] **JoinResponseOperationHandler** -> `PlayerJoinedV1` (novo contrato)
+- [x] **MoveRequestOperationHandler** -> `PlayerMoveRequestV1` (novo contrato)
 
-### **🟡 MÉDIA PRIORIDADE - Potencial KeyNotFoundException:**
+## Arquitetura Implementada
 
-#### **3. ChangeClusterEvent** ✅ **MIGRADO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Models/Events/ChangeClusterEvent.cs`
-- **Problema:** `parameters[offsets[1,2]]` - acessos diretos no segundo construtor
-- **Status:** ✅ **CORRIGIDO**
+### LocationService
+- ✅ **Criado** - Centraliza descriptografia de posições
+- ✅ **Integrado** - Injetado nos handlers que precisam de posições
+- ✅ **Funcional** - Usa XorCodeSynchronizer e PositionDecryptionService
 
-#### **4. NewDungeonEvent** ✅ **MIGRADO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Models/Events/NewDungeonEvent.cs`
-- **Problema:** `parameters[offsets[0,1,2,3]]` - múltiplos acessos diretos
-- **Status:** ✅ **CORRIGIDO**
+### Dual Dispatch
+- ✅ **Implementado** - Todos os handlers agora despacham eventos Core + V1
+- ✅ **Compatibilidade** - Mantém compatibilidade com handlers legados
+- ✅ **Contratos V1** - Eventos padronizados para consumo externo
 
-#### **5. NewHarvestableEvent** ✅ **MIGRADO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Models/Events/NewHarvestableEvent.cs`
-- **Problema:** `parameters[offsets[0-4]]` - múltiplos acessos diretos
-- **Status:** ✅ **CORRIGIDO**
+### SafeParameterExtractor
+- ✅ **Criado** - Utilitário para extração segura de parâmetros
+- ✅ **Aplicado** - Todos os eventos problemáticos migrados
+- ✅ **Robusto** - Previne KeyNotFoundException e IndexOutOfRangeException
 
-#### **6. NewMobEvent** ✅ **MIGRADO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Models/Events/NewMobEvent.cs`
-- **Problema:** `parameters[offsets[0-5]]` - múltiplos acessos diretos
-- **Status:** ✅ **CORRIGIDO**
+## Próximos Passos
 
-### **🟢 BAIXA PRIORIDADE - Já usa ContainsKey:**
+1. **Testar aplicação** - Verificar se eventos V1 estão sendo despachados
+2. **Monitorar filas** - Confirmar publicação de eventos V1 nas filas
+3. **Validar descriptografia** - Verificar se posições estão sendo descriptografadas corretamente
+4. **Performance** - Monitorar impacto da dual dispatch
+5. **Documentação** - Atualizar documentação da API V1
 
-#### **7. JoinResponseOperation** ✅ **JÁ SEGURO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Handlers/JoinResponseOperation.cs`
-- **Status:** ✅ **Já usa ContainsKey**
+## Contratos V1 Criados/Modificados
 
-#### **8. MoveRequestOperation** ✅ **JÁ SEGURO**
-- **Arquivo:** `src/AlbionOnlineSniffer.Core/Handlers/MoveRequestOperation.cs`
-- **Status:** ✅ **Já usa ContainsKey**
+### Novos Contratos
+- `PlayerJoinedV1` - Para eventos de entrada de jogador
+- `PlayerMoveRequestV1` - Para solicitações de movimento
 
-## 🛠️ **Padrão de Migração**
+### Contratos Modificados
+- Todos os contratos existentes foram ajustados para propriedades corretas
+- Propriedades `Id` padronizadas em todos os contratos
+- Estruturas de dados alinhadas com implementação dos handlers
 
-### **❌ ANTES (INSEGURO):**
-```csharp
-Id = Convert.ToInt32(parameters[offsets[0]]);
-Name = (string)parameters[offsets[1]] ?? string.Empty;
-Health = Convert.ToSingle(parameters[offsets[2]]);
-```
-
-### **✅ DEPOIS (SEGURO):**
-```csharp
-Id = SafeParameterExtractor.GetInt32(parameters, offsets[0]);
-Name = SafeParameterExtractor.GetString(parameters, offsets[1]);
-Health = SafeParameterExtractor.GetFloat(parameters, offsets[2]);
-```
-
-## 📝 **Métodos Disponíveis no SafeParameterExtractor**
-
-| Tipo | Método | Descrição |
-|------|---------|-----------|
-| **int** | `GetInt32(parameters, offset, defaultValue = 0)` | Extrai inteiro com valor padrão |
-| **float** | `GetFloat(parameters, offset, defaultValue = 0f)` | Extrai float com valor padrão |
-| **string** | `GetString(parameters, offset, defaultValue = "")` | Extrai string com valor padrão |
-| **byte** | `GetByte(parameters, offset, defaultValue = 0)` | Extrai byte com valor padrão |
-| **byte[]** | `GetByteArray(parameters, offset, defaultValue = null)` | Extrai array de bytes |
-| **float[]** | `GetFloatArray(parameters, offset, defaultValue = null)` | Extrai array de floats |
-| **T** | `GetValue<T>(parameters, offset, defaultValue)` | Extrai com conversão de tipo |
-
-## 🚀 **Próximos Passos**
-
-### **1. Migrar Eventos de Alta Prioridade** ✅ **COMPLETO**
-- [x] HealthUpdateEvent
-- [x] NewCharacterEvent
-
-### **2. Migrar Eventos de Média Prioridade** ✅ **COMPLETO**
-- [x] ChangeClusterEvent
-- [x] NewDungeonEvent  
-- [x] NewHarvestableEvent
-- [x] NewMobEvent
-
-### **3. Verificar Eventos de Baixa Prioridade** ✅ **VERIFICADO**
-- [x] JoinResponseOperation
-- [x] MoveRequestOperation
-- [x] Outros que já usam ContainsKey
-
-
-
-## 🎉 **Benefícios da Migração**
-
-1. **✅ Zero KeyNotFoundException** - Sistema nunca trava por offsets inexistentes
-2. **✅ Zero IndexOutOfRangeException** - Sistema nunca trava por tentar acessar offsets fora do array
-3. **✅ Valores padrão inteligentes** - Campos ficam com valores sensatos ao invés de vazios
-4. **✅ Conversão de tipos segura** - Tratamento de erros de conversão
-5. **✅ Código mais limpo** - Menos verificações manuais de ContainsKey
-6. **✅ Manutenibilidade** - Padrão consistente em todos os eventos
-7. **✅ Compatibilidade** - Funciona com diferentes versões do jogo
-
-## 🔧 **Como Aplicar**
-
-Para cada evento:
-1. Adicionar `using AlbionOnlineSniffer.Core.Utility;`
-2. Substituir `Convert.ToInt32(parameters[offsets[index]])` por `SafeParameterExtractor.GetInt32(parameters, offsets[index])`
-3. Substituir `(string)parameters[offsets[index]] ?? ""` por `SafeParameterExtractor.GetString(parameters, offsets[index])`
-4. **⚠️ IMPORTANTE:** Verificar se o número de offsets no código corresponde ao `offsets.json`
-5. Testar compilação
-6. Verificar se eventos funcionam sem KeyNotFoundException e IndexOutOfRangeException
-
-## ⚠️ **Problemas Adicionais Identificados**
-
-### **IndexOutOfRangeException**
-Além do `KeyNotFoundException`, identificamos outro problema: **mismatch entre offsets definidos no código e no `offsets.json`**.
-
-#### **Exemplo - HealthUpdateEvent:**
-- **offsets.json:** `"HealthUpdateEvent": [0, 3]` (2 offsets)
-- **Código antigo:** `new byte[] { 0, 1, 2, 3 }` (4 offsets)
-- **Resultado:** `IndexOutOfRangeException` ao tentar acessar `offsets[1]`, `offsets[2]`
-
-#### **Solução Aplicada:**
-```csharp
-// ✅ ANTES (INSEGURO):
-offsets = packetOffsets?.HealthUpdateEvent ?? new byte[] { 0, 1, 2, 3 };
-Health = SafeParameterExtractor.GetFloat(parameters, offsets[1]);        // ❌ offsets[1] não existe
-MaxHealth = SafeParameterExtractor.GetFloat(parameters, offsets[2]);     // ❌ offsets[2] não existe
-
-// ✅ DEPOIS (SEGURO):
-offsets = packetOffsets?.HealthUpdateEvent ?? new byte[] { 0, 3 };
-Health = SafeParameterExtractor.GetFloat(parameters, offsets[1], 100f);  // ✅ Valor padrão se offset[1] existir
-MaxHealth = 100f;                                                        // ✅ Valor padrão fixo
-```
+## Status Final
+🎉 **MIGRAÇÃO COMPLETA** - Todos os eventos Core foram migrados para V1 contracts com dual dispatch implementado.

@@ -35,9 +35,23 @@ namespace AlbionOnlineSniffer.Queue.Publishers
 
                 _logger.LogInformation("🎯 EVENTO RECEBIDO: {EventType} em {Timestamp}", eventType, timestamp);
 
-                var eventTypeFormatted = eventType.EndsWith("Event", StringComparison.Ordinal)
-                    ? eventType.Substring(0, eventType.Length - "Event".Length)
-                    : eventType;
+                // Mapeamento hierárquico para eventos V1
+                var topic = GetHierarchicalTopic(eventType);
+                if (string.IsNullOrEmpty(topic))
+                {
+                    // Fallback para eventos não mapeados
+                    var eventTypeFormatted = eventType.EndsWith("Event", StringComparison.Ordinal)
+                        ? eventType.Substring(0, eventType.Length - "Event".Length)
+                        : eventType;
+                    
+                    // Remove sufixo "V1" dos nomes das filas para eventos V1
+                    if (eventTypeFormatted.EndsWith("V1", StringComparison.Ordinal))
+                    {
+                        eventTypeFormatted = eventTypeFormatted.Substring(0, eventTypeFormatted.Length - "V1".Length);
+                    }
+                    
+                    topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
+                }
 
                 object? location = null;
                 try
@@ -59,7 +73,6 @@ namespace AlbionOnlineSniffer.Queue.Publishers
                 }
                 catch { }
 
-                var topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
                 var message = new
                 {
                     EventType = eventType,
@@ -76,6 +89,56 @@ namespace AlbionOnlineSniffer.Queue.Publishers
             {
                 _logger.LogError(ex, "❌ Erro ao publicar evento na fila: {EventType} - {Message}", gameEvent.GetType().Name, ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Mapeia tipos de eventos V1 para tópicos hierárquicos organizados por contexto
+        /// </summary>
+        /// <param name="eventType">Nome do tipo do evento (ex: "PlayerMovedV1")</param>
+        /// <returns>Tópico hierárquico ou string vazia se não mapeado</returns>
+        private static string GetHierarchicalTopic(string eventType)
+        {
+            return eventType switch
+            {
+                // Player Events 🧙‍♂️
+                "PlayerSpottedV1" => "albion.event.player.spotted",
+                "PlayerMovedV1" => "albion.event.player.moved",
+                "PlayerJoinedV1" => "albion.event.player.joined",
+                "EntityLeftV1" => "albion.event.player.left",
+                "PlayerMoveRequestV1" => "albion.event.player.move.request",
+                "EquipmentChangedV1" => "albion.event.player.equipment.changed",
+                "MountedStateChangedV1" => "albion.event.player.mounted.changed",
+                "FlaggingFinishedV1" => "albion.event.player.flagging.finished",
+                "HealthUpdatedV1" => "albion.event.player.health.updated",
+                "RegenerationChangedV1" => "albion.event.player.regeneration.changed",
+
+                // Cluster Events 🗺️
+                "ClusterChangedV1" => "albion.event.cluster.changed",
+                "ClusterObjectsLoadedV1" => "albion.event.cluster.objects.loaded",
+                "KeySyncV1" => "albion.event.cluster.key.sync",
+
+                // Mob Events 👹
+                "MobSpawnedV1" => "albion.event.mob.spawned",
+                "MobStateChangedV1" => "albion.event.mob.state.changed",
+
+                // Harvestable Events 🌿
+                "HarvestableFoundV1" => "albion.event.harvestable.found",
+                "HarvestablesListFoundV1" => "albion.event.harvestable.list.found",
+                "HarvestableStateChangedV1" => "albion.event.harvestable.state.changed",
+
+                // World Objects Events 🏰
+                "DungeonFoundV1" => "albion.event.world.dungeon.found",
+                "FishingZoneFoundV1" => "albion.event.world.fishing.zone.found",
+                "LootChestFoundV1" => "albion.event.world.loot.chest.found",
+                "WispGateOpenedV1" => "albion.event.world.wisp.gate.opened",
+                "GatedWispFoundV1" => "albion.event.world.gated.wisp.found",
+
+                // Mists Events 🌫️
+                "MistsPlayerJoinedV1" => "albion.event.mists.player.joined",
+
+                // Evento não mapeado
+                _ => string.Empty
+            };
         }
     }
 }

@@ -94,7 +94,8 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<ConfigHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<LocationService>()
             ));
             
             builder.AddEventHandler(new MountedEventHandler(
@@ -116,7 +117,8 @@ namespace AlbionOnlineSniffer.Core.Services
             builder.AddEventHandler(new MoveEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<MobsHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<LocationService>()
             ));
             
             builder.AddEventHandler(new HealthUpdateEventHandler(
@@ -132,7 +134,8 @@ namespace AlbionOnlineSniffer.Core.Services
             
             builder.AddEventHandler(new NewHarvestableEventHandler(
                 _serviceProvider.GetRequiredService<HarvestablesHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<LocationService>()
             ));
             
             builder.AddEventHandler(new NewHarvestablesListEventHandler(
@@ -142,7 +145,8 @@ namespace AlbionOnlineSniffer.Core.Services
             
             builder.AddEventHandler(new NewMobEventHandler(
                 _serviceProvider.GetRequiredService<MobsHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<LocationService>()
             ));
             
             builder.AddEventHandler(new MobChangeStateEventHandler(
@@ -162,12 +166,14 @@ namespace AlbionOnlineSniffer.Core.Services
             
             builder.AddEventHandler(new NewDungeonEventHandler(
                 _serviceProvider.GetRequiredService<DungeonsHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<LocationService>()
             ));
             
             builder.AddEventHandler(new NewFishingZoneEventHandler(
                 _serviceProvider.GetRequiredService<FishNodesHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<LocationService>()
             ));
             
             builder.AddEventHandler(new NewGatedWispEventHandler(

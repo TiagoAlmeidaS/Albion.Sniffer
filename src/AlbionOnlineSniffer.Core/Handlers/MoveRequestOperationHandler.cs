@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
 using AlbionOnlineSniffer.Core.Services;
@@ -25,9 +26,27 @@ namespace AlbionOnlineSniffer.Core.Handlers
             if(!localPlayerHandler.localPlayer.IsStanding)
                 harvestablesHandler.RemoveHarvestables();
 
-            await eventDispatcher.DispatchEvent(value);
+            // 🚀 CRIAR E DESPACHAR EVENTO V1
+            var playerMoveRequestV1 = new PlayerMoveRequestV1
+            {
+                EventId = Guid.NewGuid().ToString("n"),
+                ObservedAt = DateTimeOffset.UtcNow,
+                Cluster = localPlayerHandler.localPlayer?.CurrentCluster?.DisplayName ?? "Unknown",
+                Region = localPlayerHandler.localPlayer?.CurrentCluster?.ClusterColor.ToString() ?? "Unknown",
+                PlayerId = localPlayerHandler.localPlayer?.Id ?? 0,
+                FromX = value.Position.X,
+                FromY = value.Position.Y,
+                ToX = value.NewPosition.X,
+                ToY = value.NewPosition.Y,
+                Speed = value.Speed,
+                Timestamp = value.Time
+            };
 
-            return;
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(playerMoveRequestV1);
         }
     }
 }

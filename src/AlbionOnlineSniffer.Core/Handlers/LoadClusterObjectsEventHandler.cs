@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Localplayer;
@@ -36,8 +37,27 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
                 localPlayerHandler.UpdateClusterObjectives(value.ClusterObjectives);
                 
-                // Emitir evento para o EventDispatcher
-                await eventDispatcher.DispatchEvent(value);
+                                    // 🚀 CRIAR E DESPACHAR EVENTO V1
+                    var clusterObjectsLoadedV1 = new ClusterObjectsLoadedV1
+                    {
+                        EventId = Guid.NewGuid().ToString("n"),
+                        ObservedAt = DateTimeOffset.UtcNow,
+                        Objectives = value.ClusterObjectives?.Select(obj => new ClusterObjectiveV1
+                        {
+                            Id = obj.Key,
+                            Charge = obj.Value.Charge,
+                            X = obj.Value.Position.X,
+                            Y = obj.Value.Position.Y,
+                            Type = obj.Value.Type.ToString(),
+                            Timer = DateTime.UtcNow // TODO: Extrair timer real se disponível
+                        }).ToArray() ?? Array.Empty<ClusterObjectiveV1>()
+                    };
+
+                            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+                
+                // Emitir evento V1 para contratos
+                await eventDispatcher.DispatchEvent(clusterObjectsLoadedV1);
             }
         }
     }

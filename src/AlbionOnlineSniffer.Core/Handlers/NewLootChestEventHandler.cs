@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.LootChests;
 using AlbionOnlineSniffer.Core.Services;
@@ -28,8 +29,21 @@ namespace AlbionOnlineSniffer.Core.Handlers
             // NewLootChestEvent só possui Id e PositionBytes atualmente; usar defaults
             worldChestHandler.AddWorldChest(value.Id, position, name: "NULL", enchLvl: 0);
             
-            // Emitir evento para o EventDispatcher
-            await eventDispatcher.DispatchEvent(value);
+                            // 🚀 CRIAR E DESPACHAR EVENTO V1 COM POSIÇÃO
+                var lootChestFoundV1 = new LootChestFoundV1
+                {
+                    EventId = Guid.NewGuid().ToString("n"),
+                    ObservedAt = DateTimeOffset.UtcNow,
+                    Id = value.Id,
+                    X = position.X,
+                    Y = position.Y
+                };
+
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(lootChestFoundV1);
         }
     }
 }

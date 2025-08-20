@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.FishNodes;
 using AlbionOnlineSniffer.Core.Services;
@@ -10,26 +11,38 @@ namespace AlbionOnlineSniffer.Core.Handlers
     {
         private readonly FishNodesHandler fishZoneHandler;
         private readonly EventDispatcher eventDispatcher;
+        private readonly LocationService locationService;
         
-        public NewFishingZoneEventHandler(FishNodesHandler fishZoneHandler, EventDispatcher eventDispatcher) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewFishingZoneObject ?? 0)
+        public NewFishingZoneEventHandler(FishNodesHandler fishZoneHandler, EventDispatcher eventDispatcher, LocationService locationService) : base(PacketIndexesLoader.GlobalPacketIndexes?.NewFishingZoneObject ?? 0)
         {
             this.fishZoneHandler = fishZoneHandler;
             this.eventDispatcher = eventDispatcher;
+            this.locationService = locationService;
         }
 
         protected override async Task OnActionAsync(NewFishingZoneEvent value)
         {
-            Vector2 position = Vector2.Zero;
-            if (value.PositionBytes != null && value.PositionBytes.Length >= 8)
-            {
-                position = new Vector2(BitConverter.ToSingle(value.PositionBytes, 4), BitConverter.ToSingle(value.PositionBytes, 0));
-            }
+            // 🔐 DESCRIPTOGRAFAR POSIÇÃO USANDO LOCATIONSERVICE
+            Vector2 position = locationService.ProcessPosition(value.PositionBytes);
 
             // NewFishingZoneEvent só possui Id e PositionBytes no momento
             fishZoneHandler.AddFishZone(value.Id, position, size: 0, respawnCount: 0);
             
-            // Emitir evento para o EventDispatcher
-            await eventDispatcher.DispatchEvent(value);
+            // 🚀 CRIAR E DESPACHAR EVENTO V1 COM POSIÇÃO DESCRIPTOGRAFADA
+            var fishingZoneFoundV1 = new FishingZoneFoundV1
+            {
+                EventId = Guid.NewGuid().ToString("n"),
+                ObservedAt = DateTimeOffset.UtcNow,
+                Id = value.Id,
+                X = position.X,
+                Y = position.Y
+            };
+
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(fishingZoneFoundV1);
         }
     }
 }

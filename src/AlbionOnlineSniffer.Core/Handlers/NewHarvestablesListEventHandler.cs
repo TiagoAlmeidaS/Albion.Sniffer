@@ -1,4 +1,5 @@
 ﻿using Albion.Network;
+using Albion.Events.V1;
 using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Harvestables;
 using AlbionOnlineSniffer.Core.Services;
@@ -18,6 +19,8 @@ namespace AlbionOnlineSniffer.Core.Handlers
 
         protected override async Task OnActionAsync(NewHarvestablesListEvent value)
         {
+            var harvestablePositions = new List<(int Id, int TypeId, int Tier, float X, float Y, int Charges)>();
+            
             foreach (var harvestableObject in value.HarvestableObjects)
             {
                 Vector2 position = Vector2.Zero;
@@ -27,9 +30,33 @@ namespace AlbionOnlineSniffer.Core.Handlers
                 }
 
                 harvestableHandler.AddHarvestable(harvestableObject.Id, harvestableObject.TypeId, harvestableObject.Tier, position, count: 0, charge: harvestableObject.Charges);
+                
+                harvestablePositions.Add((harvestableObject.Id, harvestableObject.TypeId, harvestableObject.Tier, position.X, position.Y, harvestableObject.Charges));
             }
-            // Emitir evento para o EventDispatcher
-            await eventDispatcher.DispatchEvent(value);
+            
+                            // 🚀 CRIAR E DESPACHAR EVENTO V1
+                var harvestablesListFoundV1 = new HarvestablesListFoundV1
+                {
+                    EventId = Guid.NewGuid().ToString("n"),
+                    ObservedAt = DateTimeOffset.UtcNow,
+                    Harvestables = harvestablePositions.Select(pos => new HarvestableFoundV1
+                    {
+                        EventId = Guid.NewGuid().ToString("n"),
+                        ObservedAt = DateTimeOffset.UtcNow,
+                        Id = pos.Id,
+                        TypeId = pos.TypeId,
+                        Tier = pos.Tier,
+                        X = pos.X,
+                        Y = pos.Y,
+                        Charges = pos.Charges
+                    }).ToArray()
+                };
+
+            // Emitir evento Core para handlers legados - DISABLED
+            // await eventDispatcher.DispatchEvent(value);
+            
+            // Emitir evento V1 para contratos
+            await eventDispatcher.DispatchEvent(harvestablesListFoundV1);
         }
     }
 }

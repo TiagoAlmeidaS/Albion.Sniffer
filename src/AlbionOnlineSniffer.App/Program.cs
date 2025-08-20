@@ -132,11 +132,31 @@ namespace AlbionOnlineSniffer.App
                     logger.LogInformation("  - NewCharacter: [{Offsets}]",
                         string.Join(", ", packetOffsets.NewCharacter));
                     logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
+                    
+                    // 🔧 VERIFICAR SINCRONIZAÇÃO DO CÓDIGO XOR PARA DESCRIPTOGRAFIA
+                    logger.LogInformation("🔐 VERIFICANDO SINCRONIZAÇÃO DO CÓDIGO XOR:");
+                    var xorSynchronizer = serviceProvider.GetRequiredService<Core.Services.XorCodeSynchronizer>();
+                    var isXorSynced = xorSynchronizer.IsXorCodeSynchronized();
+                    logger.LogInformation("  - Código XOR sincronizado: {IsSynced}", isXorSynced);
+                    if (isXorSynced)
+                    {
+                        logger.LogInformation("  ✅ Posições serão descriptografadas corretamente nos contratos V1");
+                    }
+                    else
+                    {
+                        logger.LogWarning("  ⚠️ Código XOR não sincronizado - posições podem não ser precisas");
+                    }
 
-                    // 🔧 INTEGRAÇÃO COM MENSAGERIA - Bridge via DI
-                    logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
-                    serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
-                    logger.LogInformation("✅ Bridge Event->Queue registrada!");
+                                // 🔧 INTEGRAÇÃO COM MENSAGERIA - Bridge via DI
+            logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
+            serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
+            logger.LogInformation("✅ Bridge Event->Queue registrada!");
+            
+            // 🔧 INTEGRAÇÃO COM CONTRATOS V1 - Bridge V1 via DI
+            logger.LogInformation("🔧 Conectando EventDispatcher aos Contratos V1 via Bridge...");
+            var v1Bridge = serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.V1ContractPublisherBridge>();
+            logger.LogInformation("✅ Bridge V1 Contracts registrada!");
+                    
                     logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados",
                         eventDispatcher.GetHandlerCount("*"));
 
