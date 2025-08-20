@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Queue.Interfaces;
@@ -73,16 +74,17 @@ namespace AlbionOnlineSniffer.Queue.Publishers
                 }
                 catch { }
 
-                var message = new
+                // Validar e limpar o objeto antes da serialização JSON
+                var cleanMessage = CleanMessageForJson(new
                 {
                     EventType = eventType,
                     Timestamp = timestamp,
                     Position = location,
                     Data = gameEvent
-                };
+                });
 
                 _logger.LogInformation("📤 PUBLICANDO: {EventType} -> {Topic}", eventType, topic);
-                await _publisher.PublishAsync(topic, message);
+                await _publisher.PublishAsync(topic, cleanMessage);
                 _logger.LogInformation("✅ Evento publicado na fila: {EventType} -> {Topic}", eventType, topic);
             }
             catch (Exception ex)
@@ -139,6 +141,32 @@ namespace AlbionOnlineSniffer.Queue.Publishers
                 // Evento não mapeado
                 _ => string.Empty
             };
+        }
+
+        /// <summary>
+        /// Limpa e valida mensagem para serialização JSON segura
+        /// </summary>
+        /// <param name="message">Mensagem a ser limpa</param>
+        /// <returns>Mensagem limpa e segura para JSON</returns>
+        private static object CleanMessageForJson(object message)
+        {
+            try
+            {
+                // Serializar e deserializar para limpar valores problemáticos
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                var json = JsonSerializer.Serialize(message, jsonOptions);
+                return JsonSerializer.Deserialize<object>(json, jsonOptions) ?? message;
+            }
+            catch
+            {
+                // Se falhar, retorna a mensagem original
+                return message;
+            }
         }
     }
 }

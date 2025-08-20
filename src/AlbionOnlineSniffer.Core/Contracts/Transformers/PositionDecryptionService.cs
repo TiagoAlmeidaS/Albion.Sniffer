@@ -61,6 +61,10 @@ namespace AlbionOnlineSniffer.Core.Contracts.Transformers
                 var coordX = BitConverter.ToSingle(xBytes, 0);
                 var coordY = BitConverter.ToSingle(yBytes, 0);
 
+                // Validar valores float para evitar Infinity/NaN
+                coordX = ValidateFloat(coordX);
+                coordY = ValidateFloat(coordY);
+
                 return new Vector2(coordX, coordY);
             }
             catch (Exception ex)
@@ -93,5 +97,17 @@ namespace AlbionOnlineSniffer.Core.Contracts.Transformers
         /// Verifica se o serviço está configurado com código XOR
         /// </summary>
         public bool IsConfigured => _xorCode != null && _xorCode.Length > 0;
+
+        /// <summary>
+        /// Valida float e substitui valores inválidos por 0
+        /// </summary>
+        private static float ValidateFloat(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+            {
+                return 0f;
+            }
+            return value;
+        }
     }
 }

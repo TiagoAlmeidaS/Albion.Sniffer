@@ -83,6 +83,11 @@ namespace AlbionOnlineSniffer.Core.Services
                 // Coordenadas estão em formato: [X1][X2][X3][X4][Y1][Y2][Y3][Y4]
                 var x = BitConverter.ToSingle(positionBytes, 0);
                 var y = BitConverter.ToSingle(positionBytes, 4);
+                
+                // Validar valores float para evitar Infinity/NaN
+                x = ValidateFloat(x);
+                y = ValidateFloat(y);
+                
                 return new Vector2(x, y);
             }
             catch (Exception ex)
@@ -90,6 +95,18 @@ namespace AlbionOnlineSniffer.Core.Services
                 _logger.LogError(ex, "Erro ao converter bytes de posição: {Message}", ex.Message);
                 return Vector2.Zero;
             }
+        }
+
+        /// <summary>
+        /// Valida float e substitui valores inválidos por 0
+        /// </summary>
+        private static float ValidateFloat(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+            {
+                return 0f;
+            }
+            return value;
         }
 
         /// <summary>

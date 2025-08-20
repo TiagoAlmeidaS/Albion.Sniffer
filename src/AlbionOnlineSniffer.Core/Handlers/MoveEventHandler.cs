@@ -37,7 +37,7 @@ namespace AlbionOnlineSniffer.Core.Handlers
             value.Position = fromPosition;
             value.NewPosition = toPosition;
 
-            // 🚀 CRIAR E DESPACHAR EVENTO V1 COM POSIÇÕES DESCRIPTOGRAFADAS
+            // 🚀 CRIAR E DESPACHAR EVENTO V1 COM POSIÇÕES DESCRIPTOGRAFADAS E VALIDADAS
             var playerMovedV1 = new PlayerMovedV1
             {
                 EventId = Guid.NewGuid().ToString("n"),

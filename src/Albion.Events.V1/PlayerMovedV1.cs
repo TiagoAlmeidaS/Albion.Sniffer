@@ -6,7 +6,7 @@ namespace Albion.Events.V1;
 /// Contract for when a player moves in the world
 /// </summary>
 [MessagePackObject(true)]
-public sealed class PlayerMovedV1
+public sealed class PlayerMovedV1 : BaseEventV1
 {
     public required string EventId { get; init; }
     public required DateTimeOffset ObservedAt { get; init; }
