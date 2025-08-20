@@ -161,7 +161,8 @@ namespace AlbionOnlineSniffer.Core.Services
             
             builder.AddEventHandler(new KeySyncEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<XorCodeSynchronizer>()
             ));
             
             builder.AddEventHandler(new NewDungeonEventHandler(

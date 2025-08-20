@@ -24,8 +24,12 @@ namespace AlbionOnlineSniffer.Core.Services
             _playersHandler = playersHandler;
             _positionDecryptionService = positionDecryptionService;
             
-            // Sincronizar código XOR inicial
-            SyncXorCode();
+            _logger.LogDebug("XorCodeSynchronizer inicializado. PlayersHandler.XorCode: {Length} bytes, PositionDecryptionService.IsConfigured: {IsConfigured}", 
+                _playersHandler.XorCode?.Length ?? 0, 
+                _positionDecryptionService.IsConfigured);
+            
+            // Não sincronizar automaticamente no construtor - aguardar KeySyncEvent
+            // SyncXorCode();
         }
 
         /// <summary>
@@ -36,14 +40,20 @@ namespace AlbionOnlineSniffer.Core.Services
             try
             {
                 var xorCode = _playersHandler.XorCode;
+                _logger.LogDebug("Tentando sincronizar código XOR. PlayersHandler.XorCode: {Length} bytes", xorCode?.Length ?? 0);
+                
                 if (xorCode != null && xorCode.Length > 0)
                 {
                     _positionDecryptionService.SetXorCode(xorCode);
-                    _logger.LogDebug("Código XOR sincronizado: {XorCodeLength} bytes", xorCode.Length);
+                    _logger.LogInformation("✅ Código XOR sincronizado com sucesso: {XorCodeLength} bytes", xorCode.Length);
+                    
+                    // Verificar se a sincronização foi bem-sucedida
+                    var isConfigured = _positionDecryptionService.IsConfigured;
+                    _logger.LogDebug("PositionDecryptionService.IsConfigured após sincronização: {IsConfigured}", isConfigured);
                 }
                 else
                 {
-                    _logger.LogDebug("Código XOR não disponível para sincronização");
+                    _logger.LogDebug("❌ Código XOR não disponível para sincronização");
                 }
             }
             catch (Exception ex)
@@ -77,9 +87,16 @@ namespace AlbionOnlineSniffer.Core.Services
             var playersHandlerCode = _playersHandler.XorCode;
             var positionServiceConfigured = _positionDecryptionService.IsConfigured;
             
-            return playersHandlerCode != null && 
+            var isSynchronized = playersHandlerCode != null && 
                    playersHandlerCode.Length > 0 && 
                    positionServiceConfigured;
+            
+            _logger.LogDebug("Verificação de sincronização XOR: PlayersHandler.XorCode={Length} bytes, PositionDecryptionService.IsConfigured={IsConfigured}, Resultado={IsSynchronized}", 
+                playersHandlerCode?.Length ?? 0, 
+                positionServiceConfigured, 
+                isSynchronized);
+            
+            return isSynchronized;
         }
     }
 }

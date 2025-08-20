@@ -36,6 +36,7 @@ namespace AlbionOnlineSniffer.Core.Services
                 // Se não há bytes de posição, usar fallback
                 if (positionBytes == null || positionBytes.Length < 8)
                 {
+                    _logger.LogDebug("Bytes de posição inválidos para descriptografia, usando fallback");
                     return fallbackPosition ?? Vector2.Zero;
                 }
 
@@ -44,19 +45,24 @@ namespace AlbionOnlineSniffer.Core.Services
                 {
                     _logger.LogDebug("Código XOR não sincronizado, tentando sincronizar...");
                     _xorSynchronizer.SyncXorCode();
+                    
+                    // Verificar novamente após sincronização
+                    if (!_xorSynchronizer.IsXorCodeSynchronized())
+                    {
+                        _logger.LogWarning("Falha na sincronização do código XOR, usando fallback");
+                        return fallbackPosition ?? Vector2.Zero;
+                    }
                 }
 
+                _logger.LogDebug("Descriptografando posição com {Length} bytes", positionBytes.Length);
+                
                 // Descriptografar usando o serviço de descriptografia
                 var decryptedPosition = _positionDecryptionService.DecryptPosition(positionBytes);
                 
-                // Se descriptografia retornou Vector2.Zero e temos fallback, usar fallback
-                if (decryptedPosition == Vector2.Zero && fallbackPosition.HasValue && fallbackPosition.Value != Vector2.Zero)
-                {
-                    _logger.LogDebug("Descriptografia retornou zero, usando posição fallback");
-                    return fallbackPosition.Value;
-                }
-
-                _logger.LogTrace("Posição descriptografada: X={X}, Y={Y}", decryptedPosition.X, decryptedPosition.Y);
+                _logger.LogDebug("Resultado da descriptografia: X={X}, Y={Y}", decryptedPosition.X, decryptedPosition.Y);
+                
+                // ✅ SEMPRE retornar a posição descriptografada, mesmo se for Vector2.Zero
+                // (pode ser uma posição válida em (0,0))
                 return decryptedPosition;
             }
             catch (Exception ex)
@@ -119,28 +125,36 @@ namespace AlbionOnlineSniffer.Core.Services
         {
             if (positionBytes == null || positionBytes.Length < 8)
             {
+                _logger.LogDebug("Bytes de posição inválidos, usando fallback");
                 return fallbackPosition ?? Vector2.Zero;
             }
 
-            // Se há código XOR disponível, tentar descriptografar
+            // 🔑 PRIORIDADE: Se há código XOR disponível, SEMPRE tentar descriptografar primeiro
             if (_xorSynchronizer.IsXorCodeSynchronized())
             {
+                _logger.LogDebug("Código XOR sincronizado, tentando descriptografar posição");
                 var decryptedPosition = DecryptPosition(positionBytes, fallbackPosition);
-                if (decryptedPosition != Vector2.Zero)
-                {
-                    return decryptedPosition;
-                }
+                
+                // ✅ SEMPRE retornar a posição descriptografada, mesmo se for Vector2.Zero
+                // (pode ser uma posição válida em (0,0))
+                _logger.LogDebug("Posição descriptografada: X={X}, Y={Y}", decryptedPosition.X, decryptedPosition.Y);
+                return decryptedPosition;
+            }
+            else
+            {
+                _logger.LogDebug("Código XOR não sincronizado, usando conversão direta");
             }
 
-            // Fallback: conversão direta dos bytes
+            // Fallback: conversão direta dos bytes (apenas se não há descriptografia disponível)
             var directPosition = ConvertPositionBytes(positionBytes);
             if (directPosition != Vector2.Zero)
             {
-                _logger.LogDebug("Usando posição convertida diretamente (sem descriptografia)");
+                _logger.LogDebug("Usando posição convertida diretamente (sem descriptografia): X={X}, Y={Y}", directPosition.X, directPosition.Y);
                 return directPosition;
             }
 
             // Último recurso: fallback fornecido
+            _logger.LogDebug("Usando posição fallback: X={X}, Y={Y}", fallbackPosition?.X ?? 0, fallbackPosition?.Y ?? 0);
             return fallbackPosition ?? Vector2.Zero;
         }
 

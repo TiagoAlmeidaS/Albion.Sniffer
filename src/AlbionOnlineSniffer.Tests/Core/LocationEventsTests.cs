@@ -14,6 +14,7 @@ using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Handlers;
 using AlbionOnlineSniffer.Core;
+using AlbionOnlineSniffer.Core.Contracts.Transformers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -77,19 +78,19 @@ namespace AlbionOnlineSniffer.Tests.Core
 
         private sealed class TestMoveEventHandler : MoveEventHandler
         {
-            public TestMoveEventHandler(PlayersHandler p, MobsHandler m, EventDispatcher d) : base(p, m, d) { }
+            public TestMoveEventHandler(PlayersHandler p, MobsHandler m, EventDispatcher d, LocationService l) : base(p, m, d, l) { }
             public Task InvokeAsync(MoveEvent e) => base.OnActionAsync(e);
         }
 
         private sealed class TestKeySyncEventHandler : KeySyncEventHandler
         {
-            public TestKeySyncEventHandler(PlayersHandler p, EventDispatcher d) : base(p, d) { }
+            public TestKeySyncEventHandler(PlayersHandler p, EventDispatcher d, XorCodeSynchronizer x) : base(p, d, x) { }
             public Task InvokeAsync(KeySyncEvent e) => base.OnActionAsync(e);
         }
 
         private sealed class TestNewCharacterEventHandler : NewCharacterEventHandler
         {
-            public TestNewCharacterEventHandler(PlayersHandler p, EventDispatcher d) : base(p, d) { }
+            public TestNewCharacterEventHandler(PlayersHandler p, EventDispatcher d, LocationService l) : base(p, d, l) { }
             public Task InvokeAsync(NewCharacterEvent e) => base.OnActionAsync(e);
         }
 
@@ -107,8 +108,20 @@ namespace AlbionOnlineSniffer.Tests.Core
             var playersHandler = new PlayersHandler(new List<ItemInfo>());
             var mobsHandler = new MobsHandler(new List<MobInfo>());
 
-            var keySyncHandler = new TestKeySyncEventHandler(playersHandler, dispatcher);
-            var moveHandler = new TestMoveEventHandler(playersHandler, mobsHandler, dispatcher);
+            var positionDecryptionService = new PositionDecryptionService(CreateLoggerFactory().CreateLogger<PositionDecryptionService>());
+            var xorSynchronizer = new XorCodeSynchronizer(
+                CreateLoggerFactory().CreateLogger<XorCodeSynchronizer>(),
+                playersHandler,
+                positionDecryptionService
+            );
+            var locationService = new LocationService(
+                CreateLoggerFactory().CreateLogger<LocationService>(),
+                xorSynchronizer,
+                positionDecryptionService
+            );
+
+            var keySyncHandler = new TestKeySyncEventHandler(playersHandler, dispatcher, xorSynchronizer);
+            var moveHandler = new TestMoveEventHandler(playersHandler, mobsHandler, dispatcher, locationService);
 
             // Simula o recebimento do KeySync
             var ksParams = new Dictionary<byte, object> { { 0, SampleXorCode } };
@@ -172,8 +185,21 @@ namespace AlbionOnlineSniffer.Tests.Core
 
             var dispatcher = new EventDispatcher(CreateLoggerFactory().CreateLogger<EventDispatcher>());
             var playersHandler = new PlayersHandler(new List<ItemInfo>());
-            var keySyncHandler = new TestKeySyncEventHandler(playersHandler, dispatcher);
-            var newCharHandler = new TestNewCharacterEventHandler(playersHandler, dispatcher);
+            
+            var positionDecryptionService = new PositionDecryptionService(CreateLoggerFactory().CreateLogger<PositionDecryptionService>());
+            var xorSynchronizer = new XorCodeSynchronizer(
+                CreateLoggerFactory().CreateLogger<XorCodeSynchronizer>(),
+                playersHandler,
+                positionDecryptionService
+            );
+            var locationService = new LocationService(
+                CreateLoggerFactory().CreateLogger<LocationService>(),
+                xorSynchronizer,
+                positionDecryptionService
+            );
+            
+            var keySyncHandler = new TestKeySyncEventHandler(playersHandler, dispatcher, xorSynchronizer);
+            var newCharHandler = new TestNewCharacterEventHandler(playersHandler, dispatcher, locationService);
 
             // Setup XOR key first
             var ksParams = new Dictionary<byte, object> { { 0, SampleXorCode } };
