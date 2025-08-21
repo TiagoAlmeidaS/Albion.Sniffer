@@ -363,6 +363,24 @@ namespace AlbionOnlineSniffer.Core
             // Configuration
             services.AddSingleton<ConfigHandler>();
 
+            // ✅ REGISTRAR HANDLER DE DESCOBERTA
+            services.AddSingleton<DiscoveryDebugHandler>(sp =>
+            {
+                var factory = sp.GetRequiredService<ILoggerFactory>();
+                return new DiscoveryDebugHandler(factory.CreateLogger<DiscoveryDebugHandler>());
+            });
+
+
+
+            // ✅ REGISTRAR SERVIÇO DE DESCOBERTA
+            services.AddSingleton<DiscoveryService>(sp =>
+            {
+                var factory = sp.GetRequiredService<ILoggerFactory>();
+                var logger = factory.CreateLogger<DiscoveryService>();
+                var eventDispatcher = sp.GetRequiredService<EventDispatcher>();
+                return new DiscoveryService(logger, eventDispatcher);
+            });
+
             // Register pipeline configuration
             services.Configure<PipelineConfiguration>(options =>
             {

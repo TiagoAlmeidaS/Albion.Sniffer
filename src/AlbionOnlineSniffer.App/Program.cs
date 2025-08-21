@@ -62,13 +62,13 @@ namespace AlbionOnlineSniffer.App
                     services.ValidateOptionsOnStart<AlbionOnlineSniffer.Options.SnifferOptions>();
                     services.AddProfileManagement();
 
+                    // Queue services + Event->Queue Bridge (PRIMEIRO para sobrescrever IEventPublisher)
+                    logger.LogInformation("🔧 Registrando serviços do Queue...");
+                    Queue.DependencyProvider.AddQueueServices(services, configuration);
+
                     // Core services (registra EventDispatcher, PacketOffsets, etc.)
                     logger.LogInformation("🔧 Registrando serviços do Core...");
                     Core.DependencyProvider.RegisterServices(services);
-
-                    // Queue services + Event->Queue Bridge
-                    logger.LogInformation("🔧 Registrando serviços do Queue...");
-                    Queue.DependencyProvider.AddQueueServices(services, configuration);
 
                     // Serviços de captura via DependencyProvider (igual ao Core)
                     logger.LogInformation("🔧 Registrando serviços de captura...");
@@ -104,6 +104,10 @@ namespace AlbionOnlineSniffer.App
                     // Get pipeline service
                     var pipeline = serviceProvider.GetRequiredService<Core.Pipeline.IEventPipeline>();
                     logger.LogInformation("🚀 Pipeline obtido: {PipelineType}", pipeline.GetType().Name);
+
+                    // ✅ FORÇAR INSTANCIAÇÃO DO DISCOVERY SERVICE
+                    var discoveryService = serviceProvider.GetRequiredService<Core.Services.DiscoveryService>();
+                    logger.LogInformation("🔍 DiscoveryService instanciado: {Type}", discoveryService.GetType().Name);
 
                     // Start the pipeline
                     await pipeline.StartAsync();

@@ -38,6 +38,17 @@ namespace AlbionOnlineSniffer.Core.Services
         /// <param name="builder">ReceiverBuilder do Albion.Network</param>
         public void ConfigureReceiverBuilder(Albion.Network.ReceiverBuilder builder)
         {
+            // ✅ HANDLER DE DESCOBERTA UNIVERSAL - REGISTRAR COMO PRIMEIRO E COMO ÚLTIMO
+            var discoveryHandler = _serviceProvider.GetRequiredService<DiscoveryDebugHandler>();
+            
+            // ✅ REGISTRAR COMO PRIMEIRO HANDLER (interceptação inicial)
+            builder.AddHandler(discoveryHandler);
+            _logger.LogInformation("🔍 DiscoveryDebugHandler registrado como PRIMEIRO handler para interceptação universal");
+            
+            // ✅ REGISTRAR COMO HANDLER FINAL (interceptação de fallback)
+            builder.AddHandler(discoveryHandler);
+            _logger.LogInformation("🔍 DiscoveryDebugHandler registrado como HANDLER FINAL para interceptação de fallback");
+            
             // Registrar handlers usando a abordagem correta baseada nos handlers existentes
             builder.AddEventHandler(new LeaveEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
@@ -192,7 +203,7 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
 
-            _logger.LogInformation("ReceiverBuilder configurado com {HandlerCount} handlers", 25);
+            _logger.LogInformation("ReceiverBuilder configurado com {HandlerCount} handlers + DiscoveryDebugHandler (duplo registro para garantia)", 25);
         }
     }
 } 

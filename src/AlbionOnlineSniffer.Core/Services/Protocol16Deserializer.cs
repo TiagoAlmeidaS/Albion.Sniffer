@@ -14,13 +14,21 @@ namespace AlbionOnlineSniffer.Core.Services
     {
         private readonly ILogger<Protocol16Deserializer> _logger;
         private readonly IPhotonReceiver _photonReceiver;
+        private readonly DiscoveryService? _discoveryService;
 
         public Protocol16Deserializer(
             IPhotonReceiver photonReceiver,
-            ILogger<Protocol16Deserializer> logger)
+            ILogger<Protocol16Deserializer> logger,
+            DiscoveryService? discoveryService = null)
         {
             _logger = logger;
             _photonReceiver = photonReceiver;
+            _discoveryService = discoveryService;
+            
+            if (_discoveryService != null)
+            {
+                _logger.LogInformation("🔍 DiscoveryService conectado ao Protocol16Deserializer");
+            }
         }
 
         /// <summary>
@@ -33,7 +41,8 @@ namespace AlbionOnlineSniffer.Core.Services
             {
                 _logger.LogDebug("Recebendo pacote UDP de {PayloadLength} bytes", payload.Length);
 
-                // Processar o pacote através do receiver do Albion.Network
+                // ✅ PROCESSAR O PACOTE ATRAVÉS DO ALBION.NETWORK
+                // O DiscoveryDebugHandler irá interceptar automaticamente após descriptografia
                 _photonReceiver.ReceivePacket(payload);
             }
             catch (Exception ex)

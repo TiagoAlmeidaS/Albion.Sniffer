@@ -40,18 +40,27 @@ namespace AlbionOnlineSniffer.Queue.Publishers
                 var topic = GetHierarchicalTopic(eventType);
                 if (string.IsNullOrEmpty(topic))
                 {
-                    // Fallback para eventos não mapeados
-                    var eventTypeFormatted = eventType.EndsWith("Event", StringComparison.Ordinal)
-                        ? eventType.Substring(0, eventType.Length - "Event".Length)
-                        : eventType;
-                    
-                    // Remove sufixo "V1" dos nomes das filas para eventos V1
-                    if (eventTypeFormatted.EndsWith("V1", StringComparison.Ordinal))
+                    // ✅ ESPECIAL: PACOTES DE DESCOBERTA (DiscoveryDebugHandler)
+                    if (eventType == "DecryptedPacketData")
                     {
-                        eventTypeFormatted = eventTypeFormatted.Substring(0, eventTypeFormatted.Length - "V1".Length);
+                        topic = "albion.discovery.raw";
+                        _logger.LogInformation("🔍 DESCOBERTA: Pacote interceptado será enviado para fila de descoberta");
                     }
-                    
-                    topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
+                    else
+                    {
+                        // Fallback para eventos não mapeados
+                        var eventTypeFormatted = eventType.EndsWith("Event", StringComparison.Ordinal)
+                            ? eventType.Substring(0, eventType.Length - "Event".Length)
+                            : eventType;
+                        
+                        // Remove sufixo "V1" dos nomes das filas para eventos V1
+                        if (eventTypeFormatted.EndsWith("V1", StringComparison.Ordinal))
+                        {
+                            eventTypeFormatted = eventTypeFormatted.Substring(0, eventTypeFormatted.Length - "V1".Length);
+                        }
+                        
+                        topic = $"albion.event.{eventTypeFormatted.ToLowerInvariant()}";
+                    }
                 }
 
                 object? location = null;

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using AlbionOnlineSniffer.Core.Services;
-using AlbionOnlineSniffer.Queue.Interfaces;
+using AlbionOnlineSniffer.Core.Interfaces;
 using AlbionOnlineSniffer.Queue.Publishers;
 
 namespace AlbionOnlineSniffer.Tests.Queue
