@@ -20,9 +20,11 @@ using System.Numerics;
 using AlbionOnlineSniffer.Queue;
 using System.IO;
 using System.Linq;
+using AlbionOnlineSniffer.Core.Models.ResponseObj;
 using AlbionOnlineSniffer.Queue.Publishers;
 using AlbionOnlineSniffer.Core.Pipeline;
 using AlbionOnlineSniffer.Core.Observability;
+using AlbionOnlineSniffer.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,28 +114,28 @@ app.MapHub<SnifferHub>("/hubs/sniffer");
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 // API endpoints básicos
-app.MapGet("/api/packets", (IInMemoryRepository<Packet> packets, int skip = 0, int take = 100) => 
+app.MapGet("/api/packets", (IInMemoryRepository<Packet> packets, int skip = 0, int take = 100) =>
 {
     var data = packets.GetPaged(skip, take);
     var total = packets.Count;
     return Results.Json(new { data, total, skip, take, hasMore = skip + take < total });
 });
 
-app.MapGet("/api/events", (IInMemoryRepository<Event> events, int skip = 0, int take = 100) => 
+app.MapGet("/api/events", (IInMemoryRepository<Event> events, int skip = 0, int take = 100) =>
 {
     var data = events.GetPaged(skip, take);
     var total = events.Count;
     return Results.Json(new { data, total, skip, take, hasMore = skip + take < total });
 });
 
-app.MapGet("/api/logs", (IInMemoryRepository<WebLogEntry> logs, int skip = 0, int take = 100) => 
+app.MapGet("/api/logs", (IInMemoryRepository<WebLogEntry> logs, int skip = 0, int take = 100) =>
 {
     var data = logs.GetPaged(skip, take);
     var total = logs.Count;
     return Results.Json(new { data, total, skip, take, hasMore = skip + take < total });
 });
 
-app.MapGet("/api/sessions", (IInMemoryRepository<Session> sessions, int skip = 0, int take = 100) => 
+app.MapGet("/api/sessions", (IInMemoryRepository<Session> sessions, int skip = 0, int take = 100) =>
 {
     var data = sessions.GetPaged(skip, take);
     var total = sessions.Count;
@@ -141,7 +143,7 @@ app.MapGet("/api/sessions", (IInMemoryRepository<Session> sessions, int skip = 0
 });
 
 // Endpoints de controle
-app.MapPost("/api/repositories/clear", (IInMemoryRepository<Packet> packets, IInMemoryRepository<Event> events, IInMemoryRepository<WebLogEntry> logs, IInMemoryRepository<Session> sessions) => 
+app.MapPost("/api/repositories/clear", (IInMemoryRepository<Packet> packets, IInMemoryRepository<Event> events, IInMemoryRepository<WebLogEntry> logs, IInMemoryRepository<Session> sessions) =>
 {
     packets.Clear();
     events.Clear();
@@ -159,7 +161,76 @@ app.Lifetime.ApplicationStarted.Register(() =>
         Console.WriteLine($"📁 Diretório atual: {System.IO.Directory.GetCurrentDirectory()}");
         Console.WriteLine($"🔧 Versão do .NET: {Environment.Version}");
         Console.WriteLine($"💻 Arquitetura: {(Environment.Is64BitProcess ? "x64" : "x86")}");
-        
+
+        // ✅ CONFIGURAR PACKET OFFSETS PROVIDER (CRÍTICO!)
+        try
+        {
+            Console.WriteLine("🔧 Configurando PacketOffsetsProvider...");
+            AlbionOnlineSniffer.Core.Services.PacketOffsetsProvider.Configure(app.Services);
+            Console.WriteLine("✅ PacketOffsetsProvider configurado!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao configurar PacketOffsetsProvider: {ex.Message}");
+        }
+
+        // ✅ FORÇAR CARREGAMENTO DO PACKET INDEXES (CRÍTICO!)
+        try
+        {
+            Console.WriteLine("🔧 Forçando carregamento do PacketIndexes...");
+            var packetIndexes = app.Services.GetRequiredService<PacketIndexes>();
+            Console.WriteLine("✅ PacketIndexes carregado e GlobalPacketIndexes configurado!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao carregar PacketIndexes: {ex.Message}");
+        }
+
+        // ✅ INTEGRAÇÃO COM MENSAGERIA - Bridge via DI (CRÍTICO!)
+        try
+        {
+            Console.WriteLine("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
+            app.Services.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
+            Console.WriteLine("✅ Bridge Event->Queue registrada!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao configurar EventToQueueBridge: {ex.Message}");
+        }
+
+        // ✅ INTEGRAÇÃO COM CONTRATOS V1 - Bridge V1 via DI (CRÍTICO!)
+        try
+        {
+            Console.WriteLine("🔧 Conectando EventDispatcher aos Contratos V1 via Bridge...");
+            var v1Bridge = app.Services.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.V1ContractPublisherBridge>();
+            Console.WriteLine("✅ Bridge V1 Contracts registrada!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao configurar V1ContractPublisherBridge: {ex.Message}");
+        }
+
+        // ✅ VERIFICAR SINCRONIZAÇÃO DO CÓDIGO XOR PARA DESCRIPTOGRAFIA
+        try
+        {
+            Console.WriteLine("🔐 Verificando sincronização do código XOR...");
+            var xorSynchronizer = app.Services.GetRequiredService<XorCodeSynchronizer>();
+            var isXorSynced = xorSynchronizer.IsXorCodeSynchronized();
+            Console.WriteLine($"  - Código XOR sincronizado: {isXorSynced}");
+            if (isXorSynced)
+            {
+                Console.WriteLine("  ✅ Posições serão descriptografadas corretamente nos contratos V1");
+            }
+            else
+            {
+                Console.WriteLine("  ⚠️ Código XOR não sincronizado - posições podem não ser precisas");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao verificar sincronização XOR: {ex.Message}");
+        }
+
         // Tenta inicializar o pipeline de forma segura
         try
         {
