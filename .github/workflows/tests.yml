@@ -1,0 +1,211 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Unit Tests
+      run: |
+        dotnet test --no-build --configuration Release \
+          --filter "Category!=Integration&Category!=E2E" \
+          --logger "trx;LogFileName=unit-test-results.trx" \
+          --logger "console;verbosity=normal" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./TestResults \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+    - name: Run Integration Tests (Linux only)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        dotnet test --no-build --configuration Release \
+          --filter "Category=Integration" \
+          --logger "trx;LogFileName=integration-test-results.trx" \
+          --logger "console;verbosity=normal" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./TestResults \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}
+        path: ./TestResults/**/*.trx
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-${{ matrix.os }}
+        path: ./TestResults/**/coverage.opencover.xml
+
+    - name: Generate coverage report
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        dotnet tool install --global dotnet-reportgenerator-globaltool
+        reportgenerator \
+          -reports:./TestResults/**/coverage.opencover.xml \
+          -targetdir:./CoverageReport \
+          -reporttypes:Html
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: matrix.os == 'ubuntu-latest'
+      with:
+        name: coverage-report-html
+        path: ./CoverageReport
+
+  test-containers:
+    name: Integration Tests with Containers
+    runs-on: ubuntu-latest
+    
+    services:
+      rabbitmq:
+        image: rabbitmq:3.13-management-alpine
+        ports:
+          - 5672:5672
+          - 15672:15672
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Integration Tests with Real Services
+      env:
+        RABBITMQ_HOST: localhost
+        RABBITMQ_PORT: 5672
+        RABBITMQ_USER: test
+        RABBITMQ_PASS: test
+        REDIS_CONNECTION: localhost:6379
+      run: |
+        dotnet test --no-build --configuration Release \
+          --filter "Category=Integration|Category=E2E" \
+          --logger "trx;LogFileName=container-test-results.trx" \
+          --logger "console;verbosity=detailed"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: container-test-results
+        path: ./**/*.trx
+
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Benchmarks
+      run: |
+        dotnet run --project src/AlbionOnlineSniffer.Tests \
+          --configuration Release \
+          --no-build \
+          -- --filter "*Benchmark*" \
+          --exporters json html \
+          --artifacts ./BenchmarkResults
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: ./BenchmarkResults
+
+  publish-results:
+    name: Publish Test Results
+    runs-on: ubuntu-latest
+    needs: [test, test-containers]
+    if: always()
+    
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*test-results*'
+        merge-multiple: true
+
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: '**/*.trx'
+        check_name: 'Test Results'
+        comment_title: 'Test Results'
