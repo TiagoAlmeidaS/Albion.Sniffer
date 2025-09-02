@@ -372,13 +372,17 @@ namespace AlbionOnlineSniffer.Core
 
 
 
+            // ✅ REGISTRAR ESTATÍSTICAS DE DESCOBERTA
+            services.AddSingleton<DiscoveryStatistics>();
+
             // ✅ REGISTRAR SERVIÇO DE DESCOBERTA
             services.AddSingleton<DiscoveryService>(sp =>
             {
                 var factory = sp.GetRequiredService<ILoggerFactory>();
                 var logger = factory.CreateLogger<DiscoveryService>();
                 var eventDispatcher = sp.GetRequiredService<EventDispatcher>();
-                return new DiscoveryService(logger, eventDispatcher);
+                var statistics = sp.GetRequiredService<DiscoveryStatistics>();
+                return new DiscoveryService(logger, eventDispatcher, statistics);
             });
 
             // Register pipeline configuration

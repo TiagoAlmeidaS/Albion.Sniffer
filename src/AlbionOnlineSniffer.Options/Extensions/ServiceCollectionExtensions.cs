@@ -21,13 +21,13 @@ public static class ServiceCollectionExtensions
 	{
 		// Configure main options
 		services.Configure<SnifferOptions>(configuration.GetSection(SnifferOptions.SectionName));
-		
+
 		// Add validation
 		services.AddSingleton<IValidateOptions<SnifferOptions>, SnifferOptionsValidator>();
-		
+
 		// Add options accessor
 		services.AddSingleton(provider => provider.GetRequiredService<IOptions<SnifferOptions>>().Value);
-		
+
 		// Configure profile from command line or environment
 		services.PostConfigure<SnifferOptions>(options =>
 		{
@@ -42,7 +42,7 @@ public static class ServiceCollectionExtensions
 					break;
 				}
 			}
-			
+
 			// Check for profile override from environment variable
 			var envProfile = Environment.GetEnvironmentVariable("SNIFFER_PROFILE");
 			if (!string.IsNullOrEmpty(envProfile))
@@ -56,7 +56,7 @@ public static class ServiceCollectionExtensions
 				options.ActiveProfile = envProfile2;
 			}
 		});
-		
+
 		return services;
 	}
 
@@ -67,7 +67,7 @@ public static class ServiceCollectionExtensions
 	{
 		services.AddSingleton<IProfileManager, ProfileManager>();
 		services.AddSingleton<ITierPaletteManager, TierPaletteManager>();
-		
+
 		return services;
 	}
 
@@ -124,13 +124,13 @@ internal class ProfileLogStartupFilter : IStartupFilter
 {
 	private readonly IOptions<SnifferOptions> _options;
 	private readonly ILogger<ProfileLogStartupFilter> _logger;
-	
+
 	public ProfileLogStartupFilter(IOptions<SnifferOptions> options, ILogger<ProfileLogStartupFilter> logger)
 	{
 		_options = options;
 		_logger = logger;
 	}
-	
+
 	public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
 	{
 		var source = "appsettings";

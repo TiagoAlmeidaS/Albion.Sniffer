@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using Albion.Network;
-using AlbionOnlineSniffer.Core.Services;
 using AlbionOnlineSniffer.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using AlbionOnlineSniffer.Core.Models.Events;
 using AlbionOnlineSniffer.Core.Handlers;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Players;
 using AlbionOnlineSniffer.Core.Models.GameObjects.Mobs;
@@ -40,15 +35,15 @@ namespace AlbionOnlineSniffer.Core.Services
         {
             // ✅ HANDLER DE DESCOBERTA UNIVERSAL - REGISTRAR COMO PRIMEIRO E COMO ÚLTIMO
             var discoveryHandler = _serviceProvider.GetRequiredService<DiscoveryDebugHandler>();
-            
+
             // ✅ REGISTRAR COMO PRIMEIRO HANDLER (interceptação inicial)
             builder.AddHandler(discoveryHandler);
             _logger.LogInformation("🔍 DiscoveryDebugHandler registrado como PRIMEIRO handler para interceptação universal");
-            
+
             // ✅ REGISTRAR COMO HANDLER FINAL (interceptação de fallback)
             builder.AddHandler(discoveryHandler);
             _logger.LogInformation("🔍 DiscoveryDebugHandler registrado como HANDLER FINAL para interceptação de fallback");
-            
+
             // Registrar handlers usando a abordagem correta baseada nos handlers existentes
             builder.AddEventHandler(new LeaveEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
@@ -59,7 +54,7 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<LootChestsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddResponseHandler(new ChangeClusterEventHandler(
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
@@ -71,7 +66,7 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<LootChestsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddResponseHandler(new JoinResponseOperationHandler(
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
@@ -83,24 +78,24 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<LootChestsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddRequestHandler(new MoveRequestOperationHandler(
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<HarvestablesHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new MistsPlayerJoinedInfoEventHandler(
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new LoadClusterObjectsEventHandler(
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<ConfigHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new NewCharacterEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
@@ -108,89 +103,90 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<EventDispatcher>(),
                 _serviceProvider.GetRequiredService<LocationService>()
             ));
-            
+
             builder.AddEventHandler(new MountedEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new ChangeFlaggingFinishedEventHandler(
                 _serviceProvider.GetRequiredService<LocalPlayerHandler>(),
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new CharacterEquipmentChangedEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new MoveEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<MobsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>(),
                 _serviceProvider.GetRequiredService<LocationService>()
             ));
-            
+
             builder.AddEventHandler(new HealthUpdateEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<MobsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new RegenerationChangedEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new NewHarvestableEventHandler(
                 _serviceProvider.GetRequiredService<HarvestablesHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>(),
                 _serviceProvider.GetRequiredService<LocationService>()
             ));
-            
+
             builder.AddEventHandler(new NewHarvestablesListEventHandler(
                 _serviceProvider.GetRequiredService<HarvestablesHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
-            builder.AddEventHandler(new NewMobEventHandler(
-                _serviceProvider.GetRequiredService<MobsHandler>(),
-                _serviceProvider.GetRequiredService<EventDispatcher>(),
-                _serviceProvider.GetRequiredService<LocationService>()
-            ));
-            
+
+            // builder.AddEventHandler(new NewMobEventHandler(
+            //     _serviceProvider.GetRequiredService<MobsHandler>(),
+            //     _serviceProvider.GetRequiredService<EventDispatcher>(),
+            //     _serviceProvider.GetRequiredService<LocationService>()
+            // ));
+
             builder.AddEventHandler(new MobChangeStateEventHandler(
                 _serviceProvider.GetRequiredService<MobsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new HarvestableChangeStateEventHandler(
                 _serviceProvider.GetRequiredService<HarvestablesHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new KeySyncEventHandler(
                 _serviceProvider.GetRequiredService<PlayersHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>(),
                 _serviceProvider.GetRequiredService<XorCodeSynchronizer>()
             ));
-            
+
             builder.AddEventHandler(new NewDungeonEventHandler(
                 _serviceProvider.GetRequiredService<DungeonsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>(),
                 _serviceProvider.GetRequiredService<LocationService>()
             ));
-            
+
             builder.AddEventHandler(new NewFishingZoneEventHandler(
                 _serviceProvider.GetRequiredService<FishNodesHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>(),
                 _serviceProvider.GetRequiredService<LocationService>()
             ));
-            
+
             // 🎣 Fishing lifecycle handlers
             builder.AddEventHandler(new StartFishingEventHandler(
-                _serviceProvider.GetRequiredService<EventDispatcher>()
+                _serviceProvider.GetRequiredService<EventDispatcher>(),
+                _serviceProvider.GetRequiredService<ILogger<StartFishingEventHandler>>()
             ));
             builder.AddEventHandler(new FishingBiteEventHandler(
                 _serviceProvider.GetRequiredService<EventDispatcher>()
@@ -201,17 +197,17 @@ namespace AlbionOnlineSniffer.Core.Services
             builder.AddEventHandler(new FishingFinishEventHandler(
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new NewGatedWispEventHandler(
                 _serviceProvider.GetRequiredService<GatedWispsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new NewLootChestEventHandler(
                 _serviceProvider.GetRequiredService<LootChestsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
             ));
-            
+
             builder.AddEventHandler(new WispGateOpenedEventHandler(
                 _serviceProvider.GetRequiredService<GatedWispsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()
@@ -220,4 +216,4 @@ namespace AlbionOnlineSniffer.Core.Services
             _logger.LogInformation("ReceiverBuilder configurado com {HandlerCount} handlers + DiscoveryDebugHandler (duplo registro para garantia)", 25);
         }
     }
-} 
+}

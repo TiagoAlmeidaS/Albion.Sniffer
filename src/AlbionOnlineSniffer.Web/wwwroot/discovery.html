@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Discovery Service - Albion Sniffer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --darker: #020617;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo i {
+            font-size: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.2); color: var(--primary); }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .stat-icon.orange { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .stat-icon.red { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .stat-icon.cyan { background: rgba(6, 182, 212, 0.2); color: var(--accent); }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table th {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table td {
+            color: var(--text);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-visible {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-hidden {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-search"></i>
+                Discovery Service
+            </div>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="/discovery.html" class="nav-link active">
+                    <i class="fas fa-search"></i>
+                    Discovery
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="page-header">
+            <h1 class="page-title">🔍 Discovery Service</h1>
+            <p class="page-subtitle">Monitoramento em tempo real dos pacotes descobertos</p>
+        </div>
+
+        <!-- Estatísticas Principais -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Total de Pacotes</span>
+                    <div class="stat-icon blue">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="totalPackets">0</div>
+                <div class="stat-change" id="uptime">Tempo de execução: 00:00:00</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Pacotes Visíveis</span>
+                    <div class="stat-icon green">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="visiblePackets">0</div>
+                <div class="stat-change" id="visiblePercentage">0%</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Pacotes Escondidos</span>
+                    <div class="stat-icon red">
+                        <i class="fas fa-eye-slash"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="hiddenPackets">0</div>
+                <div class="stat-change" id="hiddenPercentage">0%</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Última Atualização</span>
+                    <div class="stat-icon cyan">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="lastUpdate">--:--:--</div>
+                <div class="stat-change">Atualizado a cada 2s</div>
+            </div>
+        </section>
+
+        <!-- Dashboard Principal -->
+        <section class="dashboard-grid">
+            <div class="main-content">
+                <!-- Top 10 Pacotes Mais Frequentes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-trophy"></i>
+                            Top 10 Pacotes Mais Frequentes
+                        </h2>
+                        <button class="refresh-btn" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i>
+                            Atualizar
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="table" id="topPacketsTable">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Tipo</th>
+                                    <th>Count</th>
+                                    <th>Status</th>
+                                    <th>Último</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topPacketsBody">
+                                <tr>
+                                    <td colspan="5" class="loading">
+                                        <i class="fas fa-spinner"></i>
+                                        Carregando...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <!-- Top 5 Tipos de Pacotes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Top 5 Tipos de Pacotes
+                        </h2>
+                    </div>
+                    <div id="topTypesList">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            Carregando...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        class DiscoveryDashboard {
+            constructor() {
+                this.updateInterval = null;
+                this.init();
+            }
+
+            init() {
+                this.loadData();
+                this.startAutoRefresh();
+            }
+
+            async loadData() {
+                try {
+                    const [stats, topPackets, topTypes] = await Promise.all([
+                        fetch('/api/discovery/stats').then(r => r.json()),
+                        fetch('/api/discovery/top-packets').then(r => r.json()),
+                        fetch('/api/discovery/top-types').then(r => r.json())
+                    ]);
+
+                    this.updateStats(stats);
+                    this.updateTopPackets(topPackets);
+                    this.updateTopTypes(topTypes);
+                } catch (error) {
+                    console.error('Erro ao carregar dados:', error);
+                }
+            }
+
+            updateStats(stats) {
+                document.getElementById('totalPackets').textContent = this.formatNumber(stats.totalPackets);
+                document.getElementById('visiblePackets').textContent = this.formatNumber(stats.visiblePackets);
+                document.getElementById('hiddenPackets').textContent = this.formatNumber(stats.hiddenPackets);
+                document.getElementById('visiblePercentage').textContent = `${stats.visiblePercentage.toFixed(1)}%`;
+                document.getElementById('hiddenPercentage').textContent = `${stats.hiddenPercentage.toFixed(1)}%`;
+                document.getElementById('uptime').textContent = `Tempo de execução: ${this.formatUptime(stats.uptime)}`;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            }
+
+            updateTopPackets(packets) {
+                const tbody = document.getElementById('topPacketsBody');
+                
+                if (!packets || packets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum pacote encontrado</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = packets.map(packet => `
+                    <tr>
+                        <td><code>${packet.code}</code></td>
+                        <td>${packet.type}</td>
+                        <td>${this.formatNumber(packet.count)}</td>
+                        <td>
+                            <span class="status-badge ${packet.isHidden ? 'status-hidden' : 'status-visible'}">
+                                ${packet.isHidden ? 'Escondido' : 'Visível'}
+                            </span>
+                        </td>
+                        <td>${new Date(packet.lastSeen).toLocaleTimeString()}</td>
+                    </tr>
+                `).join('');
+            }
+
+            updateTopTypes(types) {
+                const container = document.getElementById('topTypesList');
+                
+                if (!types || types.length === 0) {
+                    container.innerHTML = '<div class="empty-state">Nenhum tipo encontrado</div>';
+                    return;
+                }
+
+                container.innerHTML = types.map(type => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid var(--border);">
+                        <span>${type.type}</span>
+                        <span style="font-weight: 600; color: var(--primary);">${this.formatNumber(type.count)}</span>
+                    </div>
+                `).join('');
+            }
+
+            startAutoRefresh() {
+                this.updateInterval = setInterval(() => {
+                    this.loadData();
+                }, 2000); // Atualizar a cada 2 segundos
+            }
+
+            formatNumber(num) {
+                if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                return num.toString();
+            }
+
+            formatUptime(uptime) {
+                const hours = Math.floor(uptime / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                const seconds = Math.floor(uptime % 60);
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function refreshData() {
+            const dashboard = window.discoveryDashboard;
+            if (dashboard) {
+                dashboard.loadData();
+            }
+        }
+
+        // Inicializa o dashboard quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            window.discoveryDashboard = new DiscoveryDashboard();
+        });
+    </script>
+</body>
+</html>

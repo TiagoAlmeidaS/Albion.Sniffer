@@ -93,6 +93,9 @@ catch (Exception ex)
 // Web pipeline
 builder.Services.AddSingleton<SnifferWebPipeline>();
 
+// Discovery Statistics Service
+builder.Services.AddSingleton<DiscoveryWebStatisticsService>();
+
 // Queue services
 try
 {
@@ -140,6 +143,22 @@ app.MapGet("/api/sessions", (IInMemoryRepository<Session> sessions, int skip = 0
     var data = sessions.GetPaged(skip, take);
     var total = sessions.Count;
     return Results.Json(new { data, total, skip, take, hasMore = skip + take < total });
+});
+
+// Discovery Statistics API
+app.MapGet("/api/discovery/stats", (DiscoveryWebStatisticsService discoveryStats) =>
+{
+    return Results.Json(discoveryStats.GetCurrentStats());
+});
+
+app.MapGet("/api/discovery/top-packets", (DiscoveryWebStatisticsService discoveryStats, int limit = 10) =>
+{
+    return Results.Json(discoveryStats.GetTopPackets(limit));
+});
+
+app.MapGet("/api/discovery/top-types", (DiscoveryWebStatisticsService discoveryStats, int limit = 5) =>
+{
+    return Results.Json(discoveryStats.GetTopTypes(limit));
 });
 
 // Endpoints de controle
