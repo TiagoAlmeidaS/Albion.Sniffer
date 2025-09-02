@@ -188,6 +188,20 @@ namespace AlbionOnlineSniffer.Core.Services
                 _serviceProvider.GetRequiredService<LocationService>()
             ));
             
+            // 🎣 Fishing lifecycle handlers
+            builder.AddEventHandler(new StartFishingEventHandler(
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            builder.AddEventHandler(new FishingBiteEventHandler(
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            builder.AddEventHandler(new FishingMiniGameUpdateEventHandler(
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            builder.AddEventHandler(new FishingFinishEventHandler(
+                _serviceProvider.GetRequiredService<EventDispatcher>()
+            ));
+            
             builder.AddEventHandler(new NewGatedWispEventHandler(
                 _serviceProvider.GetRequiredService<GatedWispsHandler>(),
                 _serviceProvider.GetRequiredService<EventDispatcher>()

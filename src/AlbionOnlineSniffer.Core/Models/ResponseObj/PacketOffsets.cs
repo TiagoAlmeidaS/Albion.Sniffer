@@ -16,6 +16,10 @@
         public byte[] NewCharacter { get; set; }
         public byte[] NewDungeonExit { get; set; }
         public byte[] NewFishingZoneObject { get; set; }
+        public byte[] StartFishing { get; set; }
+        public byte[] FishingBiteEvent { get; set; }
+        public byte[] FishingMiniGameUpdate { get; set; }
+        public byte[] FishingFinish { get; set; }
         public byte[] NewHarvestableObject { get; set; }
         public byte[] NewLootChest { get; set; }
         public byte[] NewMobEvent { get; set; }
@@ -40,6 +44,10 @@
             NewCharacter = Array.Empty<byte>();
             NewDungeonExit = Array.Empty<byte>();
             NewFishingZoneObject = Array.Empty<byte>();
+            StartFishing = Array.Empty<byte>();
+            FishingBiteEvent = Array.Empty<byte>();
+            FishingMiniGameUpdate = Array.Empty<byte>();
+            FishingFinish = Array.Empty<byte>();
             NewHarvestableObject = Array.Empty<byte>();
             NewLootChest = Array.Empty<byte>();
             NewMobEvent = Array.Empty<byte>();

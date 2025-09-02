@@ -20,6 +20,10 @@
         public int LoadClusterObjects { get; set; }
         public int NewDungeonExit { get; set; }
         public int NewFishingZoneObject { get; set; }
+        public int StartFishing { get; set; }
+        public int FishingBiteEvent { get; set; }
+        public int FishingMiniGameUpdate { get; set; }
+        public int FishingFinish { get; set; }
         public int ChangeFlaggingFinished { get; set; }
         public int NewLootChest { get; set; }
         public int MistsPlayerJoinedInfo { get; set; }
