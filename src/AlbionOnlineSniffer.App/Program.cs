@@ -1,11 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using AlbionOnlineSniffer.Options.Extensions;
-using AlbionOnlineSniffer.Capture;
-using AlbionOnlineSniffer.Core;
-using AlbionOnlineSniffer.Queue;
+using AlbionOnlineSniffer.Core.Services;
 
 namespace AlbionOnlineSniffer.App
 {
@@ -30,7 +28,7 @@ namespace AlbionOnlineSniffer.App
                 using var loggerFactory = LoggerFactory.Create(builder =>
                 {
                     builder.AddConsole();
-                    builder.SetMinimumLevel(LogLevel.Information);
+                    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
                 });
                 var logger = loggerFactory.CreateLogger<Program>();
 
@@ -55,7 +53,11 @@ namespace AlbionOnlineSniffer.App
                     var services = new ServiceCollection();
 
                     // Add logging
-                    services.AddLogging(builder => builder.AddConsole());
+                    services.AddLogging(builder => 
+                    {
+                        builder.AddConsole();
+                        builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
+                    });
 
                     // Options + Profiles
                     services.AddSnifferOptions(configuration);
@@ -73,7 +75,7 @@ namespace AlbionOnlineSniffer.App
                     // Serviços de captura via DependencyProvider (igual ao Core)
                     logger.LogInformation("🔧 Registrando serviços de captura...");
                     Capture.DependencyProvider.RegisterServices(services, configuration);
-                    
+
                     // Pipeline App usando serviço UDP
                     services.AddSingleton<App.Services.CapturePipeline>();
 
@@ -136,7 +138,7 @@ namespace AlbionOnlineSniffer.App
                     logger.LogInformation("  - NewCharacter: [{Offsets}]",
                         string.Join(", ", packetOffsets.NewCharacter));
                     logger.LogInformation("  - Move: [{Offsets}]", string.Join(", ", packetOffsets.Move));
-                    
+
                     // 🔧 VERIFICAR SINCRONIZAÇÃO DO CÓDIGO XOR PARA DESCRIPTOGRAFIA
                     logger.LogInformation("🔐 VERIFICANDO SINCRONIZAÇÃO DO CÓDIGO XOR:");
                     var xorSynchronizer = serviceProvider.GetRequiredService<Core.Services.XorCodeSynchronizer>();
@@ -155,12 +157,12 @@ namespace AlbionOnlineSniffer.App
             logger.LogInformation("🔧 Conectando EventDispatcher ao Publisher via Bridge...");
             serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.EventToQueueBridge>();
             logger.LogInformation("✅ Bridge Event->Queue registrada!");
-            
+
             // 🔧 INTEGRAÇÃO COM CONTRATOS V1 - Bridge V1 via DI
             logger.LogInformation("🔧 Conectando EventDispatcher aos Contratos V1 via Bridge...");
             var v1Bridge = serviceProvider.GetRequiredService<AlbionOnlineSniffer.Queue.Publishers.V1ContractPublisherBridge>();
             logger.LogInformation("✅ Bridge V1 Contracts registrada!");
-                    
+
                     logger.LogInformation("🔧 Configuração de handlers: {HandlerCount} handlers registrados",
                         eventDispatcher.GetHandlerCount("*"));
 

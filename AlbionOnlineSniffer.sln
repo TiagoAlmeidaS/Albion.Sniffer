@@ -18,8 +18,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Web", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Options", "src\AlbionOnlineSniffer.Options\AlbionOnlineSniffer.Options.csproj", "{7C5E4A9B-2D3F-4E8A-9C1B-5F7D8E9A6B3C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlbionOnlineSniffer.Providers", "src\AlbionOnlineSniffer.Providers\AlbionOnlineSniffer.Providers.csproj", "{38D9543C-A550-436A-884D-9F64A6FB34DD}"
-EndProject
+
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Albion.Events.V1", "src\Albion.Events.V1\Albion.Events.V1.csproj", "{B1112222-3333-4444-5555-666677778888}"
 EndProject
 Global
