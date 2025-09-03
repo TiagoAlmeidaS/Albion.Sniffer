@@ -254,5 +254,269 @@ namespace AlbionOnlineSniffer.Web.Services
 
             return stats;
         }
+
+        /// <summary>
+        /// Obtém estatísticas avançadas com filtros por opcode range
+        /// </summary>
+        public object GetAdvancedStats(string type, int? minOpcode = null, int? maxOpcode = null, string? searchTerm = null)
+        {
+            try
+            {
+                if (type.ToLower() == "udp")
+                {
+                    return GetAdvancedUDPStats(minOpcode, maxOpcode, searchTerm);
+                }
+                else if (type.ToLower() == "discovery")
+                {
+                    return GetAdvancedDiscoveryStats(minOpcode, maxOpcode, searchTerm);
+                }
+                else
+                {
+                    return new { error = "Tipo de estatística inválido. Use 'udp' ou 'discovery'" };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter estatísticas avançadas");
+                return new { error = ex.Message };
+            }
+        }
+
+        private object GetAdvancedUDPStats(int? minOpcode, int? maxOpcode, string? searchTerm)
+        {
+            var allStats = _udpStatistics.EventStatistics;
+            var filteredStats = allStats.Values.AsEnumerable();
+
+            // Filtro por range de opcode (se disponível nos detalhes)
+            if (minOpcode.HasValue || maxOpcode.HasValue)
+            {
+                filteredStats = filteredStats.Where(s => 
+                {
+                    // Tentar extrair opcode dos detalhes do evento
+                    if (s.Details != null && s.Details.ContainsKey("details"))
+                    {
+                        var details = s.Details["details"];
+                        if (details is Dictionary<string, object> eventDetails && eventDetails.ContainsKey("Opcode"))
+                        {
+                            if (int.TryParse(eventDetails["Opcode"].ToString(), out var opcode))
+                            {
+                                if (minOpcode.HasValue && opcode < minOpcode.Value) return false;
+                                if (maxOpcode.HasValue && opcode > maxOpcode.Value) return false;
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                });
+            }
+
+            // Filtro por termo de busca
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                filteredStats = filteredStats.Where(s => 
+                    s.EventName.ToLower().Contains(searchLower) ||
+                    s.EventType.ToLower().Contains(searchLower) ||
+                    (s.Details != null && s.Details.Any(d => d.Value?.ToString()?.ToLower().Contains(searchLower) == true))
+                );
+            }
+
+            return filteredStats
+                .OrderByDescending(s => s.Count)
+                .Take(100)
+                .Select(s => new
+                {
+                    eventName = s.EventName,
+                    eventType = s.EventType,
+                    count = s.Count,
+                    isSuccessful = s.IsSuccessful,
+                    lastSeen = s.LastSeen,
+                    details = s.Details,
+                    category = GetEventCategoryFromName(s.EventName)
+                })
+                .ToList();
+        }
+
+        private object GetAdvancedDiscoveryStats(int? minOpcode, int? maxOpcode, string? searchTerm)
+        {
+            var allStats = _discoveryStatistics.PacketStatistics;
+            var filteredStats = allStats.Values.AsEnumerable();
+
+            // Filtro por range de opcode
+            if (minOpcode.HasValue || maxOpcode.HasValue)
+            {
+                filteredStats = filteredStats.Where(s => 
+                {
+                    if (int.TryParse(s.Code, out var opcode))
+                    {
+                        if (minOpcode.HasValue && opcode < minOpcode.Value) return false;
+                        if (maxOpcode.HasValue && opcode > maxOpcode.Value) return false;
+                        return true;
+                    }
+                    return false;
+                });
+            }
+
+            // Filtro por termo de busca
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                filteredStats = filteredStats.Where(s => 
+                    s.Code.ToLower().Contains(searchLower) ||
+                    s.Type.ToLower().Contains(searchLower)
+                );
+            }
+
+            return filteredStats
+                .OrderByDescending(s => s.Count)
+                .Take(100)
+                .Select(s => new
+                {
+                    code = s.Code,
+                    type = s.Type,
+                    count = s.Count,
+                    isHidden = s.IsHidden,
+                    lastSeen = s.LastSeen,
+                    category = GetPacketCategoryFromCode(s.Code)
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Obtém distribuição de opcodes
+        /// </summary>
+        public object GetOpcodeDistribution(string type)
+        {
+            try
+            {
+                if (type.ToLower() == "udp")
+                {
+                    return GetUDPOpcodeDistribution();
+                }
+                else if (type.ToLower() == "discovery")
+                {
+                    return GetDiscoveryOpcodeDistribution();
+                }
+                else
+                {
+                    return new { error = "Tipo inválido. Use 'udp' ou 'discovery'" };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter distribuição de opcodes");
+                return new { error = ex.Message };
+            }
+        }
+
+        private object GetUDPOpcodeDistribution()
+        {
+            var allStats = _udpStatistics.EventStatistics;
+            var opcodeCounts = new Dictionary<string, int>();
+
+            foreach (var stat in allStats.Values)
+            {
+                if (stat.Details != null && stat.Details.ContainsKey("details"))
+                {
+                    var details = stat.Details["details"];
+                    if (details is Dictionary<string, object> eventDetails && eventDetails.ContainsKey("Opcode"))
+                    {
+                        var opcode = eventDetails["Opcode"].ToString();
+                        if (!string.IsNullOrEmpty(opcode) && opcode != "N/A")
+                        {
+                            if (opcodeCounts.ContainsKey(opcode))
+                                opcodeCounts[opcode] += stat.Count;
+                            else
+                                opcodeCounts[opcode] = stat.Count;
+                        }
+                    }
+                }
+            }
+
+            return opcodeCounts
+                .OrderByDescending(kvp => kvp.Value)
+                .Take(50)
+                .Select(kvp => new { opcode = kvp.Key, count = kvp.Value })
+                .ToList();
+        }
+
+        private object GetDiscoveryOpcodeDistribution()
+        {
+            var allStats = _discoveryStatistics.PacketStatistics;
+            return allStats.Values
+                .OrderByDescending(s => s.Count)
+                .Take(50)
+                .Select(s => new { opcode = s.Code, count = s.Count })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Obtém métricas de performance
+        /// </summary>
+        public object GetPerformanceMetrics()
+        {
+            try
+            {
+                var udpStats = _udpStatistics.GetWebStats();
+                var discoveryStats = _discoveryStatistics.GetWebStats();
+
+                return new
+                {
+                    timestamp = DateTimeOffset.UtcNow,
+                    udp = new
+                    {
+                        totalEvents = udpStats.GetValueOrDefault("totalEvents", 0),
+                        successRate = udpStats.GetValueOrDefault("successRate", 0.0),
+                        errorRate = udpStats.GetValueOrDefault("errorRate", 0.0),
+                        eventsPerSecond = udpStats.GetValueOrDefault("eventsPerSecond", 0.0)
+                    },
+                    discovery = new
+                    {
+                        totalPackets = discoveryStats.GetValueOrDefault("totalPackets", 0),
+                        successRate = discoveryStats.GetValueOrDefault("successRate", 0.0),
+                        errorRate = discoveryStats.GetValueOrDefault("errorRate", 0.0),
+                        packetsPerSecond = discoveryStats.GetValueOrDefault("packetsPerSecond", 0.0)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter métricas de performance");
+                return new { error = ex.Message };
+            }
+        }
+
+        private string GetEventCategoryFromName(string eventName)
+        {
+            return eventName switch
+            {
+                var name when name.Contains("Fishing") => "Fishing",
+                var name when name.Contains("Dungeon") || name.Contains("Wisp") => "Dungeons",
+                var name when name.Contains("Harvestable") => "Harvestables",
+                var name when name.Contains("Mob") => "Mobs",
+                var name when name.Contains("Character") || name.Contains("Player") || name.Contains("Move") || name.Contains("Health") || name.Contains("Equipment") || name.Contains("Regeneration") || name.Contains("Mists") => "Players",
+                var name when name.Contains("Loot") => "Loot",
+                var name when name.Contains("Key") || name.Contains("Cluster") || name.Contains("Flagging") => "System",
+                _ => "Unknown"
+            };
+        }
+
+        private string GetPacketCategoryFromCode(string code)
+        {
+            if (int.TryParse(code, out var opcode))
+            {
+                return opcode switch
+                {
+                    >= 100 and <= 199 => "System",
+                    >= 200 and <= 299 => "Player",
+                    >= 300 and <= 399 => "Combat",
+                    >= 400 and <= 499 => "Economy",
+                    >= 500 and <= 599 => "Guild",
+                    >= 600 and <= 699 => "Territory",
+                    _ => "Unknown"
+                };
+            }
+            return "Unknown";
+        }
     }
 }
