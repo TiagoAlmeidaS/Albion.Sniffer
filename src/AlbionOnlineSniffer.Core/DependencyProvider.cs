@@ -375,6 +375,12 @@ namespace AlbionOnlineSniffer.Core
             // ✅ REGISTRAR ESTATÍSTICAS DE DESCOBERTA
             services.AddSingleton<DiscoveryStatistics>();
 
+            // ✅ REGISTRAR ESTATÍSTICAS UDP
+            services.AddSingleton<UDPStatistics>();
+
+            // ✅ REGISTRAR SERVIÇO DE CATEGORIZAÇÃO DE EVENTOS
+            services.AddSingleton<EventCategoryService>();
+
             // ✅ REGISTRAR SERVIÇO DE DESCOBERTA
             services.AddSingleton<DiscoveryService>(sp =>
             {
@@ -383,6 +389,16 @@ namespace AlbionOnlineSniffer.Core
                 var eventDispatcher = sp.GetRequiredService<EventDispatcher>();
                 var statistics = sp.GetRequiredService<DiscoveryStatistics>();
                 return new DiscoveryService(logger, eventDispatcher, statistics);
+            });
+
+            // ✅ REGISTRAR SERVIÇO DE INTEGRAÇÃO UDP
+            services.AddSingleton<UDPEventIntegrationService>(sp =>
+            {
+                var factory = sp.GetRequiredService<ILoggerFactory>();
+                var logger = factory.CreateLogger<UDPEventIntegrationService>();
+                var eventDispatcher = sp.GetRequiredService<EventDispatcher>();
+                var udpStatistics = sp.GetRequiredService<UDPStatistics>();
+                return new UDPEventIntegrationService(logger, eventDispatcher, udpStatistics);
             });
 
             // Register pipeline configuration

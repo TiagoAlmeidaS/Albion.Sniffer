@@ -96,6 +96,12 @@ builder.Services.AddSingleton<SnifferWebPipeline>();
 // Discovery Statistics Service
 builder.Services.AddSingleton<DiscoveryWebStatisticsService>();
 
+// UDP Statistics Service
+builder.Services.AddSingleton<UDPWebStatisticsService>();
+
+// Event Filter Service
+builder.Services.AddSingleton<EventFilterService>();
+
 // Queue services
 try
 {
@@ -159,6 +165,53 @@ app.MapGet("/api/discovery/top-packets", (DiscoveryWebStatisticsService discover
 app.MapGet("/api/discovery/top-types", (DiscoveryWebStatisticsService discoveryStats, int limit = 5) =>
 {
     return Results.Json(discoveryStats.GetTopTypes(limit));
+});
+
+// UDP Statistics API
+app.MapGet("/api/udp/stats", (UDPWebStatisticsService udpStats) =>
+{
+    return Results.Json(udpStats.GetCurrentStats());
+});
+
+app.MapGet("/api/udp/top-events", (UDPWebStatisticsService udpStats, int limit = 10) =>
+{
+    return Results.Json(udpStats.GetTopEvents(limit));
+});
+
+app.MapGet("/api/udp/top-types", (UDPWebStatisticsService udpStats, int limit = 5) =>
+{
+    return Results.Json(udpStats.GetTopTypes(limit));
+});
+
+// Event Categories and Filters API
+app.MapGet("/api/events/categories", (EventFilterService filterService) =>
+{
+    return Results.Json(filterService.GetCategories());
+});
+
+app.MapGet("/api/events/categories/{type}", (EventFilterService filterService, string type) =>
+{
+    return Results.Json(filterService.GetCategoriesByType(type));
+});
+
+app.MapGet("/api/events/filters", (EventFilterService filterService) =>
+{
+    return Results.Json(filterService.GetFilterConfig());
+});
+
+app.MapPost("/api/events/filters", (EventFilterService filterService, object config) =>
+{
+    return Results.Json(filterService.UpdateFilterConfig(config));
+});
+
+app.MapGet("/api/events/stats/{type}", (EventFilterService filterService, string type, string? category = null, bool? showHidden = null, int? minCount = null) =>
+{
+    return Results.Json(filterService.GetFilteredStats(type, category, showHidden, minCount));
+});
+
+app.MapGet("/api/events/category-stats", (EventFilterService filterService) =>
+{
+    return Results.Json(filterService.GetCategoryStatistics());
 });
 
 // Endpoints de controle

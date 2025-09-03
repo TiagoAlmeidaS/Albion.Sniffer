@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Event Dashboard - Albion Sniffer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --darker: #020617;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo i {
+            font-size: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .filters-panel {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .filter-select, .filter-input {
+            background: var(--darker);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            accent-color: var(--primary);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--text-muted);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stats-card {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--darker);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .events-table {
+            background: var(--card);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .table-header {
+            background: var(--darker);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .table-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: var(--darker);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .table tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-info {
+            background: rgba(6, 182, 212, 0.2);
+            color: var(--accent);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .error {
+            text-align: center;
+            padding: 2rem;
+            color: var(--danger);
+        }
+
+        .category-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 0.125rem;
+        }
+
+        .category-chip.fishing { background: rgba(6, 182, 212, 0.2); color: var(--accent); }
+        .category-chip.dungeons { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .category-chip.harvestables { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .category-chip.mobs { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .category-chip.players { background: rgba(59, 130, 246, 0.2); color: var(--primary); }
+        .category-chip.loot { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .category-chip.system { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+        .category-chip.discovery { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                Event Dashboard
+            </div>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="/discovery.html" class="nav-link">
+                    <i class="fas fa-search"></i>
+                    Discovery
+                </a>
+                <a href="/events.html" class="nav-link active">
+                    <i class="fas fa-chart-line"></i>
+                    Events
+                </a>
+            </nav>
+        </div>
+
+        <div class="filters-panel">
+            <h3 style="margin-bottom: 1rem; color: var(--text);">🔧 Filtros de Eventos</h3>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Tipo de Evento</label>
+                    <select class="filter-select" id="eventType">
+                        <option value="">Todos</option>
+                        <option value="discovery">Discovery</option>
+                        <option value="udp">UDP</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Categoria</label>
+                    <select class="filter-select" id="category">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Contagem Mínima</label>
+                    <input type="number" class="filter-input" id="minCount" placeholder="0" min="0">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Buscar</label>
+                    <input type="text" class="filter-input" id="searchTerm" placeholder="Nome do evento...">
+                </div>
+            </div>
+            <div class="filter-checkbox">
+                <input type="checkbox" id="showHidden" checked>
+                <label for="showHidden">Mostrar pacotes escondidos</label>
+            </div>
+            <div class="filter-checkbox">
+                <input type="checkbox" id="showVisible" checked>
+                <label for="showVisible">Mostrar pacotes visíveis</label>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i>
+                    Limpar
+                </button>
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i>
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="stats-card">
+                <div class="stats-header">
+                    <i class="fas fa-search" style="color: var(--accent);"></i>
+                    Discovery Statistics
+                </div>
+                <div class="stats-grid" id="discoveryStats">
+                    <div class="loading">Carregando...</div>
+                </div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-header">
+                    <i class="fas fa-network-wired" style="color: var(--primary);"></i>
+                    UDP Statistics
+                </div>
+                <div class="stats-grid" id="udpStats">
+                    <div class="loading">Carregando...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="events-table">
+            <div class="table-header">
+                <div class="table-title">📊 Eventos Filtrados</div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">
+                    Atualizado: <span id="lastUpdate">--:--:--</span>
+                </div>
+            </div>
+            <div class="table-content">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Nome</th>
+                            <th>Categoria</th>
+                            <th>Contagem</th>
+                            <th>Status</th>
+                            <th>Último</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTableBody">
+                        <tr>
+                            <td colspan="6" class="loading">Carregando eventos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilters = {
+            type: '',
+            category: '',
+            minCount: 0,
+            searchTerm: '',
+            showHidden: true,
+            showVisible: true
+        };
+
+        let categories = [];
+        let updateInterval;
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCategories();
+            loadStats();
+            loadFilteredEvents();
+            
+            // Atualizar a cada 3 segundos
+            updateInterval = setInterval(() => {
+                loadStats();
+                loadFilteredEvents();
+                updateLastUpdateTime();
+            }, 3000);
+        });
+
+        // Carregar categorias
+        async function loadCategories() {
+            try {
+                console.log('📂 Carregando categorias...');
+                const response = await fetch('/api/events/categories');
+                categories = await response.json();
+                
+                console.log('📂 Categorias carregadas:', categories);
+                
+                const categorySelect = document.getElementById('category');
+                categorySelect.innerHTML = '<option value="">Todas</option>';
+                
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = `${category.icon} ${category.name}`;
+                    categorySelect.appendChild(option);
+                });
+                
+                console.log('📂 Dropdown de categorias populado com', categories.length, 'categorias');
+            } catch (error) {
+                console.error('❌ Erro ao carregar categorias:', error);
+            }
+        }
+
+        // Carregar estatísticas
+        async function loadStats() {
+            try {
+                // Discovery Stats
+                const discoveryResponse = await fetch('/api/discovery/stats');
+                const discoveryData = await discoveryResponse.json();
+                updateDiscoveryStats(discoveryData);
+
+                // UDP Stats
+                const udpResponse = await fetch('/api/udp/stats');
+                const udpData = await udpResponse.json();
+                updateUDPStats(udpData);
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        // Atualizar estatísticas do Discovery
+        function updateDiscoveryStats(data) {
+            const container = document.getElementById('discoveryStats');
+            container.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${data.totalPackets || 0}</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.visiblePackets || 0}</div>
+                    <div class="stat-label">Visíveis</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.hiddenPackets || 0}</div>
+                    <div class="stat-label">Escondidos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.visiblePercentage ? data.visiblePercentage.toFixed(1) : 0}%</div>
+                    <div class="stat-label">% Visíveis</div>
+                </div>
+            `;
+        }
+
+        // Atualizar estatísticas do UDP
+        function updateUDPStats(data) {
+            const container = document.getElementById('udpStats');
+            container.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${data.totalEvents || 0}</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.successfulEvents || 0}</div>
+                    <div class="stat-label">Sucessos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.failedEvents || 0}</div>
+                    <div class="stat-label">Falhas</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.successPercentage ? data.successPercentage.toFixed(1) : 0}%</div>
+                    <div class="stat-label">% Sucesso</div>
+                </div>
+            `;
+        }
+
+        // Carregar eventos filtrados
+        async function loadFilteredEvents() {
+            try {
+                const params = new URLSearchParams();
+                if (currentFilters.type) params.append('type', currentFilters.type);
+                if (currentFilters.category) params.append('category', currentFilters.category);
+                if (currentFilters.minCount > 0) params.append('minCount', currentFilters.minCount);
+                if (currentFilters.showHidden !== null) params.append('showHidden', currentFilters.showHidden);
+
+                const url = `/api/events/stats/${currentFilters.type || 'discovery'}?${params}`;
+                console.log('🔍 Carregando eventos filtrados:', url);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                console.log('📊 Dados recebidos:', data);
+                console.log('📋 Categorias disponíveis:', categories);
+                
+                updateEventsTable(data);
+            } catch (error) {
+                console.error('❌ Erro ao carregar eventos filtrados:', error);
+                document.getElementById('eventsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="error">Erro ao carregar eventos: ${error.message}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Atualizar tabela de eventos
+        function updateEventsTable(events) {
+            const tbody = document.getElementById('eventsTableBody');
+            
+            if (!events || events.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="loading">Nenhum evento encontrado</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = events.map(event => {
+                // Mapear corretamente os dados baseado no tipo de evento
+                const eventName = event.eventName || event.type || 'Unknown';
+                const eventType = event.eventType || event.type || 'Unknown';
+                
+                // Encontrar categoria baseada no nome do evento ou código do pacote
+                const category = categories.find(c => {
+                    if (c.eventNames && Array.isArray(c.eventNames)) {
+                        return c.eventNames.includes(eventName);
+                    }
+                    if (c.packetCodes && Array.isArray(c.packetCodes) && event.code) {
+                        return c.packetCodes.includes(event.code);
+                    }
+                    return false;
+                });
+                
+                const categoryChip = category ? 
+                    `<span class="category-chip ${category.id}">${category.icon} ${category.name}</span>` : 
+                    '<span class="badge badge-info">Unknown</span>';
+
+                // Status badge baseado no tipo de evento
+                let statusBadge;
+                if (event.isHidden !== undefined) {
+                    // Discovery events
+                    statusBadge = event.isHidden ? 
+                        '<span class="badge badge-warning">Escondido</span>' : 
+                        '<span class="badge badge-success">Visível</span>';
+                } else if (event.isSuccessful !== undefined) {
+                    // UDP events
+                    statusBadge = event.isSuccessful ? 
+                        '<span class="badge badge-success">Sucesso</span>' : 
+                        '<span class="badge badge-danger">Falha</span>';
+                } else {
+                    statusBadge = '<span class="badge badge-info">N/A</span>';
+                }
+
+                const count = event.count || 0;
+                const lastSeen = event.lastSeen ? new Date(event.lastSeen).toLocaleTimeString() : '--:--:--';
+
+                return `
+                    <tr>
+                        <td>${eventType}</td>
+                        <td>${eventName}</td>
+                        <td>${categoryChip}</td>
+                        <td>${count}</td>
+                        <td>${statusBadge}</td>
+                        <td>${lastSeen}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Aplicar filtros
+        function applyFilters() {
+            currentFilters = {
+                type: document.getElementById('eventType').value,
+                category: document.getElementById('category').value,
+                minCount: parseInt(document.getElementById('minCount').value) || 0,
+                searchTerm: document.getElementById('searchTerm').value,
+                showHidden: document.getElementById('showHidden').checked,
+                showVisible: document.getElementById('showVisible').checked
+            };
+
+            loadFilteredEvents();
+        }
+
+        // Limpar filtros
+        function clearFilters() {
+            document.getElementById('eventType').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('minCount').value = '';
+            document.getElementById('searchTerm').value = '';
+            document.getElementById('showHidden').checked = true;
+            document.getElementById('showVisible').checked = true;
+
+            currentFilters = {
+                type: '',
+                category: '',
+                minCount: 0,
+                searchTerm: '',
+                showHidden: true,
+                showVisible: true
+            };
+
+            loadFilteredEvents();
+        }
+
+        // Atualizar tempo da última atualização
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        // Limpar interval ao sair da página
+        window.addEventListener('beforeunload', function() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>
