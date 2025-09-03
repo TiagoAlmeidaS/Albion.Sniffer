@@ -36,6 +36,7 @@ builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Informatio
 // Serviços básicos
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddControllers();
 builder.Services.AddRouting();
 
 // Configuração dos repositórios em memória
@@ -117,6 +118,7 @@ var app = builder.Build();
 // Configuração básica
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.MapControllers();
 app.MapHub<SnifferHub>("/hubs/sniffer");
 
 // Health checks básicos

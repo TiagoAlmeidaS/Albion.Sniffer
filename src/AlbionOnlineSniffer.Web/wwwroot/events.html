@@ -6,6 +6,7 @@
     <title>Event Dashboard - Albion Sniffer</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #3b82f6;
@@ -334,6 +335,105 @@
         .category-chip.system { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
         .category-chip.discovery { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
 
+        .opcode-badge {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 0;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .stat-card {
+            background: var(--darker);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .stat-card h4 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .stat-card p {
+            margin: 0.25rem 0;
+            color: var(--text-muted);
+        }
+
+        .charts-section {
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-header h3 {
+            color: var(--text);
+            margin: 0;
+        }
+
+        .chart-controls select {
+            background: var(--darker);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        .chart-content {
+            position: relative;
+            height: 300px;
+        }
+
         @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
@@ -397,6 +497,14 @@
                     <label class="filter-label">Buscar</label>
                     <input type="text" class="filter-input" id="searchTerm" placeholder="Nome do evento...">
                 </div>
+                <div class="filter-group">
+                    <label class="filter-label">Opcode Mín</label>
+                    <input type="number" class="filter-input" id="minOpcode" placeholder="Ex: 100">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Opcode Máx</label>
+                    <input type="number" class="filter-input" id="maxOpcode" placeholder="Ex: 500">
+                </div>
             </div>
             <div class="filter-checkbox">
                 <input type="checkbox" id="showHidden" checked>
@@ -414,6 +522,14 @@
                 <button class="btn btn-primary" onclick="applyFilters()">
                     <i class="fas fa-filter"></i>
                     Aplicar Filtros
+                </button>
+                <button class="btn btn-info" onclick="showAdvancedStats()">
+                    <i class="fas fa-chart-line"></i>
+                    Estatísticas Avançadas
+                </button>
+                <button class="btn btn-success" onclick="exportData()">
+                    <i class="fas fa-download"></i>
+                    Exportar
                 </button>
             </div>
         </div>
@@ -439,6 +555,23 @@
             </div>
         </div>
 
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>📈 Distribuição de Opcodes</h3>
+                    <div class="chart-controls">
+                        <select id="chartType" onchange="updateChart()">
+                            <option value="udp">UDP</option>
+                            <option value="discovery">Discovery</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-content">
+                    <canvas id="opcodeChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="events-table">
             <div class="table-header">
                 <div class="table-title">📊 Eventos Filtrados</div>
@@ -452,15 +585,17 @@
                         <tr>
                             <th>Tipo</th>
                             <th>Nome</th>
+                            <th>Opcode</th>
                             <th>Categoria</th>
                             <th>Contagem</th>
                             <th>Status</th>
                             <th>Último</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="eventsTableBody">
                         <tr>
-                            <td colspan="6" class="loading">Carregando eventos...</td>
+                            <td colspan="8" class="loading">Carregando eventos...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -480,17 +615,20 @@
 
         let categories = [];
         let updateInterval;
+        let opcodeChart = null;
 
         // Inicializar página
         document.addEventListener('DOMContentLoaded', function() {
             loadCategories();
             loadStats();
             loadFilteredEvents();
+            initializeChart();
             
             // Atualizar a cada 3 segundos
             updateInterval = setInterval(() => {
                 loadStats();
                 loadFilteredEvents();
+                updateChart();
                 updateLastUpdateTime();
             }, 3000);
         });
@@ -591,8 +729,18 @@
                 if (currentFilters.category) params.append('category', currentFilters.category);
                 if (currentFilters.minCount > 0) params.append('minCount', currentFilters.minCount);
                 if (currentFilters.showHidden !== null) params.append('showHidden', currentFilters.showHidden);
+                if (currentFilters.minOpcode) params.append('minOpcode', currentFilters.minOpcode);
+                if (currentFilters.maxOpcode) params.append('maxOpcode', currentFilters.maxOpcode);
+                if (currentFilters.searchTerm) params.append('searchTerm', currentFilters.searchTerm);
 
-                const url = `/api/events/stats/${currentFilters.type || 'discovery'}?${params}`;
+                // Usar endpoint avançado se filtros avançados estão ativos
+                let url;
+                if (currentFilters.minOpcode || currentFilters.maxOpcode || currentFilters.searchTerm) {
+                    url = `/api/events/advanced-stats/${currentFilters.type || 'discovery'}?${params}`;
+                } else {
+                    url = `/api/events/stats/${currentFilters.type || 'discovery'}?${params}`;
+                }
+                
                 console.log('🔍 Carregando eventos filtrados:', url);
                 
                 const response = await fetch(url);
@@ -606,7 +754,7 @@
                 console.error('❌ Erro ao carregar eventos filtrados:', error);
                 document.getElementById('eventsTableBody').innerHTML = `
                     <tr>
-                        <td colspan="6" class="error">Erro ao carregar eventos: ${error.message}</td>
+                        <td colspan="8" class="error">Erro ao carregar eventos: ${error.message}</td>
                     </tr>
                 `;
             }
@@ -619,7 +767,7 @@
             if (!events || events.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="loading">Nenhum evento encontrado</td>
+                        <td colspan="8" class="loading">Nenhum evento encontrado</td>
                     </tr>
                 `;
                 return;
@@ -629,6 +777,14 @@
                 // Mapear corretamente os dados baseado no tipo de evento
                 const eventName = event.eventName || event.type || 'Unknown';
                 const eventType = event.eventType || event.type || 'Unknown';
+                
+                // Extrair opcode dos detalhes ou do código
+                let opcode = 'N/A';
+                if (event.details && event.details.details && event.details.details.Opcode) {
+                    opcode = event.details.details.Opcode;
+                } else if (event.code) {
+                    opcode = event.code;
+                }
                 
                 // Encontrar categoria baseada no nome do evento ou código do pacote
                 const category = categories.find(c => {
@@ -668,10 +824,16 @@
                     <tr>
                         <td>${eventType}</td>
                         <td>${eventName}</td>
+                        <td><span class="opcode-badge">${opcode}</span></td>
                         <td>${categoryChip}</td>
                         <td>${count}</td>
                         <td>${statusBadge}</td>
                         <td>${lastSeen}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="showEventDetails('${eventName}', ${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -685,7 +847,9 @@
                 minCount: parseInt(document.getElementById('minCount').value) || 0,
                 searchTerm: document.getElementById('searchTerm').value,
                 showHidden: document.getElementById('showHidden').checked,
-                showVisible: document.getElementById('showVisible').checked
+                showVisible: document.getElementById('showVisible').checked,
+                minOpcode: parseInt(document.getElementById('minOpcode').value) || null,
+                maxOpcode: parseInt(document.getElementById('maxOpcode').value) || null
             };
 
             loadFilteredEvents();
@@ -697,6 +861,8 @@
             document.getElementById('category').value = '';
             document.getElementById('minCount').value = '';
             document.getElementById('searchTerm').value = '';
+            document.getElementById('minOpcode').value = '';
+            document.getElementById('maxOpcode').value = '';
             document.getElementById('showHidden').checked = true;
             document.getElementById('showVisible').checked = true;
 
@@ -706,16 +872,218 @@
                 minCount: 0,
                 searchTerm: '',
                 showHidden: true,
-                showVisible: true
+                showVisible: true,
+                minOpcode: null,
+                maxOpcode: null
             };
 
             loadFilteredEvents();
+        }
+
+        // Mostrar detalhes do evento
+        function showEventDetails(eventName, eventData) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📋 Detalhes do Evento: ${eventName}</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <pre style="background: var(--card); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; color: var(--text);">${JSON.stringify(eventData, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Mostrar estatísticas avançadas
+        async function showAdvancedStats() {
+            try {
+                const response = await fetch('/api/events/performance');
+                const data = await response.json();
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h3>📊 Estatísticas Avançadas</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <h4>UDP Performance</h4>
+                                    <p>Total Events: ${data.udp?.totalEvents || 0}</p>
+                                    <p>Success Rate: ${data.udp?.successRate?.toFixed(2) || 0}%</p>
+                                    <p>Events/sec: ${data.udp?.eventsPerSecond?.toFixed(2) || 0}</p>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Discovery Performance</h4>
+                                    <p>Total Packets: ${data.discovery?.totalPackets || 0}</p>
+                                    <p>Success Rate: ${data.discovery?.successRate?.toFixed(2) || 0}%</p>
+                                    <p>Packets/sec: ${data.discovery?.packetsPerSecond?.toFixed(2) || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas avançadas:', error);
+                alert('Erro ao carregar estatísticas avançadas');
+            }
+        }
+
+        // Exportar dados
+        async function exportData() {
+            try {
+                const params = new URLSearchParams();
+                if (currentFilters.type) params.append('type', currentFilters.type);
+                if (currentFilters.category) params.append('category', currentFilters.category);
+                if (currentFilters.minCount > 0) params.append('minCount', currentFilters.minCount);
+                if (currentFilters.showHidden !== null) params.append('showHidden', currentFilters.showHidden);
+                if (currentFilters.minOpcode) params.append('minOpcode', currentFilters.minOpcode);
+                if (currentFilters.maxOpcode) params.append('maxOpcode', currentFilters.maxOpcode);
+                if (currentFilters.searchTerm) params.append('searchTerm', currentFilters.searchTerm);
+
+                let url;
+                if (currentFilters.minOpcode || currentFilters.maxOpcode || currentFilters.searchTerm) {
+                    url = `/api/events/advanced-stats/${currentFilters.type || 'discovery'}?${params}`;
+                } else {
+                    url = `/api/events/stats/${currentFilters.type || 'discovery'}?${params}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const csv = convertToCSV(data);
+                downloadCSV(csv, `events_${new Date().toISOString().split('T')[0]}.csv`);
+            } catch (error) {
+                console.error('Erro ao exportar dados:', error);
+                alert('Erro ao exportar dados');
+            }
+        }
+
+        // Converter dados para CSV
+        function convertToCSV(data) {
+            if (!data || data.length === 0) return 'No data available';
+            
+            const headers = ['Tipo', 'Nome', 'Opcode', 'Categoria', 'Contagem', 'Status', 'Último'];
+            const rows = data.map(event => {
+                const eventName = event.eventName || event.type || 'Unknown';
+                const eventType = event.eventType || event.type || 'Unknown';
+                let opcode = 'N/A';
+                if (event.details && event.details.details && event.details.details.Opcode) {
+                    opcode = event.details.details.Opcode;
+                } else if (event.code) {
+                    opcode = event.code;
+                }
+                const count = event.count || 0;
+                const lastSeen = event.lastSeen ? new Date(event.lastSeen).toLocaleString() : '--:--:--';
+                let status = 'N/A';
+                if (event.isHidden !== undefined) {
+                    status = event.isHidden ? 'Escondido' : 'Visível';
+                } else if (event.isSuccessful !== undefined) {
+                    status = event.isSuccessful ? 'Sucesso' : 'Falha';
+                }
+                
+                return [eventType, eventName, opcode, 'Unknown', count, status, lastSeen];
+            });
+            
+            return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+        }
+
+        // Download CSV
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
         }
 
         // Atualizar tempo da última atualização
         function updateLastUpdateTime() {
             const now = new Date();
             document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        // Inicializar gráfico
+        function initializeChart() {
+            const ctx = document.getElementById('opcodeChart').getContext('2d');
+            opcodeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Contagem de Opcodes',
+                        data: [],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#f8fafc'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Atualizar gráfico
+        async function updateChart() {
+            try {
+                const chartType = document.getElementById('chartType').value;
+                const response = await fetch(`/api/events/opcode-distribution/${chartType}`);
+                const data = await response.json();
+                
+                if (data && Array.isArray(data)) {
+                    const labels = data.map(item => item.opcode).slice(0, 20); // Top 20
+                    const counts = data.map(item => item.count).slice(0, 20);
+                    
+                    opcodeChart.data.labels = labels;
+                    opcodeChart.data.datasets[0].data = counts;
+                    opcodeChart.data.datasets[0].label = `Contagem de Opcodes (${chartType.toUpperCase()})`;
+                    opcodeChart.update();
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar gráfico:', error);
+            }
         }
 
         // Limpar interval ao sair da página
